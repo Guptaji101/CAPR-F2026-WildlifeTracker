@@ -10,7 +10,7 @@ return [
     ],
     'gbif' => [
         'base_url' => 'https://api.gbif.org/v1',
-        'timeout'  => 15,
+        'timeout'  => 30,
         'limit'    => 300,
     ],
     'app' => [
