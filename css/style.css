@@ -1,0 +1,1341 @@
+/* ==========================================================================
+   Wildlife Sighting Mapping & Species Distribution Tracker
+   Modern Nature & Conservation Theme Stylesheet
+   ========================================================================== */
+
+:root {
+    /* Brand Color Palette */
+    --primary-900: #064e3b;
+    --primary-800: #065f46;
+    --primary-700: #047857;
+    --primary-600: #059669;
+    --primary-500: #10b981;
+    --primary-400: #34d399;
+    --primary-100: #d1fae5;
+    --primary-50:  #ecfdf5;
+
+    /* Neutrals / Dark Slates */
+    --slate-950: #0b1117;
+    --slate-900: #0f172a;
+    --slate-800: #1e293b;
+    --slate-700: #334155;
+    --slate-600: #475569;
+    --slate-500: #64748b;
+    --slate-400: #94a3b8;
+    --slate-300: #cbd5e1;
+    --slate-200: #e2e8f0;
+    --slate-100: #f1f5f9;
+    --slate-50:  #f8fafc;
+    --white:     #ffffff;
+
+    /* Taxon Category Colors */
+    --taxon-aves:      #0284c7; /* Birds - Sky Blue */
+    --taxon-mammalia:  #ea580c; /* Mammals - Amber Orange */
+    --taxon-insecta:   #10b981; /* Insects - Emerald Green */
+    --taxon-amphibia:  #8b5cf6; /* Amphibians - Violet */
+    --taxon-reptilia:  #eab308; /* Reptiles - Gold */
+    --taxon-other:     #64748b; /* Others - Slate */
+
+    /* Typography */
+    --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-heading: 'Outfit', var(--font-sans);
+    --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+    /* Elevation & Glassmorphism */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.08);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.08);
+    --shadow-glass: 0 8px 32px 0 rgba(15, 23, 42, 0.08);
+
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+    --radius-full: 9999px;
+
+    --transition-fast: 0.15s ease;
+    --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ==========================================================================
+   Base & Reset
+   ========================================================================== */
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: var(--font-sans);
+    background-color: var(--slate-100);
+    color: var(--slate-800);
+    line-height: 1.5;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* ==========================================================================
+   App Header & Brand
+   ========================================================================== */
+.app-header {
+    background: linear-gradient(135deg, var(--slate-950) 0%, var(--primary-900) 60%, var(--primary-800) 100%);
+    color: var(--white);
+    padding: 1rem 1.75rem;
+    box-shadow: var(--shadow-lg);
+    position: relative;
+    z-index: 100;
+}
+
+.header-inner {
+    max-width: 1720px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.brand-section {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.brand-icon-wrapper {
+    width: 46px;
+    height: 46px;
+    border-radius: var(--radius-md);
+    background: linear-gradient(135deg, var(--primary-500), var(--primary-700));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 16px rgba(16, 185, 129, 0.4);
+    font-size: 1.5rem;
+}
+
+.brand-title {
+    font-family: var(--font-heading);
+    font-size: 1.35rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    line-height: 1.2;
+}
+
+.brand-badge {
+    background: rgba(16, 185, 129, 0.2);
+    border: 1px solid rgba(52, 211, 153, 0.35);
+    color: var(--primary-400);
+    font-size: 0.72rem;
+    padding: 0.15rem 0.55rem;
+    border-radius: var(--radius-full);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.brand-subtitle {
+    font-size: 0.85rem;
+    color: var(--slate-300);
+    margin-top: 0.2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.brand-subtitle .dot-separator {
+    opacity: 0.4;
+}
+
+/* Header Right Actions */
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    flex-wrap: wrap;
+}
+
+.status-pill {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.85rem;
+    background: rgba(15, 23, 42, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: var(--radius-full);
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--slate-200);
+}
+
+.pulse-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--primary-500);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 7px rgba(16, 185, 129, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+.pulse-dot.offline {
+    background-color: #ef4444;
+    box-shadow: none;
+    animation: none;
+}
+
+.btn-locate {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: var(--white);
+    border-radius: var(--radius-md);
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+
+.btn-locate:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+}
+
+/* ==========================================================================
+   Quick Presets Ribbon
+   ========================================================================== */
+.presets-bar {
+    background: var(--slate-900);
+    border-bottom: 1px solid var(--slate-800);
+    padding: 0.6rem 1.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    overflow-x: auto;
+    scrollbar-width: thin;
+}
+
+.presets-label {
+    color: var(--slate-400);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.presets-list {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.preset-chip {
+    padding: 0.35rem 0.85rem;
+    border-radius: var(--radius-full);
+    border: 1px solid var(--slate-700);
+    background: var(--slate-800);
+    color: var(--slate-300);
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition-fast);
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.preset-chip:hover {
+    background: var(--primary-800);
+    border-color: var(--primary-600);
+    color: var(--white);
+    transform: translateY(-1px);
+}
+
+.preset-chip.active {
+    background: var(--primary-600);
+    border-color: var(--primary-500);
+    color: var(--white);
+}
+
+/* ==========================================================================
+   Live Stats Strip (KPI Bar)
+   ========================================================================== */
+.stats-strip {
+    background: var(--white);
+    border-bottom: 1px solid var(--slate-200);
+    padding: 0.75rem 1.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    box-shadow: var(--shadow-sm);
+}
+
+.stats-grid {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.stat-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.15rem;
+    background: var(--slate-100);
+    color: var(--slate-600);
+}
+
+.stat-item:nth-child(1) .stat-icon { background: #e0f2fe; color: #0284c7; }
+.stat-item:nth-child(2) .stat-icon { background: var(--primary-100); color: var(--primary-700); }
+.stat-item:nth-child(3) .stat-icon { background: #fef3c7; color: #d97706; }
+.stat-item:nth-child(4) .stat-icon { background: #ede9fe; color: #7c3aed; }
+
+.stat-meta {
+    display: flex;
+    flex-direction: column;
+}
+
+.stat-value {
+    font-family: var(--font-heading);
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--slate-900);
+    line-height: 1.1;
+}
+
+.stat-label {
+    font-size: 0.74rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--slate-500);
+}
+
+.status-feed-text {
+    font-size: 0.85rem;
+    color: var(--slate-600);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* ==========================================================================
+   Main Application Dashboard Layout
+   ========================================================================== */
+.app-container {
+    max-width: 1720px;
+    width: 100%;
+    margin: 1.25rem auto;
+    padding: 0 1.5rem;
+    flex: 1;
+    display: grid;
+    grid-template-columns: 420px 1fr;
+    gap: 1.5rem;
+    position: relative;
+    min-height: calc(100vh - 240px);
+}
+
+/* Left Sidebar / Controller & Feed */
+.sidebar-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.card {
+    background: var(--white);
+    border: 1px solid var(--slate-200);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+}
+
+/* Search & Filters Box */
+.filter-card-header {
+    padding: 1.25rem 1.25rem 0.5rem 1.25rem;
+}
+
+.card-title {
+    font-family: var(--font-heading);
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--slate-900);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+}
+
+.card-desc {
+    font-size: 0.8rem;
+    color: var(--slate-500);
+}
+
+.filter-card-body {
+    padding: 1rem 1.25rem 1.25rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.15rem;
+}
+
+/* Search Input Group */
+.search-group {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.search-icon {
+    position: absolute;
+    left: 1rem;
+    color: var(--slate-400);
+    font-size: 0.95rem;
+    pointer-events: none;
+}
+
+.search-input {
+    width: 100%;
+    padding: 0.75rem 2.75rem 0.75rem 2.6rem;
+    border: 1.5px solid var(--slate-300);
+    border-radius: var(--radius-md);
+    font-family: var(--font-sans);
+    font-size: 0.92rem;
+    color: var(--slate-900);
+    background: var(--white);
+    transition: var(--transition-fast);
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: var(--primary-600);
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+}
+
+.search-btn {
+    position: absolute;
+    right: 0.35rem;
+    background: var(--primary-600);
+    color: var(--white);
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 0.45rem 0.75rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition-fast);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.search-btn:hover {
+    background: var(--primary-700);
+}
+
+/* Taxon Category Selectors */
+.filter-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--slate-600);
+    margin-bottom: 0.5rem;
+}
+
+.taxon-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.45rem;
+}
+
+.taxon-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    padding: 0.65rem 0.4rem;
+    border-radius: var(--radius-md);
+    border: 1.5px solid var(--slate-200);
+    background: var(--slate-50);
+    cursor: pointer;
+    transition: var(--transition-fast);
+    color: var(--slate-700);
+    text-align: center;
+}
+
+.taxon-btn span.icon {
+    font-size: 1.35rem;
+}
+
+.taxon-btn span.name {
+    font-size: 0.76rem;
+    font-weight: 600;
+}
+
+.taxon-btn:hover {
+    background: var(--white);
+    border-color: var(--slate-400);
+    transform: translateY(-1px);
+}
+
+.taxon-btn.active {
+    background: var(--primary-50);
+    border-color: var(--primary-600);
+    color: var(--primary-900);
+    box-shadow: 0 0 0 1px var(--primary-600);
+}
+
+/* Specific Taxon Button Color Accents when active */
+.taxon-btn[data-taxon="212"].active { border-color: var(--taxon-aves); background: #f0f9ff; color: #0369a1; }
+.taxon-btn[data-taxon="359"].active { border-color: var(--taxon-mammalia); background: #fff7ed; color: #c2410c; }
+.taxon-btn[data-taxon="216"].active { border-color: var(--taxon-insecta); background: var(--primary-50); color: var(--primary-900); }
+.taxon-btn[data-taxon="131"].active { border-color: var(--taxon-amphibia); background: #f5f3ff; color: #6d28d9; }
+.taxon-btn[data-taxon="358"].active { border-color: var(--taxon-reptilia); background: #fefce8; color: #a16207; }
+.taxon-btn[data-taxon="204"].active { border-color: #06b6d4; background: #ecfeff; color: #0891b2; }
+.taxon-btn[data-taxon="52"].active  { border-color: #14b8a6; background: #f0fdfa; color: #0f766e; }
+.taxon-btn[data-taxon="other"].active { border-color: var(--taxon-other); background: #f8fafc; color: #334155; }
+
+/* Radius & Limit Controls */
+.controls-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.85rem;
+}
+
+.control-field {
+    display: flex;
+    flex-direction: column;
+}
+
+.custom-select {
+    padding: 0.6rem 0.85rem;
+    border: 1.5px solid var(--slate-300);
+    border-radius: var(--radius-md);
+    background-color: var(--white);
+    font-family: var(--font-sans);
+    font-size: 0.86rem;
+    color: var(--slate-800);
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+
+.custom-select:focus {
+    outline: none;
+    border-color: var(--primary-600);
+}
+
+/* Secondary collapsible filter (Date range) */
+.filter-accordion-toggle {
+    background: none;
+    border: none;
+    color: var(--primary-700);
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.2rem 0;
+    align-self: flex-start;
+}
+
+.filter-accordion-toggle:hover {
+    text-decoration: underline;
+}
+
+.filter-date-inputs {
+    display: none;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    padding-top: 0.5rem;
+    border-top: 1px dashed var(--slate-200);
+}
+
+.filter-date-inputs.open {
+    display: grid;
+}
+
+.date-field input {
+    width: 100%;
+    padding: 0.45rem 0.65rem;
+    border: 1px solid var(--slate-300);
+    border-radius: var(--radius-sm);
+    font-size: 0.8rem;
+    color: var(--slate-700);
+}
+
+/* Action buttons */
+.filter-action-btn {
+    width: 100%;
+    padding: 0.75rem;
+    background: linear-gradient(135deg, var(--primary-600), var(--primary-700));
+    color: var(--white);
+    border: none;
+    border-radius: var(--radius-md);
+    font-family: var(--font-sans);
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: var(--transition-fast);
+}
+
+.filter-action-btn:hover {
+    background: linear-gradient(135deg, var(--primary-700), var(--primary-800));
+    box-shadow: 0 6px 16px rgba(5, 150, 105, 0.35);
+    transform: translateY(-1px);
+}
+
+/* ==========================================================================
+   Sightings Feed & Tab Panel
+   ========================================================================== */
+.feed-card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 480px;
+    max-height: 600px;
+}
+
+.feed-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--slate-200);
+    background: var(--slate-50);
+}
+
+.feed-tab {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    border: none;
+    background: transparent;
+    font-family: var(--font-sans);
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--slate-500);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: var(--transition-fast);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+}
+
+.feed-tab:hover {
+    color: var(--slate-800);
+    background: rgba(255, 255, 255, 0.6);
+}
+
+.feed-tab.active {
+    color: var(--primary-700);
+    border-bottom-color: var(--primary-600);
+    background: var(--white);
+}
+
+.feed-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+}
+
+/* Sighting Item Card */
+.sighting-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.85rem;
+    padding: 0.75rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--slate-200);
+    background: var(--white);
+    cursor: pointer;
+    transition: var(--transition-fast);
+    position: relative;
+}
+
+.sighting-item:hover {
+    border-color: var(--primary-500);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+    background: var(--primary-50);
+}
+
+.sighting-item.active {
+    border-color: var(--primary-600);
+    background: var(--primary-50);
+    box-shadow: 0 0 0 2px var(--primary-500);
+}
+
+.sighting-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-md);
+    background: var(--slate-100);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    flex-shrink: 0;
+}
+
+.sighting-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.sighting-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.2rem;
+}
+
+.sighting-common {
+    font-family: var(--font-heading);
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--slate-900);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sighting-badge {
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 0.15rem 0.5rem;
+    border-radius: var(--radius-full);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    flex-shrink: 0;
+}
+
+.badge-aves      { background: #e0f2fe; color: #0369a1; }
+.badge-mammalia  { background: #ffedd5; color: #c2410c; }
+.badge-insecta   { background: #d1fae5; color: #047857; }
+.badge-amphibia  { background: #ede9fe; color: #6d28d9; }
+.badge-reptilia  { background: #fef9c3; color: #a16207; }
+.badge-fish      { background: #cffafe; color: #0891b2; }
+.badge-mollusc   { background: #ccfbf1; color: #0f766e; }
+.badge-arachnid  { background: #f3e8ff; color: #7e22ce; }
+.badge-other     { background: #f1f5f9; color: #475569; }
+
+.sighting-scientific {
+    font-size: 0.78rem;
+    font-style: italic;
+    color: var(--slate-500);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 0.3rem;
+}
+
+.sighting-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.72rem;
+    color: var(--slate-400);
+    flex-wrap: wrap;
+}
+
+.sighting-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+/* Taxon Analytics Tab Panel */
+.analytics-panel {
+    padding: 1.25rem;
+    display: none;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.analytics-panel.open {
+    display: flex;
+}
+
+.analytics-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.analytics-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--slate-700);
+}
+
+.analytics-bar-bg {
+    height: 8px;
+    background: var(--slate-200);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+}
+
+.analytics-bar-fill {
+    height: 100%;
+    border-radius: var(--radius-full);
+    transition: width 0.6s ease;
+}
+
+/* ==========================================================================
+   Center Stage: Map Area
+   ========================================================================== */
+.map-stage {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    position: relative;
+}
+
+.map-wrapper {
+    position: relative;
+    width: 100%;
+    height: calc(100vh - 280px);
+    min-height: 600px;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    border: 1px solid var(--slate-200);
+    box-shadow: var(--shadow-lg);
+    background: var(--slate-200);
+}
+
+#map {
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+
+/* Floating Map Overlay: Floating Legend */
+.map-legend-overlay {
+    position: absolute;
+    bottom: 1.25rem;
+    left: 1.25rem;
+    z-index: 20;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(8px);
+    padding: 0.75rem 1.15rem;
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    box-shadow: var(--shadow-md);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    pointer-events: auto;
+}
+
+.legend-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--slate-500);
+    margin-right: 0.25rem;
+}
+
+.legend-chip {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--slate-700);
+}
+
+.legend-dot {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    border: 1.5px solid white;
+    box-shadow: 0 0 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Map Quick Actions on Top-Right */
+.map-action-bar {
+    position: absolute;
+    top: 1.25rem;
+    right: 1.25rem;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.map-action-btn {
+    width: 38px;
+    height: 38px;
+    background: var(--white);
+    border: 1px solid var(--slate-300);
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--slate-700);
+    font-size: 1rem;
+    cursor: pointer;
+    box-shadow: var(--shadow-md);
+    transition: var(--transition-fast);
+}
+
+.map-action-btn:hover {
+    background: var(--slate-50);
+    color: var(--primary-700);
+    transform: scale(1.05);
+}
+
+/* Map Loading Overlay */
+.map-loading-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.3);
+    backdrop-filter: blur(3px);
+    z-index: 30;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    color: var(--white);
+    flex-direction: column;
+    gap: 0.75rem;
+    font-weight: 600;
+    border-radius: var(--radius-lg);
+}
+
+.map-loading-overlay.active {
+    display: flex;
+}
+
+.spinner {
+    width: 42px;
+    height: 42px;
+    border: 3.5px solid rgba(255, 255, 255, 0.25);
+    border-top-color: var(--primary-400);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Leaflet Custom Marker & Tooltip Overrides */
+.custom-pin {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 2px solid #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 12px;
+    transition: transform 0.2s ease;
+}
+
+.custom-pin:hover {
+    transform: scale(1.25);
+    z-index: 9999 !important;
+}
+
+.leaflet-tooltip-custom {
+    background: rgba(15, 23, 42, 0.9) !important;
+    backdrop-filter: blur(4px);
+    color: white !important;
+    border: none !important;
+    border-radius: var(--radius-sm) !important;
+    box-shadow: var(--shadow-md) !important;
+    padding: 6px 10px !important;
+    font-family: var(--font-sans) !important;
+    font-size: 0.8rem !important;
+}
+
+.leaflet-tooltip-custom::before {
+    border-top-color: rgba(15, 23, 42, 0.9) !important;
+}
+
+/* ==========================================================================
+   Species Detail Inspector Drawer / Floating Card
+   ========================================================================== */
+.species-drawer {
+    position: absolute;
+    top: 1.25rem;
+    right: 1.25rem;
+    width: 380px;
+    max-height: calc(100% - 2.5rem);
+    background: rgba(255, 255, 255, 0.97);
+    backdrop-filter: blur(16px);
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    box-shadow: var(--shadow-xl);
+    z-index: 25;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transform: translateX(110%);
+    opacity: 0;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+    pointer-events: auto;
+}
+
+.species-drawer.open {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+.drawer-header {
+    position: relative;
+    padding: 1.25rem 1.25rem 0.75rem 1.25rem;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--slate-200);
+}
+
+.drawer-close {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--slate-100);
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--slate-600);
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+
+.drawer-close:hover {
+    background: var(--slate-200);
+    color: var(--slate-900);
+}
+
+.drawer-scroll-body {
+    overflow-y: auto;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.15rem;
+}
+
+.species-hero-photo-wrapper {
+    width: 100%;
+    height: 200px;
+    border-radius: var(--radius-md);
+    background: var(--slate-100);
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--slate-200);
+}
+
+.species-hero-photo {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: none;
+    transition: transform 0.3s ease;
+}
+
+.species-hero-photo:hover {
+    transform: scale(1.03);
+}
+
+.photo-fallback {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--slate-400);
+    font-size: 0.8rem;
+}
+
+.photo-fallback-icon {
+    font-size: 3rem;
+}
+
+.species-title-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.species-common-title {
+    font-family: var(--font-heading);
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: var(--slate-900);
+    line-height: 1.2;
+}
+
+.species-scientific-title {
+    font-size: 0.95rem;
+    font-style: italic;
+    color: var(--primary-700);
+    font-weight: 500;
+}
+
+/* Taxonomy Hierarchy Chips */
+.taxonomy-chain {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.tax-badge {
+    background: var(--slate-100);
+    border: 1px solid var(--slate-200);
+    color: var(--slate-700);
+    padding: 0.25rem 0.6rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.72rem;
+    font-weight: 600;
+}
+
+.tax-badge span.rank {
+    color: var(--slate-400);
+    text-transform: uppercase;
+    font-size: 0.62rem;
+    margin-right: 0.25rem;
+}
+
+/* Observation Detail Card */
+.observation-meta-card {
+    background: var(--slate-50);
+    border: 1px solid var(--slate-200);
+    border-radius: var(--radius-md);
+    padding: 0.85rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.meta-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.78rem;
+}
+
+.meta-label {
+    color: var(--slate-500);
+    font-weight: 500;
+}
+
+.meta-val {
+    color: var(--slate-800);
+    font-weight: 600;
+    text-align: right;
+}
+
+.drawer-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.btn-gbif {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    width: 100%;
+    padding: 0.65rem 1rem;
+    background: var(--slate-900);
+    color: var(--white);
+    border-radius: var(--radius-md);
+    font-size: 0.84rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: var(--transition-fast);
+}
+
+.btn-gbif:hover {
+    background: var(--slate-800);
+    transform: translateY(-1px);
+}
+
+/* ==========================================================================
+   Toast Notifications
+   ========================================================================== */
+.toast-container {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    pointer-events: none;
+}
+
+.toast {
+    background: var(--slate-900);
+    color: var(--white);
+    padding: 0.75rem 1.15rem;
+    border-radius: var(--radius-md);
+    font-size: 0.85rem;
+    box-shadow: var(--shadow-lg);
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    pointer-events: auto;
+    animation: slideInToast 0.3s ease;
+    border-left: 4px solid var(--primary-500);
+    max-width: 360px;
+}
+
+.toast.error {
+    border-left-color: #ef4444;
+}
+
+@keyframes slideInToast {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+/* ==========================================================================
+   Footer
+   ========================================================================== */
+.app-footer {
+    background: var(--slate-900);
+    color: var(--slate-400);
+    border-top: 1px solid var(--slate-800);
+    padding: 1.25rem 1.75rem;
+    font-size: 0.8rem;
+    text-align: center;
+    margin-top: auto;
+}
+
+.footer-inner {
+    max-width: 1720px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.footer-team {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    flex-wrap: wrap;
+}
+
+.footer-team span {
+    color: var(--slate-200);
+    font-weight: 500;
+}
+
+/* ==========================================================================
+   Responsive Breakpoints
+   ========================================================================== */
+@media (max-width: 1200px) {
+    .app-container {
+        grid-template-columns: 360px 1fr;
+    }
+}
+
+@media (max-width: 992px) {
+    .app-container {
+        grid-template-columns: 1fr;
+    }
+
+    .map-wrapper {
+        height: 520px;
+        min-height: 480px;
+    }
+
+    .species-drawer {
+        width: calc(100% - 2.5rem);
+    }
+}
+
+@media (max-width: 640px) {
+    .app-header {
+        padding: 1rem;
+    }
+
+    .header-inner {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .stats-strip {
+        padding: 0.75rem 1rem;
+    }
+
+    .stats-grid {
+        gap: 1rem;
+    }
+
+    .app-container {
+        padding: 0 0.75rem;
+        margin: 0.75rem auto;
+    }
+
+    .map-wrapper {
+        height: 420px;
+        min-height: 380px;
+    }
+
+    .map-legend-overlay {
+        bottom: 0.5rem;
+        left: 0.5rem;
+        right: 0.5rem;
+        font-size: 0.7rem;
+        padding: 0.5rem;
+    }
+}

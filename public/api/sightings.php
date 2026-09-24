@@ -19,12 +19,26 @@ $from   = $_GET['from']  ?? null;
 $to     = $_GET['to']    ?? null;
 $limit  = isset($_GET['limit']) ? (int)$_GET['limit'] : 50;
 
-$data = gbif_search_nearby($lat, $lng, $radius, $taxon, $from, $to, $limit);
+$gbifTaxon = ($taxon === 'other' || empty($taxon)) ? null : $taxon;
+$fetchLimit = ($taxon === 'other') ? max($limit * 2, 100) : $limit;
+$data = gbif_search_nearby($lat, $lng, $radius, $gbifTaxon, $from, $to, $fetchLimit);
 
 if (isset($data['error'])) {
     http_response_code(502);
     echo json_encode(['error' => $data['error']]);
     exit;
+}
+
+$rawResults = $data['results'] ?? [];
+
+// If filtering for "other" fauna, exclude the five main classes
+if ($taxon === 'other') {
+    $mainClasses = ['aves', 'mammalia', 'insecta', 'amphibia', 'reptilia', 'actinopterygii', 'gastropoda', 'bivalvia', 'cephalopoda', 'polyplacophora'];
+    $rawResults = array_values(array_filter($rawResults, function($r) use ($mainClasses) {
+        $c = strtolower($r['class'] ?? '');
+        return !in_array($c, $mainClasses);
+    }));
+    $rawResults = array_slice($rawResults, 0, $limit);
 }
 
 $results = array_map(fn($r) => [
@@ -38,6 +52,6 @@ $results = array_map(fn($r) => [
     'eventDate'      => $r['eventDate'] ?? null,
     'country'        => $r['country'] ?? null,
     'locality'       => $r['locality'] ?? null,
-], $data['results'] ?? []);
+], $rawResults);
 
-echo json_encode(['count' => $data['count'] ?? count($results), 'results' => $results]);
+echo json_encode(['count' => count($results), 'results' => $results]);
