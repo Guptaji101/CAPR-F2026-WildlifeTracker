@@ -238,7 +238,7 @@
                         </div>
                     </div>
 
-                    <button class="filter-action-btn" onclick="handleSearch()">
+                    <button class="filter-action-btn" onclick="querySightings()">
                         <i class="fa-solid fa-satellite-dish"></i> Query Sightings
                     </button>
                 </div>
@@ -293,6 +293,7 @@
                     <div class="legend-chip"><span class="legend-dot" style="background:var(--taxon-reptilia);"></span> Reptiles</div>
                     <div class="legend-chip"><span class="legend-dot" style="background:#06b6d4;"></span> Fishes</div>
                     <div class="legend-chip"><span class="legend-dot" style="background:#14b8a6;"></span> Molluscs</div>
+                    <div class="legend-chip"><span class="legend-dot" style="background:#db2777;"></span> Arachnids</div>
                     <div class="legend-chip"><span class="legend-dot" style="background:var(--taxon-other);"></span> Other</div>
                 </div>
 

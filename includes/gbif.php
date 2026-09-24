@@ -25,7 +25,8 @@ function gbif_search_nearby(
     'limit'         => min($limit, 300),
 ];
     if ($taxonKey) $params['taxonKey'] = $taxonKey;
-    if ($fromDate) $params['eventDate'] = $fromDate . ',' . ($toDate ?: date('Y-m-d'));
+    // "*" leaves the start of the range open, so a To date on its own still applies
+    if ($fromDate || $toDate) $params['eventDate'] = ($fromDate ?: '*') . ',' . ($toDate ?: date('Y-m-d'));
 
     $url = $cfg['base_url'] . '/occurrence/search?' . http_build_query($params);
 
@@ -50,6 +51,10 @@ function gbif_search_nearby(
             $json = json_decode($raw, true);
             if ($json) return $json;
             $lastError = 'Invalid JSON';
+        } elseif ($code >= 400 && $code < 500 && $code !== 429) {
+            // GBIF is reachable but rejected the request (e.g. a bad date range):
+            // retrying won't help, and showing sample data would hide the real problem
+            return ['error' => "GBIF rejected the request (HTTP $code)"];
         } else {
             $lastError = $err ?: "HTTP $code";
         }
@@ -87,7 +92,7 @@ function gbif_sample_fallback(float $lat, float $lng): array
             'locality' => 'Saha-gu',
         ],
         [
-            'key' => 2, 'speciesKey' => 2435099,
+            'key' => 2, 'speciesKey' => 2481197,
             'scientificName' => 'Larus crassirostris',
             'vernacularName' => 'Black-tailed Gull',
             'class' => 'Aves',
@@ -98,7 +103,7 @@ function gbif_sample_fallback(float $lat, float $lng): array
             'locality' => 'Busan',
         ],
         [
-            'key' => 3, 'speciesKey' => 2436435,
+            'key' => 3, 'speciesKey' => 5231198,
             'scientificName' => 'Passer montanus',
             'vernacularName' => 'Eurasian Tree Sparrow',
             'class' => 'Aves',
@@ -109,7 +114,7 @@ function gbif_sample_fallback(float $lat, float $lng): array
             'locality' => 'Busanjin-gu',
         ],
         [
-            'key' => 4, 'speciesKey' => 5219243,
+            'key' => 4, 'speciesKey' => 2437761,
             'scientificName' => 'Apodemus agrarius',
             'vernacularName' => 'Striped Field Mouse',
             'class' => 'Mammalia',
@@ -120,7 +125,7 @@ function gbif_sample_fallback(float $lat, float $lng): array
             'locality' => 'Busan',
         ],
         [
-            'key' => 5, 'speciesKey' => 2440946,
+            'key' => 5, 'speciesKey' => 2440954,
             'scientificName' => 'Cervus nippon',
             'vernacularName' => 'Sika Deer',
             'class' => 'Mammalia',

@@ -11,6 +11,7 @@ const state = {
     currentLat: 35.1796,  // Default: Busan
     currentLng: 129.0756,
     currentLocationName: 'Busan, South Korea',
+    lastQuery: 'Busan',   // search-box text that produced the current coordinates
     radiusKm: 10,
     taxonKey: '',
     limit: 75,
@@ -33,7 +34,7 @@ const TAXON_META = {
     '358':   { name: 'Reptiles', class: 'Reptilia', color: '#eab308', icon: '🦎', badgeClass: 'badge-reptilia' },
     '204':   { name: 'Fishes', class: 'Actinopterygii', color: '#06b6d4', icon: '🐟', badgeClass: 'badge-fish' },
     '52':    { name: 'Molluscs', class: 'Mollusca', color: '#14b8a6', icon: '🐚', badgeClass: 'badge-mollusc' },
-    '367':   { name: 'Arachnids', class: 'Arachnida', color: '#a855f7', icon: '🕷️', badgeClass: 'badge-arachnid' },
+    '367':   { name: 'Arachnids', class: 'Arachnida', color: '#db2777', icon: '🕷️', badgeClass: 'badge-arachnid' },
     'other': { name: 'Other Fauna', class: 'Other', color: '#64748b', icon: '🐾', badgeClass: 'badge-other' }
 };
 
@@ -191,6 +192,7 @@ async function handleSearch() {
         state.currentLat = geo.lat;
         state.currentLng = geo.lng;
         state.currentLocationName = geo.displayName || query;
+        state.lastQuery = query;
 
         // Animate map view smoothly to target location
         map.flyTo([state.currentLat, state.currentLng], 12, { duration: 1.2 });
@@ -218,6 +220,19 @@ function quickSelect(city, elem) {
     handleSearch();
 }
 
+// "Query Sightings" button: reload with the current filters. Only geocode again when
+// the user has typed a different place; otherwise keep the current coordinates
+// (so a "Locate Me" GPS position is not replaced by a search for its label).
+function querySightings() {
+    const input = document.getElementById('location-input');
+    const query = input ? input.value.trim() : '';
+    if (query && query !== state.lastQuery) {
+        handleSearch();
+    } else {
+        loadSightings();
+    }
+}
+
 function useCurrentLocation() {
     if (!navigator.geolocation) {
         showToast('Geolocation is not supported by your browser', 'error');
@@ -232,7 +247,8 @@ function useCurrentLocation() {
             state.currentLocationName = 'My Location';
 
             const input = document.getElementById('location-input');
-            if (input) input.value = 'Current Location (GPS)';
+            state.lastQuery = 'Current Location (GPS)';
+            if (input) input.value = state.lastQuery;
             setText('stat-location', 'Near Me');
 
             map.flyTo([state.currentLat, state.currentLng], 13, { duration: 1.2 });
@@ -295,6 +311,12 @@ function toggleRadius() {
 async function loadSightings() {
     if (state.currentLat === null || state.currentLng === null) return;
 
+    if (state.fromDate && state.toDate && state.fromDate > state.toDate) {
+        setLoading(false);
+        showToast('The "From" date must be on or before the "To" date', 'error');
+        return;
+    }
+
     setLoading(true, 'Querying GBIF biodiversity records...');
 
     let url = `api/sightings.php?lat=${state.currentLat}&lng=${state.currentLng}&radius=${state.radiusKm}&limit=${state.limit}`;
@@ -312,7 +334,13 @@ async function loadSightings() {
         updateKpiStats(data.count || state.sightings.length, state.sightings);
 
         const statusEl = document.getElementById('status-feed');
-        if (statusEl) {
+        if (data.fallback) {
+            // NFR-04: GBIF was unreachable, so the server sent its built-in sample records
+            showToast('GBIF is unreachable — showing sample data (filters not applied)', 'error');
+            if (statusEl) {
+                statusEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> GBIF unreachable — showing <b>${state.sightings.length}</b> sample records`;
+            }
+        } else if (statusEl) {
             statusEl.innerHTML = `<i class="fa-solid fa-check text-emerald"></i> Found <b>${state.sightings.length}</b> records within ${state.radiusKm}km`;
         }
 
