@@ -1,6 +1,6 @@
 /**
  * Wildlife Sighting Mapping and Species Distribution Tracker
- * Modern Application Logic & Controller
+ * Dashboard logic: search, filters, map, sightings table and species profile
  * CAPR-F2026 Capstone Project
  */
 
@@ -11,103 +11,85 @@ const state = {
     currentLat: 35.1796,  // Default: Busan
     currentLng: 129.0756,
     currentLocationName: 'Busan, South Korea',
-    lastQuery: 'Busan',   // search-box text that produced the current coordinates
     radiusKm: 10,
-    taxonKey: '',
+    groups: new Set(),    // selected animal groups (filled from GROUPS below)
     limit: 75,
     fromDate: '',
     toDate: '',
     sightings: [],
     markers: [],
+    page: 0,
+    pageSize: 10,
+    selected: null,       // index into state.sightings
     radiusCircle: null,
-    activeMarker: null,
+    radiusLabel: null,
     speciesCache: new Map(),
-    isLoading: false,
 };
 
-// Animal taxon metadata & colors
-const TAXON_META = {
-    '212':   { name: 'Birds', class: 'Aves', color: '#0284c7', icon: '🦅', badgeClass: 'badge-aves' },
-    '359':   { name: 'Mammals', class: 'Mammalia', color: '#ea580c', icon: '🐺', badgeClass: 'badge-mammalia' },
-    '216':   { name: 'Insects', class: 'Insecta', color: '#10b981', icon: '🦋', badgeClass: 'badge-insecta' },
-    '131':   { name: 'Amphibians', class: 'Amphibia', color: '#8b5cf6', icon: '🐸', badgeClass: 'badge-amphibia' },
-    '358':   { name: 'Reptiles', class: 'Reptilia', color: '#eab308', icon: '🦎', badgeClass: 'badge-reptilia' },
-    '204':   { name: 'Fishes', class: 'Actinopterygii', color: '#06b6d4', icon: '🐟', badgeClass: 'badge-fish' },
-    '52':    { name: 'Molluscs', class: 'Mollusca', color: '#14b8a6', icon: '🐚', badgeClass: 'badge-mollusc' },
-    '367':   { name: 'Arachnids', class: 'Arachnida', color: '#db2777', icon: '🕷️', badgeClass: 'badge-arachnid' },
-    'other': { name: 'Other Fauna', class: 'Other', color: '#64748b', icon: '🐾', badgeClass: 'badge-other' }
+// Animal groups: filter keys (GBIF taxon keys), map colour and icon.
+// GBIF splits reptiles into Squamata, Testudines and Crocodylia, so all three are used.
+const GROUPS = {
+    mammals:       { label: 'Mammals',       color: '#f28c1b', bg: '#fdebd3', text: '#b45309', icon: 'fa-paw',  keys: [359] },
+    birds:         { label: 'Birds',         color: '#1d7fe0', bg: '#dbeafe', text: '#1d4ed8', icon: 'fa-dove', keys: [212] },
+    reptiles:      { label: 'Reptiles',      color: '#43a047', bg: '#dcfce7', text: '#15803d', icon: 'fa-dragon', keys: [11592253, 11418114, 11493978] },
+    amphibians:    { label: 'Amphibians',    color: '#8b3fd9', bg: '#ede4fb', text: '#6d28d9', icon: 'fa-frog', keys: [131] },
+    fish:          { label: 'Fish',          color: '#17a2c6', bg: '#d7f1f8', text: '#0e7490', icon: 'fa-fish', keys: [204, 121] },
+    invertebrates: { label: 'Invertebrates', color: '#e03131', bg: '#fde2e2', text: '#b91c1c', icon: 'fa-bug', keys: [54, 52, 42, 43, 50] },
 };
+Object.keys(GROUPS).forEach(g => state.groups.add(g));
+
+const REPTILE_CLASSES = ['reptilia', 'squamata', 'testudines', 'crocodylia'];
+const FISH_CLASSES = ['actinopterygii', 'elasmobranchii', 'chondrichthyes', 'sarcopterygii', 'holocephali', 'petromyzonti', 'myxini'];
+
+// Which of the six groups a sighting belongs to, from its class (and phylum)
+function groupOf(record) {
+    const cls = (record.taxonGroup || '').toLowerCase();
+    if (cls === 'aves') return 'birds';
+    if (cls === 'mammalia') return 'mammals';
+    if (REPTILE_CLASSES.includes(cls)) return 'reptiles';
+    if (cls === 'amphibia') return 'amphibians';
+    if (FISH_CLASSES.includes(cls)) return 'fish';
+    return 'invertebrates';
+}
 
 // =============================================================================
-// Map Setup & Multi-layer Basemaps (Watermark-free, Full Zoom Coverage)
+// Map Setup
 // =============================================================================
-const openStreetMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-});
-
-const satelliteMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-    maxNativeZoom: 18,
-    maxZoom: 19,
-    attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
-});
-
-const esriTopo = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
-    maxNativeZoom: 13,
-    maxZoom: 19,
-    attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom, USGS, NPS, NRCAN, Ordnance Survey'
-});
+const baseLayers = {
+    map: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }),
+    satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxNativeZoom: 18,
+        maxZoom: 19,
+        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+    }),
+    topo: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
+        maxNativeZoom: 13,
+        maxZoom: 19,
+        attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom, USGS, NPS, NRCAN, Ordnance Survey'
+    }),
+};
+let activeLayer = baseLayers.map;
 
 const map = L.map('map', {
     center: [state.currentLat, state.currentLng],
     zoom: 11,
     maxZoom: 19,
     zoomControl: false,
-    layers: [openStreetMap] // OpenStreetMap has complete high-resolution data up to zoom 19 everywhere
+    layers: [activeLayer]
 });
-
-// Position zoom controls at bottom-right for clean UI
-L.control.zoom({ position: 'bottomright' }).addTo(map);
-
-// Add modern base layer selector
-const baseLayers = {
-    "OpenStreetMap (Standard)": openStreetMap,
-    "Satellite Imagery (Esri)": satelliteMap,
-    "Topographic (Esri)": esriTopo
-};
-L.control.layers(baseLayers, null, { position: 'topright' }).addTo(map);
+L.control.scale({ position: 'bottomright', imperial: false }).addTo(map);
 
 // =============================================================================
-// Utility Helpers & Safe DOM Setters
+// Utility Helpers
 // =============================================================================
+function $(id) { return document.getElementById(id); }
+
 function setText(id, text) {
-    const el = document.getElementById(id);
+    const el = $(id);
     if (el) el.innerText = text;
-}
-
-function setHtml(id, html) {
-    const el = document.getElementById(id);
-    if (el) el.innerHTML = html;
-}
-
-function showToast(message, type = 'info') {
-    const container = document.getElementById('toast-container');
-    if (!container) return;
-
-    const toast = document.createElement('div');
-    toast.className = `toast ${type === 'error' ? 'error' : ''}`;
-    toast.innerHTML = `
-        <i class="fa-solid ${type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-check'}"></i>
-        <span>${escapeHtml(message)}</span>
-    `;
-
-    container.appendChild(toast);
-    setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transform = 'translateY(10px)';
-        toast.style.transition = 'all 0.3s ease';
-        setTimeout(() => toast.remove(), 300);
-    }, 4000);
 }
 
 function escapeHtml(str) {
@@ -117,6 +99,24 @@ function escapeHtml(str) {
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;');
+}
+
+function showToast(message, type = 'info') {
+    const container = $('toast-container');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = `toast ${type === 'error' ? 'error' : ''}`;
+    toast.innerHTML = `
+        <i class="fa-solid ${type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-check'}"></i>
+        <span>${escapeHtml(message)}</span>
+    `;
+    container.appendChild(toast);
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 4000);
 }
 
 async function safeJsonFetch(url) {
@@ -134,49 +134,40 @@ async function safeJsonFetch(url) {
     }
 }
 
-function getTaxonMeta(taxonGroup) {
-    if (!taxonGroup) return TAXON_META['other'];
-    const lower = taxonGroup.toLowerCase();
-    if (lower.includes('ave') || lower.includes('bird')) return TAXON_META['212'];
-    if (lower.includes('mammal')) return TAXON_META['359'];
-    if (lower.includes('insect') || lower.includes('hexapod')) return TAXON_META['216'];
-    if (lower.includes('amphib')) return TAXON_META['131'];
-    if (lower.includes('reptil') || lower.includes('squamata')) return TAXON_META['358'];
-    if (lower.includes('actinopteryg') || lower.includes('pisces') || lower.includes('fish') || lower.includes('chondrichth')) return TAXON_META['204'];
-    if (lower.includes('mollusc') || lower.includes('gastropod') || lower.includes('bivalv') || lower.includes('cephalopod') || lower.includes('polyplacophora')) return TAXON_META['52'];
-    if (lower.includes('arachnid') || lower.includes('araneae')) return TAXON_META['367'];
-    return TAXON_META['other'];
-}
-
 function setLoading(isLoading, statusText = '') {
-    state.isLoading = isLoading;
-    const loader = document.getElementById('map-loader');
-    const feedStatus = document.getElementById('status-feed');
-    const searchBtn = document.getElementById('search-btn');
-
+    const loader = $('map-loader');
     if (loader) {
         loader.classList.toggle('active', isLoading);
-        if (statusText) {
-            const loaderText = loader.querySelector('.loader-text');
-            if (loaderText) loaderText.innerText = statusText;
-        }
+        if (statusText) loader.querySelector('.loader-text').innerText = statusText;
     }
+    const locateBtn = $('locate-btn');
+    if (locateBtn) locateBtn.disabled = isLoading;
+}
 
-    if (feedStatus && statusText) {
-        feedStatus.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ${escapeHtml(statusText)}`;
-    }
+// iNaturalist photos come as "original" size; ask for a smaller version
+function sizedImage(url, size) {
+    if (!url) return null;
+    return url.includes('inaturalist-open-data') ? url.replace(/\/original\./, `/${size}.`) : url;
+}
 
-    if (searchBtn) {
-        searchBtn.disabled = isLoading;
-        searchBtn.innerHTML = isLoading ? '<i class="fa-solid fa-spinner fa-spin"></i>' : '<i class="fa-solid fa-arrow-right"></i>';
-    }
+function formatDate(eventDate) {
+    return eventDate ? eventDate.split('T')[0] : 'N/A';
+}
+
+function formatCoords(record) {
+    return record.lat && record.lng ? `${record.lat.toFixed(4)}, ${record.lng.toFixed(4)}` : 'N/A';
+}
+
+function groupIconHtml(groupKey, size = 18) {
+    const g = GROUPS[groupKey];
+    return `<span class="group-icon" style="background:${g.color};width:${size}px;height:${size}px"><i class="fa-solid ${g.icon}"></i></span>`;
 }
 
 // =============================================================================
-// Search & Geolocation Logic
+// Search & Geolocation
 // =============================================================================
 async function handleSearch() {
-    const input = document.getElementById('location-input');
+    const input = $('location-input');
     const query = input ? input.value.trim() : '';
     if (!query) {
         showToast('Please enter a location or city name', 'error');
@@ -192,18 +183,12 @@ async function handleSearch() {
         state.currentLat = geo.lat;
         state.currentLng = geo.lng;
         state.currentLocationName = geo.displayName || query;
-        state.lastQuery = query;
 
-        // Animate map view smoothly to target location
         map.flyTo([state.currentLat, state.currentLng], 12, { duration: 1.2 });
         updateRadiusCircle();
-
-        // Update active location badge in KPI stats
-        setText('stat-location', query);
         showToast(`Located "${query}" successfully!`);
 
         await loadSightings();
-
     } catch (err) {
         console.error(err);
         showToast(`Search error: ${err.message}`, 'error');
@@ -211,26 +196,13 @@ async function handleSearch() {
     }
 }
 
-function quickSelect(city, elem) {
-    document.querySelectorAll('.preset-chip').forEach(btn => btn.classList.remove('active'));
+function quickSelect(place, elem) {
+    document.querySelectorAll('.chip[data-place]').forEach(btn => btn.classList.remove('active'));
     if (elem) elem.classList.add('active');
 
-    const input = document.getElementById('location-input');
-    if (input) input.value = city;
+    const input = $('location-input');
+    if (input) input.value = place;
     handleSearch();
-}
-
-// "Query Sightings" button: reload with the current filters. Only geocode again when
-// the user has typed a different place; otherwise keep the current coordinates
-// (so a "Locate Me" GPS position is not replaced by a search for its label).
-function querySightings() {
-    const input = document.getElementById('location-input');
-    const query = input ? input.value.trim() : '';
-    if (query && query !== state.lastQuery) {
-        handleSearch();
-    } else {
-        loadSightings();
-    }
 }
 
 function useCurrentLocation() {
@@ -246,10 +218,9 @@ function useCurrentLocation() {
             state.currentLng = position.coords.longitude;
             state.currentLocationName = 'My Location';
 
-            const input = document.getElementById('location-input');
-            state.lastQuery = 'Current Location (GPS)';
-            if (input) input.value = state.lastQuery;
-            setText('stat-location', 'Near Me');
+            const input = $('location-input');
+            if (input) input.value = 'Current Location (GPS)';
+            document.querySelectorAll('.chip[data-place]').forEach(btn => btn.classList.remove('active'));
 
             map.flyTo([state.currentLat, state.currentLng], 13, { duration: 1.2 });
             updateRadiusCircle();
@@ -267,46 +238,43 @@ function useCurrentLocation() {
 }
 
 // =============================================================================
-// Map Overlay & Circle Perimeter
+// Map Overlays: radius circle, label and base layers
 // =============================================================================
 function updateRadiusCircle() {
-    if (state.radiusCircle) {
-        map.removeLayer(state.radiusCircle);
-        state.radiusCircle = null;
-    }
+    if (state.radiusCircle) map.removeLayer(state.radiusCircle);
+    if (state.radiusLabel) map.removeLayer(state.radiusLabel);
 
-    if (state.currentLat && state.currentLng) {
-        state.radiusCircle = L.circle([state.currentLat, state.currentLng], {
-            radius: state.radiusKm * 1000,
-            color: '#059669',
-            fillColor: '#10b981',
-            fillOpacity: 0.08,
-            weight: 2,
-            dashArray: '5, 5'
-        }).addTo(map);
-    }
+    state.radiusCircle = L.circle([state.currentLat, state.currentLng], {
+        radius: state.radiusKm * 1000,
+        color: '#1d6fd8',
+        fillColor: '#1d6fd8',
+        fillOpacity: 0.06,
+        weight: 2.5,
+    }).addTo(map);
+
+    // Label sits on the top edge of the circle
+    const labelLat = state.currentLat + state.radiusKm / 111.32;
+    state.radiusLabel = L.marker([labelLat, state.currentLng], {
+        icon: L.divIcon({ className: '', html: `<span class="radius-label">${state.radiusKm} km</span>`, iconSize: [0, 0] }),
+        interactive: false,
+    }).addTo(map);
+}
+
+function switchBaseLayer(name, button) {
+    const layer = baseLayers[name];
+    if (!layer || layer === activeLayer) return;
+    map.removeLayer(activeLayer);
+    layer.addTo(map);
+    activeLayer = layer;
+    document.querySelectorAll('.basemap-tabs button').forEach(b => b.classList.toggle('active', b === button));
 }
 
 function recenterMap() {
-    if (state.currentLat && state.currentLng) {
-        map.flyTo([state.currentLat, state.currentLng], 12, { duration: 0.8 });
-    }
-}
-
-function toggleRadius() {
-    if (!state.radiusCircle) {
-        updateRadiusCircle();
-    } else {
-        if (map.hasLayer(state.radiusCircle)) {
-            map.removeLayer(state.radiusCircle);
-        } else {
-            state.radiusCircle.addTo(map);
-        }
-    }
+    map.flyTo([state.currentLat, state.currentLng], 12, { duration: 0.8 });
 }
 
 // =============================================================================
-// Sightings Fetching & Rendering
+// Sightings: fetching and rendering
 // =============================================================================
 async function loadSightings() {
     if (state.currentLat === null || state.currentLng === null) return;
@@ -317,448 +285,353 @@ async function loadSightings() {
         return;
     }
 
+    if (state.groups.size === 0) {
+        setLoading(false);
+        state.sightings = [];
+        renderAll();
+        showToast('Select at least one animal group', 'error');
+        return;
+    }
+
     setLoading(true, 'Querying GBIF biodiversity records...');
 
     let url = `api/sightings.php?lat=${state.currentLat}&lng=${state.currentLng}&radius=${state.radiusKm}&limit=${state.limit}`;
-    if (state.taxonKey) url += `&taxon=${encodeURIComponent(state.taxonKey)}`;
+    // With every group ticked no taxon filter is sent, so all animals are returned
+    if (state.groups.size < Object.keys(GROUPS).length) {
+        const keys = [...state.groups].flatMap(g => GROUPS[g].keys);
+        url += `&taxa=${keys.join(',')}`;
+    }
     if (state.fromDate) url += `&from=${encodeURIComponent(state.fromDate)}`;
     if (state.toDate)   url += `&to=${encodeURIComponent(state.toDate)}`;
 
     try {
         const data = await safeJsonFetch(url);
         state.sightings = data.results || [];
+        state.page = 0;
+        renderAll();
 
-        renderMarkers(state.sightings);
-        renderSightingsFeed(state.sightings);
-        renderTaxonAnalytics(state.sightings);
-        updateKpiStats(data.count || state.sightings.length, state.sightings);
-
-        const statusEl = document.getElementById('status-feed');
         if (data.fallback) {
             // NFR-04: GBIF was unreachable, so the server sent its built-in sample records
             showToast('GBIF is unreachable — showing sample data (filters not applied)', 'error');
-            if (statusEl) {
-                statusEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> GBIF unreachable — showing <b>${state.sightings.length}</b> sample records`;
-            }
-        } else if (statusEl) {
-            statusEl.innerHTML = `<i class="fa-solid fa-check text-emerald"></i> Found <b>${state.sightings.length}</b> records within ${state.radiusKm}km`;
         }
-
+        if (state.sightings.length) selectSighting(0, { fly: false });
     } catch (err) {
         console.error(err);
         showToast(`Failed to load sightings: ${err.message}`, 'error');
-        const feedList = document.getElementById('feed-list');
-        if (feedList) {
-            feedList.innerHTML = `<div class="placeholder-text" style="padding: 2rem; text-align: center; color: #ef4444;">
-                <i class="fa-solid fa-triangle-exclamation" style="font-size: 2rem; margin-bottom: 0.5rem; display: block;"></i>
-                Could not load wildlife records.<br><small>${escapeHtml(err.message)}</small>
-            </div>`;
-        }
+        state.sightings = [];
+        renderAll(`Could not load wildlife records. ${err.message}`);
     } finally {
         setLoading(false);
     }
 }
 
-// Render Custom Map Pin Markers
-function renderMarkers(records) {
-    // Clear existing markers
+function renderAll(emptyMessage) {
+    state.selected = null;
+    clearProfile();
+    renderMarkers();
+    renderTable(emptyMessage);
+}
+
+function renderMarkers() {
     state.markers.forEach(m => map.removeLayer(m));
     state.markers = [];
 
-    if (!records || records.length === 0) return;
+    state.sightings.forEach((r, index) => {
+        if (!r.lat || !r.lng) { state.markers.push(null); return; }
 
-    records.forEach((r, index) => {
-        if (!r.lat || !r.lng) return;
-
-        const meta = getTaxonMeta(r.taxonGroup);
+        const g = GROUPS[groupOf(r)];
         const name = r.commonName || r.scientificName || 'Unknown Animal';
+        const marker = L.marker([r.lat, r.lng], {
+            icon: L.divIcon({
+                className: 'pin-wrap',
+                html: `<div class="pin" style="background:${g.color}"><i class="fa-solid ${g.icon}"></i></div>`,
+                iconSize: [30, 30],
+                iconAnchor: [4, 30],
+            })
+        }).addTo(map);
 
-        // Create sleek custom SVG circle pin
-        const customIcon = L.divIcon({
-            className: 'custom-pin-wrapper',
-            html: `
-                <div class="custom-pin" style="background-color: ${meta.color};" title="${escapeHtml(name)}">
-                    <span style="font-size: 11px;">${meta.icon}</span>
-                </div>
-            `,
-            iconSize: [26, 26],
-            iconAnchor: [13, 13]
-        });
-
-        const marker = L.marker([r.lat, r.lng], { icon: customIcon }).addTo(map);
-
-        // Tooltip
-        marker.bindTooltip(`
-            <div style="font-weight: 700; margin-bottom: 2px;">${escapeHtml(name)}</div>
-            <div style="font-style: italic; font-size: 11px; opacity: 0.85;">${escapeHtml(r.scientificName || '')}</div>
-            <div style="font-size: 10px; margin-top: 3px; color: ${meta.color}; font-weight: 600;">
-                ● ${escapeHtml(meta.name)} &bull; ${escapeHtml(r.eventDate || 'Date N/A')}
-            </div>
-        `, {
-            className: 'leaflet-tooltip-custom',
-            direction: 'top',
-            offset: [0, -10]
-        });
-
-        marker.on('click', () => {
-            selectSighting(r, index, marker);
-        });
-
-        marker._recordIndex = index;
+        marker.bindTooltip(`<b>${escapeHtml(name)}</b><br><i>${escapeHtml(r.scientificName || '')}</i><br>${g.label} &bull; ${escapeHtml(formatDate(r.eventDate))}`,
+            { className: 'pin-tip', direction: 'top', offset: [12, -28] });
+        marker.on('click', () => selectSighting(index, { fly: false }));
         state.markers.push(marker);
     });
 }
 
-// Render Left Panel Sighting Cards Feed
-function renderSightingsFeed(records) {
-    const feedList = document.getElementById('feed-list');
-    const countBadge = document.getElementById('feed-count-badge');
-    if (!feedList) return;
+function renderTable(emptyMessage) {
+    const body = $('sightings-body');
+    const total = state.sightings.length;
+    const start = state.page * state.pageSize;
+    const end = Math.min(start + state.pageSize, total);
 
-    if (countBadge) countBadge.innerText = records.length;
+    setText('page-info', total ? `Showing ${start + 1}–${end} of ${total}` : 'Showing 0 of 0');
+    $('page-prev').disabled = state.page === 0;
+    $('page-next').disabled = end >= total;
 
-    if (records.length === 0) {
-        feedList.innerHTML = `
-            <div class="placeholder-text" style="padding: 2.5rem 1rem; text-align: center;">
-                <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🐾</div>
-                <div style="font-weight: 600; color: var(--slate-700);">No fauna records found</div>
-                <div style="font-size: 0.8rem; color: var(--slate-400); margin-top: 0.25rem;">
-                    Try increasing the radius or searching a different area.
-                </div>
-            </div>
-        `;
+    if (!total) {
+        body.innerHTML = `<tr class="table-empty"><td colspan="8"><i class="fa-solid fa-paw"></i>
+            ${escapeHtml(emptyMessage || 'No fauna records found. Try increasing the radius or searching a different area.')}</td></tr>`;
         return;
     }
 
-    let html = '';
-    records.forEach((r, idx) => {
-        const meta = getTaxonMeta(r.taxonGroup);
-        const commonName = r.commonName || r.scientificName || 'Unknown Animal';
-        const scientific = r.scientificName || 'Species unidentified';
-        const dateStr = r.eventDate ? r.eventDate.split('T')[0] : 'Date N/A';
-        const locationStr = r.locality || r.country || 'Region unspecified';
+    body.innerHTML = state.sightings.slice(start, end).map((r, i) => {
+        const index = start + i;
+        const groupKey = groupOf(r);
+        const g = GROUPS[groupKey];
+        const thumb = sizedImage(r.image, 'square');
+        const photo = thumb
+            ? `<img class="thumb" src="${escapeHtml(thumb)}" alt="" loading="lazy" onerror="this.outerHTML='${escapeHtml(thumbFallback(groupKey))}'">`
+            : thumbFallback(groupKey);
+        return `
+            <tr data-index="${index}" class="${index === state.selected ? 'selected' : ''}">
+                <td>${index + 1}</td>
+                <td>${photo}</td>
+                <td><div class="sp-name">${escapeHtml(r.commonName || r.species || r.scientificName || 'Unknown Animal')}</div>
+                    <div class="sp-sci">${escapeHtml(r.species || r.scientificName || '')}</div></td>
+                <td><span class="group-badge" style="background:${g.bg};color:${g.text}">${g.label}</span></td>
+                <td>${escapeHtml(formatDate(r.eventDate))}</td>
+                <td class="loc-cell" title="${escapeHtml(r.locality || r.country || '')}">${escapeHtml(r.locality || r.country || 'Not specified')}</td>
+                <td>${escapeHtml(formatCoords(r))}</td>
+                <td><button class="btn-view" data-index="${index}">View</button></td>
+            </tr>`;
+    }).join('');
 
-        html += `
-            <div class="sighting-item" data-index="${idx}" onclick="handleSightingCardClick(${idx})">
-                <div class="sighting-avatar" style="background-color: ${meta.color}15; color: ${meta.color};">
-                    ${meta.icon}
-                </div>
-                <div class="sighting-body">
-                    <div class="sighting-top">
-                        <div class="sighting-common" title="${escapeHtml(commonName)}">${escapeHtml(commonName)}</div>
-                        <span class="sighting-badge ${meta.badgeClass}">${escapeHtml(meta.name)}</span>
-                    </div>
-                    <div class="sighting-scientific">${escapeHtml(scientific)}</div>
-                    <div class="sighting-meta">
-                        <span><i class="fa-regular fa-calendar"></i> ${escapeHtml(dateStr)}</span>
-                        <span><i class="fa-solid fa-location-dot"></i> ${escapeHtml(locationStr)}</span>
-                    </div>
-                </div>
-            </div>
-        `;
-    });
-
-    feedList.innerHTML = html;
+    fillCommonNames(start, end);
 }
 
-// Compute & Render Taxon Diversity Analytics
-function renderTaxonAnalytics(records) {
-    const container = document.getElementById('analytics-content');
-    if (!container) return;
-
-    if (!records || records.length === 0) {
-        container.innerHTML = `<div style="text-align:center; padding: 2rem; color: var(--slate-400);">No data to analyze.</div>`;
-        return;
-    }
-
-    const counts = {};
-    records.forEach(r => {
-        const meta = getTaxonMeta(r.taxonGroup);
-        counts[meta.name] = counts[meta.name] || { count: 0, color: meta.color, icon: meta.icon };
-        counts[meta.name].count++;
+// GBIF occurrence records rarely carry an English name, so look them up
+// (once per species) for the rows on screen and patch the table in place
+function fillCommonNames(start, end) {
+    state.sightings.slice(start, end).forEach(async (r, i) => {
+        if (r.commonName || !r.speciesKey || r.nameChecked) return;
+        r.nameChecked = true;
+        const data = await getSpecies(r.speciesKey);
+        if (!data || !data.vernacularName) return;
+        r.commonName = data.vernacularName;
+        const cell = document.querySelector(`#sightings-body tr[data-index="${start + i}"] .sp-name`);
+        if (cell) cell.innerText = r.commonName;
     });
-
-    const total = records.length;
-    const sorted = Object.entries(counts).sort((a, b) => b[1].count - a[1].count);
-
-    let html = '';
-    sorted.forEach(([name, data]) => {
-        const pct = Math.round((data.count / total) * 100);
-        html += `
-            <div class="analytics-row">
-                <div class="analytics-header">
-                    <span>${data.icon} ${escapeHtml(name)}</span>
-                    <span><b>${data.count}</b> (${pct}%)</span>
-                </div>
-                <div class="analytics-bar-bg">
-                    <div class="analytics-bar-fill" style="width: ${pct}%; background-color: ${data.color};"></div>
-                </div>
-            </div>
-        `;
-    });
-
-    container.innerHTML = html;
 }
 
-// Update Top KPI Summary Strip
-function updateKpiStats(totalCount, records) {
-    setText('stat-sightings', totalCount);
-    setText('stat-radius', `${state.radiusKm} km`);
-
-    // Calculate unique species count
-    const uniqueSpecies = new Set(records.map(r => r.speciesKey || r.scientificName).filter(Boolean));
-    setText('stat-diversity', `${uniqueSpecies.size} species`);
-
-    // Dominant group
-    const groups = {};
-    records.forEach(r => {
-        const meta = getTaxonMeta(r.taxonGroup);
-        groups[meta.name] = (groups[meta.name] || 0) + 1;
-    });
-
-    let dominantName = 'None';
-    let max = 0;
-    for (const [k, v] of Object.entries(groups)) {
-        if (v > max) {
-            max = v;
-            dominantName = k;
-        }
+async function getSpecies(speciesKey) {
+    if (!state.speciesCache.has(speciesKey)) {
+        // Cache the promise so parallel callers share one request
+        state.speciesCache.set(speciesKey, safeJsonFetch(`api/species.php?speciesKey=${speciesKey}`).catch(() => null));
     }
-    const dominantPct = records.length > 0 ? Math.round((max / records.length) * 100) : 0;
-    setText('stat-dominant', records.length > 0 ? `${dominantName} (${dominantPct}%)` : '—');
+    return state.speciesCache.get(speciesKey);
+}
+
+function thumbFallback(groupKey) {
+    const g = GROUPS[groupKey];
+    return `<div class="thumb thumb-fallback" style="background:${g.color}"><i class="fa-solid ${g.icon}"></i></div>`;
+}
+
+function changePage(delta) {
+    const maxPage = Math.max(0, Math.ceil(state.sightings.length / state.pageSize) - 1);
+    state.page = Math.min(maxPage, Math.max(0, state.page + delta));
+    renderTable();
 }
 
 // =============================================================================
-// Sighting & Species Inspection (Right Drawer)
+// Species Profile
 // =============================================================================
-function handleSightingCardClick(index) {
+function selectSighting(index, { fly = true } = {}) {
     const record = state.sightings[index];
-    const marker = state.markers[index];
     if (!record) return;
 
+    // Highlight the pin
+    if (state.selected !== null && state.markers[state.selected]) {
+        state.markers[state.selected].getElement()?.querySelector('.pin')?.classList.remove('selected');
+    }
+    state.selected = index;
+    const marker = state.markers[index];
     if (marker) {
-        map.flyTo([record.lat, record.lng], 14, { duration: 0.8 });
-        marker.openTooltip();
+        marker.getElement()?.querySelector('.pin')?.classList.add('selected');
+        if (fly) {
+            map.flyTo([record.lat, record.lng], 14, { duration: 0.8 });
+            marker.openTooltip();
+        }
     }
 
-    selectSighting(record, index, marker);
+    // Show the row, switching table page if needed
+    const page = Math.floor(index / state.pageSize);
+    if (page !== state.page) state.page = page;
+    renderTable();
+
+    showProfile(record);
 }
 
-async function selectSighting(record, index, marker) {
-    // Highlight active card
-    document.querySelectorAll('.sighting-item').forEach(el => el.classList.remove('active'));
-    const activeCard = document.querySelector(`.sighting-item[data-index="${index}"]`);
-    if (activeCard) {
-        activeCard.classList.add('active');
-        activeCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-
-    openSpeciesDrawer(record);
+function clearProfile() {
+    $('profile-empty').hidden = false;
+    $('profile-body').hidden = true;
 }
 
-async function openSpeciesDrawer(record) {
-    const drawer = document.getElementById('species-drawer');
-    const photoImg = document.getElementById('drawer-species-photo');
-    const photoFallback = document.getElementById('drawer-photo-fallback');
-    const gbifBtn = document.getElementById('drawer-gbif-btn');
+async function showProfile(record) {
+    const groupKey = groupOf(record);
+    const g = GROUPS[groupKey];
 
-    // Observation fields
-    setText('meta-date', record.eventDate ? record.eventDate.split('T')[0] : 'N/A');
-    setText('meta-locality', record.locality || record.country || 'Not specified');
-    setText('meta-coords', record.lat && record.lng ? `${record.lat.toFixed(4)}, ${record.lng.toFixed(4)}` : 'N/A');
-    setText('meta-id', record.key || record.speciesKey || 'N/A');
+    $('profile-empty').hidden = true;
+    $('profile-body').hidden = false;
 
-    const meta = getTaxonMeta(record.taxonGroup);
-    setText('drawer-common-name', record.commonName || record.scientificName || 'Unknown Species');
-    setText('drawer-scientific-name', record.scientificName || 'Unclassified');
+    const badge = $('profile-badge');
+    badge.style.background = g.color;
+    badge.innerHTML = `<i class="fa-solid ${g.icon}"></i> ${g.label}`;
 
-    // Show fallback photo state while loading
-    if (photoImg) photoImg.style.display = 'none';
-    if (photoFallback) {
-        photoFallback.style.display = 'flex';
-        const iconEl = photoFallback.querySelector('.photo-fallback-icon');
-        if (iconEl) iconEl.innerText = meta.icon;
-        const textEl = photoFallback.querySelector('.fallback-text');
-        if (textEl) textEl.innerText = 'Searching GBIF media archive...';
-    }
+    setText('profile-name', record.commonName || record.scientificName || 'Unknown Species');
+    setText('profile-sci', record.scientificName || 'Unclassified');
+    setText('meta-date', formatDate(record.eventDate));
+    setText('meta-locality', [record.locality, record.country].filter(Boolean).join(', ') || 'Not specified');
+    setText('meta-coords', formatCoords(record));
 
-    // Open the drawer smoothly
-    if (drawer) drawer.classList.add('open');
+    renderTaxonomy({ kingdom: 'Animalia', class: record.taxonGroup });
+    setPhoto(sizedImage(record.image, 'medium'), 'Searching GBIF media archive...');
+
+    const gbifBtn = $('profile-gbif');
+    gbifBtn.href = record.key ? `https://www.gbif.org/occurrence/${record.key}` : 'https://www.gbif.org';
 
     if (!record.speciesKey) {
-        if (photoFallback) {
-            const textEl = photoFallback.querySelector('.fallback-text');
-            if (textEl) textEl.innerText = 'No media attached to this occurrence.';
-        }
-        setHtml('drawer-taxonomy', `<span class="tax-badge"><span class="rank">Group</span>${meta.name}</span>`);
-        if (gbifBtn) gbifBtn.href = record.key ? `https://www.gbif.org/occurrence/${record.key}` : 'https://www.gbif.org';
+        if (!record.image) setPhoto(null, 'No media attached to this occurrence.');
         return;
     }
 
-    // Check cache or fetch species info
-    let speciesData;
-    if (state.speciesCache.has(record.speciesKey)) {
-        speciesData = state.speciesCache.get(record.speciesKey);
-    } else {
-        try {
-            speciesData = await safeJsonFetch(`api/species.php?speciesKey=${record.speciesKey}`);
-            state.speciesCache.set(record.speciesKey, speciesData);
-        } catch (err) {
-            console.warn('Could not fetch species taxonomy:', err);
-            speciesData = null;
-        }
+    const speciesData = await getSpecies(record.speciesKey);
+    if (!speciesData) {
+        if (state.sightings[state.selected] !== record) return;
+        if (!record.image) setPhoto(null, 'Taxonomy details unavailable');
+        gbifBtn.href = `https://www.gbif.org/species/${record.speciesKey}`;
+        return;
     }
 
-    if (speciesData) {
-        if (speciesData.vernacularName) {
-            setText('drawer-common-name', speciesData.vernacularName);
-        }
-        if (speciesData.scientificName) {
-            setText('drawer-scientific-name', speciesData.scientificName);
-        }
+    // The user may have selected another sighting while this request was running
+    if (state.sightings[state.selected] !== record) return;
 
-        // Render taxonomy breadcrumb chips
-        const ranks = ['kingdom', 'phylum', 'class', 'order', 'family', 'genus'];
-        let chipsHtml = '';
-        ranks.forEach(rank => {
-            if (speciesData[rank]) {
-                chipsHtml += `<span class="tax-badge"><span class="rank">${rank}</span>${escapeHtml(speciesData[rank])}</span>`;
-            }
-        });
-        setHtml('drawer-taxonomy', chipsHtml || `<span class="tax-badge">${meta.name}</span>`);
-
-        // Image handling
-        if (speciesData.imageUrl && photoImg && photoFallback) {
-            photoImg.src = speciesData.imageUrl;
-            photoImg.onload = () => {
-                photoImg.style.display = 'block';
-                photoFallback.style.display = 'none';
-            };
-            photoImg.onerror = () => {
-                photoImg.style.display = 'none';
-                photoFallback.style.display = 'flex';
-                const textEl = photoFallback.querySelector('.fallback-text');
-                if (textEl) textEl.innerText = 'Image preview not available';
-            };
-        } else if (photoFallback) {
-            const textEl = photoFallback.querySelector('.fallback-text');
-            if (textEl) textEl.innerText = 'No image provided by GBIF';
-        }
-
-        // GBIF External Link
-        if (gbifBtn) gbifBtn.href = speciesData.gbifUrl || `https://www.gbif.org/species/${record.speciesKey}`;
-    } else {
-        if (photoFallback) {
-            const textEl = photoFallback.querySelector('.fallback-text');
-            if (textEl) textEl.innerText = 'Taxonomy details unavailable';
-        }
-        if (gbifBtn) gbifBtn.href = `https://www.gbif.org/species/${record.speciesKey}`;
-    }
+    if (speciesData.vernacularName) setText('profile-name', speciesData.vernacularName);
+    if (speciesData.scientificName) setText('profile-sci', speciesData.scientificName);
+    renderTaxonomy(speciesData);
+    if (!record.image) setPhoto(speciesData.imageUrl, 'No image provided by GBIF');
+    gbifBtn.href = speciesData.gbifUrl || `https://www.gbif.org/species/${record.speciesKey}`;
 }
 
-function closeSpeciesDrawer() {
-    const drawer = document.getElementById('species-drawer');
-    if (drawer) drawer.classList.remove('open');
-    document.querySelectorAll('.sighting-item').forEach(el => el.classList.remove('active'));
+function renderTaxonomy(t) {
+    // "Alcedo atthis" is shown as "A. atthis", as in field guides
+    let species = t.species || '';
+    const parts = species.split(' ');
+    if (parts.length >= 2) species = `${parts[0][0]}. ${parts.slice(1).join(' ')}`;
+
+    const rows = [
+        ['Kingdom', t.kingdom], ['Phylum', t.phylum], ['Class', t.class], ['Order', t.order],
+        ['Family', t.family], ['Genus', t.genus, true], ['Species', species, true],
+    ];
+    $('profile-taxonomy').innerHTML = rows.map(([label, value, italic]) =>
+        `<dt>${label}</dt><dd class="${italic && value ? 'italic' : ''}">${escapeHtml(value || '—')}</dd>`).join('');
 }
 
-// Copy coordinates to clipboard
-function copyCoordinates() {
-    const coordsEl = document.getElementById('meta-coords');
-    const coords = coordsEl ? coordsEl.innerText : '';
-    if (coords && coords !== 'N/A') {
-        navigator.clipboard.writeText(coords).then(() => {
-            showToast(`Copied ${coords} to clipboard!`);
-        });
+function setPhoto(url, fallbackText) {
+    const img = $('profile-img');
+    const fallback = $('photo-fallback');
+    setText('photo-text', fallbackText);
+    if (!url) {
+        img.style.display = 'none';
+        fallback.style.display = 'flex';
+        return;
     }
+    img.style.display = 'none';
+    fallback.style.display = 'flex';
+    img.onload = () => { img.style.display = 'block'; fallback.style.display = 'none'; };
+    img.onerror = () => { setText('photo-text', 'Image preview not available'); };
+    img.src = url;
+}
+
+// =============================================================================
+// Sidebar: groups, legend, navigation
+// =============================================================================
+function buildGroupControls() {
+    $('group-list').innerHTML = Object.entries(GROUPS).map(([key, g]) => `
+        <label class="group-option">
+            <input type="checkbox" value="${key}" checked>
+            ${groupIconHtml(key)} ${g.label}
+        </label>`).join('');
+
+    $('legend-list').innerHTML = Object.entries(GROUPS).map(([key, g]) =>
+        `<div class="legend-item">${groupIconHtml(key, 16)} ${g.label}</div>`).join('');
+}
+
+function handleNav(link) {
+    document.querySelectorAll('.nav-item').forEach(a => a.classList.toggle('active', a === link));
+    const target = link.dataset.nav;
+    if (target === 'about') $('about-dialog').showModal();
+    else if (target === 'species') $('sightings-section').scrollIntoView({ behavior: 'smooth' });
+    else if (target === 'map') $('map-section').scrollIntoView({ behavior: 'smooth' });
+    else window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // =============================================================================
 // Event Listeners & Initializer
 // =============================================================================
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Search Input Trigger on Enter
-    const locationInput = document.getElementById('location-input');
-    if (locationInput) {
-        locationInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') handleSearch();
-        });
-    }
+    buildGroupControls();
 
-    // 2. Taxon Category Buttons
-    document.querySelectorAll('.taxon-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.querySelectorAll('.taxon-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            state.taxonKey = btn.getAttribute('data-taxon') || '';
-            loadSightings();
-        });
+    $('location-input').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') handleSearch();
+    });
+    $('search-btn').addEventListener('click', handleSearch);
+    $('locate-btn').addEventListener('click', useCurrentLocation);
+
+    document.querySelectorAll('.chip[data-place]').forEach(chip =>
+        chip.addEventListener('click', () => quickSelect(chip.dataset.place, chip)));
+
+    document.querySelectorAll('.chip[data-radius]').forEach(chip => chip.addEventListener('click', () => {
+        document.querySelectorAll('.chip[data-radius]').forEach(c => c.classList.toggle('active', c === chip));
+        state.radiusKm = parseFloat(chip.dataset.radius) || 10;
+        updateRadiusCircle();
+        loadSightings();
+    }));
+
+    $('group-list').addEventListener('change', (e) => {
+        if (e.target.checked) state.groups.add(e.target.value);
+        else state.groups.delete(e.target.value);
+        loadSightings();
     });
 
-    // 3. Radius & Limit Select Dropdowns
-    const radiusSelect = document.getElementById('radius-select');
-    if (radiusSelect) {
-        radiusSelect.addEventListener('change', (e) => {
-            state.radiusKm = parseFloat(e.target.value) || 10;
-            updateRadiusCircle();
-            loadSightings();
-        });
-    }
+    $('date-from').addEventListener('change', (e) => { state.fromDate = e.target.value; loadSightings(); });
+    $('date-to').addEventListener('change', (e) => { state.toDate = e.target.value; loadSightings(); });
 
-    const limitSelect = document.getElementById('limit-select');
-    if (limitSelect) {
-        limitSelect.addEventListener('change', (e) => {
-            state.limit = parseInt(e.target.value) || 75;
-            loadSightings();
-        });
-    }
+    $('limit-select').addEventListener('change', (e) => {
+        state.limit = parseInt(e.target.value) || 75;
+        loadSightings();
+    });
 
-    // 4. Date Range Filters
-    const fromInput = document.getElementById('date-from');
-    const toInput = document.getElementById('date-to');
-    if (fromInput) fromInput.addEventListener('change', (e) => { state.fromDate = e.target.value; });
-    if (toInput) toInput.addEventListener('change', (e) => { state.toDate = e.target.value; });
+    document.querySelectorAll('.basemap-tabs button').forEach(btn =>
+        btn.addEventListener('click', () => switchBaseLayer(btn.dataset.layer, btn)));
+    $('zoom-in').addEventListener('click', () => map.zoomIn());
+    $('zoom-out').addEventListener('click', () => map.zoomOut());
+    $('recenter').addEventListener('click', recenterMap);
 
-    // 5. Accordion Toggle for Date Filters
-    const dateToggle = document.getElementById('toggle-date-filter');
-    const dateBox = document.getElementById('date-filter-box');
-    if (dateToggle && dateBox) {
-        dateToggle.addEventListener('click', () => {
-            const isOpen = dateBox.classList.toggle('open');
-            dateToggle.innerHTML = isOpen
-                ? '<i class="fa-solid fa-chevron-up"></i> Hide Date Filters'
-                : '<i class="fa-solid fa-calendar-days"></i> Filter by Observation Date';
-        });
-    }
+    $('page-prev').addEventListener('click', () => changePage(-1));
+    $('page-next').addEventListener('click', () => changePage(1));
+    $('sightings-body').addEventListener('click', (e) => {
+        const btn = e.target.closest('.btn-view');
+        if (btn) selectSighting(parseInt(btn.dataset.index));
+    });
 
-    // 6. Tabs Switcher (Sightings Feed vs Analytics)
-    const tabFeed = document.getElementById('tab-feed');
-    const tabAnalytics = document.getElementById('tab-analytics');
-    const feedContent = document.getElementById('feed-list');
-    const analyticsContent = document.getElementById('analytics-content');
+    $('profile-close').addEventListener('click', () => {
+        if (state.selected !== null && state.markers[state.selected]) {
+            state.markers[state.selected].getElement()?.querySelector('.pin')?.classList.remove('selected');
+        }
+        state.selected = null;
+        clearProfile();
+        renderTable();
+    });
 
-    if (tabFeed && tabAnalytics) {
-        tabFeed.addEventListener('click', () => {
-            tabFeed.classList.add('active');
-            tabAnalytics.classList.remove('active');
-            if (feedContent) feedContent.style.display = 'flex';
-            if (analyticsContent) analyticsContent.classList.remove('open');
-        });
+    document.querySelectorAll('.nav-item').forEach(link => link.addEventListener('click', (e) => {
+        e.preventDefault();
+        handleNav(link);
+    }));
 
-        tabAnalytics.addEventListener('click', () => {
-            tabAnalytics.classList.add('active');
-            tabFeed.classList.remove('active');
-            if (feedContent) feedContent.style.display = 'none';
-            if (analyticsContent) analyticsContent.classList.add('open');
-        });
-    }
-
-    // 7. Keyboard Shortcuts (Escape to close drawer)
     window.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') closeSpeciesDrawer();
+        if (e.key === 'Escape') $('profile-close').click();
     });
 
-    // 8. Auto-load default location (Busan)
+    // Auto-load the default location (Busan)
     updateRadiusCircle();
     loadSightings();
 });

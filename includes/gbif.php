@@ -11,7 +11,7 @@ function gbif_config(): array
 
 function gbif_search_nearby(
     float $lat, float $lng, float $radiusKm = 10,
-    ?string $taxonKey = null, ?string $fromDate = null,
+    array $taxonKeys = [], ?string $fromDate = null,
     ?string $toDate = null, int $limit = 50
 ): array {
     $cfg = gbif_config();
@@ -24,11 +24,14 @@ function gbif_search_nearby(
     'kingdomKey'    => 1,
     'limit'         => min($limit, 300),
 ];
-    if ($taxonKey) $params['taxonKey'] = $taxonKey;
     // "*" leaves the start of the range open, so a To date on its own still applies
     if ($fromDate || $toDate) $params['eventDate'] = ($fromDate ?: '*') . ',' . ($toDate ?: date('Y-m-d'));
 
-    $url = $cfg['base_url'] . '/occurrence/search?' . http_build_query($params);
+    $query = http_build_query($params);
+    // GBIF ORs repeated taxonKey parameters, so several animal groups can be requested at once
+    foreach ($taxonKeys as $key) $query .= '&taxonKey=' . (int)$key;
+
+    $url = $cfg['base_url'] . '/occurrence/search?' . $query;
 
     // Try up to 3 times with backoff
     $lastError = null;

@@ -54,6 +54,7 @@ echo json_encode([
     'order'          => $species['order'] ?? null,
     'family'         => $species['family'] ?? null,
     'genus'          => $species['genus'] ?? null,
+    'species'        => $species['species'] ?? null,
     'imageUrl'       => $imageUrl,
     'gbifUrl'        => "https://www.gbif.org/species/{$speciesKey}",
 ]);
