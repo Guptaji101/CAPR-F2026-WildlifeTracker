@@ -2,6 +2,23 @@
 
 _Last updated: 5 Oct 2026_
 
+## How to resume in a new Claude Code chat
+1. Start Claude Code in this folder (`C:\xampp\htdocs\CAPR-F2026-WildlifeTracker`).
+   `CLAUDE.md` is read automatically and points here.
+2. Paste one clear starter prompt, for example:
+   - `Read NOTES.md. Next task: System Design for Oct 17 — draft the ERD and data-flow diagram.`
+   - `Read NOTES.md. Next task: build the landing page from the prototype.`
+   - `Read NOTES.md. Decide with me whether to keep the Fish group, then update the app and the document.`
+3. At the end of the session, ask: `Update NOTES.md with what we did and push it.`
+
+(Earlier chats also stay in the app's sidebar and can be reopened.)
+
+## Session log
+- **24 Sep:** Requirements doc restructured to v1.1 (use cases, diagrams). Bug fixes (`962ec58`).
+- **29 Sep:** Dashboard redesign (`d934b02`). v1.1 updated to match it.
+- **5 Oct:** Figure 3 redrawn (A type / B Quick Location / C Locate Me, external services).
+  Clickable PDF contents. NOTES.md, CLAUDE.md, and `docs/build` scripts added.
+
 ## What the project is
 
 **WildTrack — Wildlife Sighting Mapping and Species Distribution Tracker.** A map-based web app
@@ -64,6 +81,7 @@ by animal group / date / radius, and open a species profile with photo and taxon
 ```
 CAPR-F2026-WildlifeTracker/
 ├── NOTES.md                  this file
+├── CLAUDE.md                 standing instructions for Claude Code (read automatically)
 ├── README.md                 project summary and team
 ├── docs/build/               scripts that generate the requirements document + figures
 │   ├── build.js              document text (requirements, use cases, tables)
@@ -90,9 +108,9 @@ CAPR-F2026-WildlifeTracker/
 **Deadlines (all 11:59 PM):** System Design Oct 17 · Working Prototype Nov 3 · Project
 Finalization Nov 26 · Presentation Dec 2 (Group 3 is in Presentation 1).
 
-- [ ] Replace the v1.1 `.docx` / `.pdf` in Downloads with the latest build (they were open in
-      Word / a viewer), confirm the Requirement Specification submission, and add a
-      contribution row for the v1.1 revision.
+- [ ] The latest v1.1 `.docx` is in Downloads. The `.pdf` there may be older if it was open in
+      a viewer; rebuild with `docs/build` (see its README) and copy it over. Confirm the
+      Requirement Specification submission and add a contribution row for the v1.1 revision.
 - [ ] Decide whether to keep **Fish** (remove the group in `app.js` `GROUPS` and the checkbox if not).
 - [ ] Each member writes their **individual progress PDF** (tasks, timeline, tools).
 - [ ] **System Design (Oct 17):** ERD, data flow, UI wireframes or mockups. Decide whether MySQL
