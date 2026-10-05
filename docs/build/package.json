@@ -1,0 +1,13 @@
+{
+  "name": "wildtrack-docs-build",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Builds the WildTrack Requirements Analysis document (Word + PDF) and its diagrams",
+  "scripts": {
+    "diagrams": "node diagrams.js",
+    "build": "node build.js"
+  },
+  "dependencies": {
+    "docx": "^9.7.2"
+  }
+}

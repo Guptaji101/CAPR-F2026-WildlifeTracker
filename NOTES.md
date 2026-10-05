@@ -35,7 +35,7 @@ by animal group / date / radius, and open a species profile with photo and taxon
   - Duplicate root `css/` and `js/` folders removed.
 - CSS/JS links carry `?v=<file time>` so browsers always load the latest files.
 
-### Documents (kept outside the repo)
+### Documents (output kept outside the repo; build scripts in `docs/build`)
 - **Week 3 Requirements Analysis v1.1** (`Downloads\Week3_Requirements_Analysis_v1.1.docx` / `.pdf`, 22 pages):
   - Restructured to follow the professor's Week 4 study case: objectives → FR → NFR → actors →
     use cases → requirements-to-design traceability.
@@ -65,6 +65,10 @@ by animal group / date / radius, and open a species profile with photo and taxon
 CAPR-F2026-WildlifeTracker/
 ├── NOTES.md                  this file
 ├── README.md                 project summary and team
+├── docs/build/               scripts that generate the requirements document + figures
+│   ├── build.js              document text (requirements, use cases, tables)
+│   ├── diagrams.js           figures (use case, architecture, flowcharts)
+│   └── finalize.ps1          Word: update contents page, export PDF
 ├── config/
 │   ├── config.example.php    template (copy to config.php)
 │   └── config.php            local settings and credentials (git-ignored)
@@ -102,8 +106,7 @@ Finalization Nov 26 · Presentation Dec 2 (Group 3 is in Presentation 1).
 - [ ] Teammates should commit from their **own GitHub accounts**; set up a GitHub Issues /
       Projects task board.
 - [ ] Update `README.md` with the new dashboard and animal groups.
-- [ ] Keep the document build scripts somewhere safe. They currently live in a temporary
-      folder, not in this repo.
+- [x] Document build scripts are now in `docs/build` (see its README to rebuild).
 - [ ] Before deployment, check Esri tile terms and test on Chrome, Firefox and Edge (NFR-02)
       and at small screen widths (NFR-06).
 - [ ] Minor: when GBIF gives no locality, the Location column shows the country.
