@@ -2,31 +2,21 @@ CREATE DATABASE IF NOT EXISTS wildlife_tracker
   CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE wildlife_tracker;
 
-CREATE TABLE IF NOT EXISTS saved_locations (
-    id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    label       VARCHAR(120) NOT NULL,
-    latitude    DECIMAL(9,6) NOT NULL,
-    longitude   DECIMAL(9,6) NOT NULL,
-    radius_km   DECIMAL(6,2) DEFAULT 10.00,
-    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB;
-
-CREATE TABLE IF NOT EXISTS search_history (
-    id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    query       VARCHAR(160) NULL,
-    latitude    DECIMAL(9,6) NULL,
-    longitude   DECIMAL(9,6) NULL,
-    radius_km   DECIMAL(6,2) NULL,
-    taxon_key   VARCHAR(40)  NULL,
-    searched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_searched_at (searched_at)
-) ENGINE=InnoDB;
-
+-- Species details from the GBIF Species API, saved the first time a species is viewed
+-- so species.php can answer later requests without calling GBIF (System Design, Section 4).
+-- saved_locations and search_history were dropped: they need user accounts or have no use case.
 CREATE TABLE IF NOT EXISTS species_cache (
-    species_key     INT UNSIGNED PRIMARY KEY,
+    species_key     INT UNSIGNED PRIMARY KEY,   -- GBIF species key
     scientific_name VARCHAR(200) NULL,
-    common_name     VARCHAR(200) NULL,
-    taxon_group     VARCHAR(80)  NULL,
+    vernacular_name VARCHAR(200) NULL,          -- English common name
+    taxon_rank      VARCHAR(20)  NULL,
+    kingdom         VARCHAR(100) NULL,
+    phylum          VARCHAR(100) NULL,
+    class_name      VARCHAR(100) NULL,          -- "class" is a reserved word in PHP
+    order_name      VARCHAR(100) NULL,          -- "order" is a reserved word in SQL
+    family          VARCHAR(100) NULL,
+    genus           VARCHAR(100) NULL,
+    species         VARCHAR(200) NULL,
     image_url       VARCHAR(500) NULL,
-    cached_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    cached_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
