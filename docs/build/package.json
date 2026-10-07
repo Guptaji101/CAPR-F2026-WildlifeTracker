@@ -5,7 +5,8 @@
   "description": "Builds the WildTrack Requirements Analysis document (Word + PDF) and its diagrams",
   "scripts": {
     "diagrams": "node diagrams.js",
-    "build": "node build.js"
+    "build": "node build.js",
+    "design": "node design.js"
   },
   "dependencies": {
     "docx": "^9.7.2"

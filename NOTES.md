@@ -1,6 +1,6 @@
 # Handoff Notes — WildTrack (CAPR-F2026, Group 3)
 
-_Last updated: 5 Oct 2026_
+_Last updated: 7 Oct 2026_
 
 ## How to resume in a new Claude Code chat
 1. Start Claude Code in this folder (`C:\xampp\htdocs\CAPR-F2026-WildlifeTracker`).
@@ -20,7 +20,18 @@ _Last updated: 5 Oct 2026_
   Clickable PDF contents. NOTES.md, CLAUDE.md, and `docs/build` scripts added.
 - **7 Oct:** Contents links didn't click in Google Drive's PDF preview. Made
   `Downloads\Week3_Requirements_Analysis_v1.1_drive.pdf` with "go to page" link actions
-  (`docs/build/fix_links.py`). **Not yet confirmed in Drive.**
+  (`docs/build/fix_links.py`). **Confirmed working in Drive**, so it is now a standard build step.
+- **7 Oct (later):** System Design draft v1.0 (`docs/build/design.js`, 9 pages): architecture
+  (updated figure), database decision, ERD, `species_cache` data dictionary + cache rules,
+  context DFD + Level 1 DFD, traceability. Shared doc helpers moved to `docs/build/common.js`
+  (v1.1 output unchanged). `sql/schema.sql` reduced to the one `species_cache` table.
+  Outputs in `Downloads\System_Design_v1.0.docx` / `.pdf` / `_drive.pdf`.
+- **7 Oct (evening):** System Design v1.0 completed (12 pages): UI wireframes of the landing
+  page and dashboard (Section 6, numbered keys), contribution table by role (Section 8),
+  removed the internal to-do section. `species_cache` connected in `species.php` (cache rules
+  4.6, `X-Cache: HIT/MISS/STALE` header for testing); credited to Singh in the document.
+  Local DB reset from `sql/schema.sql` (old tables were empty). Tested: second view of a
+  species 1.5 s → 0.006 s; expired rows refresh; missing table falls back to GBIF.
 
 ## What the project is
 
@@ -63,7 +74,7 @@ by animal group / date / radius, and open a species profile with photo and taxon
   - Use case diagram, architecture diagram, and two flowcharts. Figure 3 shows the three ways
     to choose a location (A type / B Quick Location / C Locate Me) and the external services.
   - Clickable table of contents, plus PDF bookmarks.
-- Landing page **prototype** (HTML mock-up only, not built into the app).
+- Landing page **prototype** (`docs/prototypes/landing.html`, HTML mock-up only, not built into the app).
 
 ## Decisions made
 - **Animal groups:** Mammals, Birds, Reptiles, Amphibians, Fish, Invertebrates, as in the mockup.
@@ -78,6 +89,10 @@ by animal group / date / radius, and open a species profile with photo and taxon
 - **Dates start empty** and apply as soon as they change; there is no "Query Sightings" button.
 - **No accounts:** "EN" and "Guest" in the top bar are display-only.
 - **Task allocation, timeline and tools** go in the individual progress PDFs, not in v1.1.
+- **Database (7 Oct):** MySQL is used only for `species_cache` (taxonomy + photo per species,
+  refreshed after 30 days), read and written by `species.php`. `saved_locations` and
+  `search_history` were dropped (need accounts / no use case). Occurrences are never stored.
+- **Google Drive:** upload the `_drive.pdf` made by `fix_links.py`; its contents links work there.
 - **AI use:** commits made with AI help carry a `Co-Authored-By` line, in line with the syllabus.
 
 ## File structure
@@ -86,10 +101,13 @@ CAPR-F2026-WildlifeTracker/
 ├── NOTES.md                  this file
 ├── CLAUDE.md                 standing instructions for Claude Code (read automatically)
 ├── README.md                 project summary and team
-├── docs/build/               scripts that generate the requirements document + figures
-│   ├── build.js              document text (requirements, use cases, tables)
-│   ├── diagrams.js           figures (use case, architecture, flowcharts)
-│   └── finalize.ps1          Word: update contents page, export PDF
+├── docs/build/               scripts that generate the documents + figures
+│   ├── common.js             shared helpers (text, tables, figures, page styles)
+│   ├── build.js              Requirements Analysis v1.1 text
+│   ├── design.js             System Design v1.0 text
+│   ├── diagrams.js           all figures (use case, architecture, flowcharts, ERD, DFDs)
+│   ├── finalize.ps1          Word: update contents page, export PDF
+│   └── fix_links.py          Google Drive copy of a PDF (working contents links)
 ├── config/
 │   ├── config.example.php    template (copy to config.php)
 │   └── config.php            local settings and credentials (git-ignored)
@@ -103,8 +121,8 @@ CAPR-F2026-WildlifeTracker/
 │   └── api/
 │       ├── geocode.php       place name → lat/lng (Nominatim)
 │       ├── sightings.php     occurrences near a point (GBIF), with filters
-│       └── species.php       taxonomy + photo for a speciesKey (GBIF)
-└── sql/schema.sql            saved_locations, search_history, species_cache (designed, not connected)
+│       └── species.php       taxonomy + photo for a speciesKey (MySQL cache, else GBIF)
+└── sql/schema.sql            species_cache only (used by species.php)
 ```
 
 ## Remaining to-dos
@@ -114,13 +132,19 @@ Finalization Nov 26 · Presentation Dec 2 (Group 3 is in Presentation 1).
 - [ ] The latest v1.1 `.docx` is in Downloads. The `.pdf` there may be older if it was open in
       a viewer; rebuild with `docs/build` (see its README) and copy it over. Confirm the
       Requirement Specification submission and add a contribution row for the v1.1 revision.
-- [ ] Upload `Week3_Requirements_Analysis_v1.1_drive.pdf` to Drive and test the contents links.
-      If they work, add `fix_links.py` as a standard build step. If not, use the Drive bookmarks
-      panel or open the .docx with Google Docs.
+- [x] Drive contents links tested: the `_drive.pdf` works; `fix_links.py` is a standard step.
 - [ ] Decide whether to keep **Fish** (remove the group in `app.js` `GROUPS` and the checkbox if not).
 - [ ] Each member writes their **individual progress PDF** (tasks, timeline, tools).
-- [ ] **System Design (Oct 17):** ERD, data flow, UI wireframes or mockups. Decide whether MySQL
-      is used at all (for example, wire up `species_cache`) or drop it from the design.
+- [ ] **System Design (Oct 17):** v1.0 complete in Downloads. Team: review it together (every
+      member must be able to explain the ERD, DFDs and wireframes; Singh must be able to explain
+      the cache code in `species.php`), adjust the contribution table if needed, then upload
+      `System_Design_v1.0_drive.pdf` and submit.
+- [x] `species_cache` wired into `species.php`. Each teammate resets their local DB:
+      `DROP DATABASE wildlife_tracker`, then import `sql/schema.sql`. Still untested: the
+      "GBIF down, serve old row" rule (needs GBIF to fail).
+- [ ] Landing prototype uses different animal groups (Insects, …) than the app; the wireframe
+      uses the app's six groups. Align the prototype when the landing page is built.
+- [ ] If v1.1 is revised again: its Figure 2 and Section 13 still describe three planned tables.
 - [ ] **Landing page:** review the prototype, agree changes, then build it in front of the map page.
 - [ ] Choose **one specific end user and one community-impact feature** (the instructor's
       "think outside the box" note), and update the objectives, FRs and use cases to match.
