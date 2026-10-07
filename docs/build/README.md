@@ -28,6 +28,13 @@ Then fill in the contents page and export the PDF with Word (PowerShell):
 .\finalize.ps1 -Docx "$PWD\out\Week3_Requirements_Analysis_v1.1.docx" -Pdf "$PWD\out\Week3_Requirements_Analysis_v1.1.pdf"
 ```
 
+Optional, for Google Drive: Drive's PDF preview may ignore Word's contents links. This makes a
+copy with "go to page" link actions (needs `pip install pypdf`):
+
+```bash
+python fix_links.py out/Week3_Requirements_Analysis_v1.1.pdf out/Week3_Requirements_Analysis_v1.1_drive.pdf
+```
+
 ## Files
 | File | Purpose |
 |---|---|

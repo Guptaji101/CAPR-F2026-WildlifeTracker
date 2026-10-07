@@ -18,6 +18,9 @@ _Last updated: 5 Oct 2026_
 - **29 Sep:** Dashboard redesign (`d934b02`). v1.1 updated to match it.
 - **5 Oct:** Figure 3 redrawn (A type / B Quick Location / C Locate Me, external services).
   Clickable PDF contents. NOTES.md, CLAUDE.md, and `docs/build` scripts added.
+- **7 Oct:** Contents links didn't click in Google Drive's PDF preview. Made
+  `Downloads\Week3_Requirements_Analysis_v1.1_drive.pdf` with "go to page" link actions
+  (`docs/build/fix_links.py`). **Not yet confirmed in Drive.**
 
 ## What the project is
 
@@ -111,6 +114,9 @@ Finalization Nov 26 · Presentation Dec 2 (Group 3 is in Presentation 1).
 - [ ] The latest v1.1 `.docx` is in Downloads. The `.pdf` there may be older if it was open in
       a viewer; rebuild with `docs/build` (see its README) and copy it over. Confirm the
       Requirement Specification submission and add a contribution row for the v1.1 revision.
+- [ ] Upload `Week3_Requirements_Analysis_v1.1_drive.pdf` to Drive and test the contents links.
+      If they work, add `fix_links.py` as a standard build step. If not, use the Drive bookmarks
+      panel or open the .docx with Google Docs.
 - [ ] Decide whether to keep **Fish** (remove the group in `app.js` `GROUPS` and the checkbox if not).
 - [ ] Each member writes their **individual progress PDF** (tasks, timeline, tools).
 - [ ] **System Design (Oct 17):** ERD, data flow, UI wireframes or mockups. Decide whether MySQL
