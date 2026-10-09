@@ -12,26 +12,13 @@ if (!$speciesKey) {
     exit;
 }
 
-function gbif_get(string $url): ?array {
-    $ch = curl_init($url);
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT        => 15,
-        CURLOPT_ENCODING       => '',
-        CURLOPT_USERAGENT      => 'CAPR-F2026-WildlifeTracker/1.0 (student project)',
-        CURLOPT_HTTPHEADER     => ['Accept: application/json'],
-    ]);
-    $raw  = curl_exec($ch);
-    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-    if ($raw === false || $code !== 200) return null;
-    return json_decode($raw, true);
-}
 
 // --- species_cache (System Design, Section 4.6) -------------------------------
 // The cache is optional: if MySQL can't be reached, every function below fails
 // quietly and the endpoint works straight from GBIF, as before.
 require_once __DIR__ . '/../../includes/db.php';
+require_once __DIR__ . '/../../includes/gbif.php';
+require_once __DIR__ . '/../../includes/wikipedia.php';
 
 const CACHE_DAYS = 30;
 
@@ -77,6 +64,8 @@ function send_species(array $row, string $cacheStatus): void {
         'genus'          => $row['genus'],
         'species'        => $row['species'],
         'imageUrl'       => $row['image_url'],
+        'summary'        => $row['summary'],
+        'wikiUrl'        => $row['wiki_url'],
         'gbifUrl'        => "https://www.gbif.org/species/{$row['species_key']}",
     ]);
     exit;
@@ -105,10 +94,17 @@ if ($media && !empty($media['results'][0]['identifier'])) {
     $imageUrl = $media['results'][0]['identifier'];
 }
 
+// ...and a short description from Wikipedia (best-effort; used by the Encyclopedia)
+$wiki = wiki_summary($species['species'] ?? $species['canonicalName'] ?? null);
+$wikiReached = $wiki !== false;
+$wiki = $wiki ?: null;
+// Wikipedia's page title is the English name, unless the page is only titled by the scientific name
+$wikiName = ($wiki && $wiki['title'] !== ($species['species'] ?? null)) ? $wiki['title'] : null;
+
 $row = [
     'species_key'     => $speciesKey,
     'scientific_name' => $species['scientificName'] ?? $species['canonicalName'] ?? null,
-    'vernacular_name' => $species['vernacularName'] ?? null,
+    'vernacular_name' => $species['vernacularName'] ?? $wikiName,
     'taxon_rank'      => $species['rank'] ?? null,
     'kingdom'         => $species['kingdom'] ?? null,
     'phylum'          => $species['phylum'] ?? null,
@@ -117,9 +113,14 @@ $row = [
     'family'          => $species['family'] ?? null,
     'genus'           => $species['genus'] ?? null,
     'species'         => $species['species'] ?? null,
-    'image_url'       => $imageUrl,
+    // Wikipedia's lead photo first: chosen by editors and small. GBIF species media are often
+    // full-size originals or figures from scientific papers, so they are only the fallback.
+    'image_url'       => $wiki['image'] ?? $imageUrl,
+    'summary'         => $wiki['summary'] ?? null,
+    'wiki_url'        => $wiki['url'] ?? null,
 ];
 
-// Rule 4: save it for the next visitor, then return it
-cache_save($row);
+// Rule 4: save it for the next visitor, then return it. If Wikipedia couldn't be reached,
+// don't save, so the next request tries again instead of keeping "no summary" for 30 days.
+if ($wikiReached) cache_save($row);
 send_species($row, 'MISS');

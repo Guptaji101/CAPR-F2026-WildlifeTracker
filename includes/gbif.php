@@ -140,3 +140,23 @@ function gbif_sample_fallback(float $lat, float $lng): array
         ],
     ];
 }
+
+/**
+ * Simple GET request to GBIF (one attempt). Returns the decoded JSON, or null on any error.
+ * Used by species.php and encyclopedia.php.
+ */
+function gbif_get(string $url): ?array {
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT        => 15,
+        CURLOPT_ENCODING       => '',
+        CURLOPT_USERAGENT      => 'CAPR-F2026-WildlifeTracker/1.0 (student project)',
+        CURLOPT_HTTPHEADER     => ['Accept: application/json'],
+    ]);
+    $raw  = curl_exec($ch);
+    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    if ($raw === false || $code !== 200) return null;
+    return json_decode($raw, true);
+}
