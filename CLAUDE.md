@@ -21,12 +21,16 @@ Run it at `http://localhost/CAPR-F2026-WildlifeTracker/public/` (XAMPP, Apache o
   in Word first.
 - **Open decisions:** ask before removing the Fish animal group, or adding accounts or a database.
 - **Secrets:** `config/config.php` is git-ignored; never commit it.
-- **Browser caching:** CSS/JS links are versioned by file time in `public/index.php`; keep that.
+- **Browser caching:** CSS/JS links are versioned by file time in `public/index.php` and `public/encyclopedia.php`;
+  keep that.
 
 ## Key files
-- `public/index.php`: dashboard page. `public/js/app.js`: all frontend logic. `public/css/style.css`: styles.
-- `public/api/geocode.php`, `sightings.php`, `species.php`: JSON endpoints.
-- `includes/gbif.php`: GBIF client (retry ×3, sample-data fallback for NFR-04).
+- `public/index.php`: Map page (home). `public/js/app.js`: its logic. `public/css/style.css`: shared styles.
+- `public/encyclopedia.php` + `js/encyclopedia.js` + `css/encyclopedia.css`: Animal Encyclopedia.
+- `public/partials/header.php`: top bar shared by both pages (Map | Encyclopedia | About).
+- `public/api/geocode.php`, `sightings.php`, `species.php`, `encyclopedia.php`: JSON endpoints.
+- `includes/gbif.php`: GBIF client (retry ×3, sample-data fallback for NFR-04, `gbif_get()`).
+- `includes/wikipedia.php`: species summary from Wikipedia (cached in `species_cache`).
 
 ## Quick checks after changes
 ```bash
@@ -35,7 +39,8 @@ Run it at `http://localhost/CAPR-F2026-WildlifeTracker/public/` (XAMPP, Apache o
 ```bash
 node --check public/js/app.js
 ```
-Then open the app in the browser and confirm pins, the table, and the Species Profile load.
+Then open the app in the browser: on the Map page the pins, the table and the Species Profile load;
+on the Encyclopedia page the cards fill with photos and summaries.
 
 ## End of every session
 Update **NOTES.md** (what was done, decisions, to-dos), then commit and push it, so the next

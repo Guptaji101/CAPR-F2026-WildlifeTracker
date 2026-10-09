@@ -1,13 +1,12 @@
 # Handoff Notes — WildTrack (CAPR-F2026, Group 3)
 
-_Last updated: 7 Oct 2026_
+_Last updated: 9 Oct 2026_
 
 ## How to resume in a new Claude Code chat
 1. Start Claude Code in this folder (`C:\xampp\htdocs\CAPR-F2026-WildlifeTracker`).
    `CLAUDE.md` is read automatically and points here.
 2. Paste one clear starter prompt, for example:
    - `Read NOTES.md. Next task: System Design for Oct 17 — draft the ERD and data-flow diagram.`
-   - `Read NOTES.md. Next task: build the landing page from the prototype.`
    - `Read NOTES.md. Decide with me whether to keep the Fish group, then update the app and the document.`
 3. At the end of the session, ask: `Update NOTES.md with what we did and push it.`
 
@@ -32,6 +31,27 @@ _Last updated: 7 Oct 2026_
   4.6, `X-Cache: HIT/MISS/STALE` header for testing); credited to Singh in the document.
   Local DB reset from `sql/schema.sql` (old tables were empty). Tested: second view of a
   species 1.5 s → 0.006 s; expired rows refresh; missing table falls back to GBIF.
+- **7 Oct (night, earlier):** Landing page built (`public/index.php` + `css/landing.css`) from the
+  prototype, with the app's six animal groups (same colors/icons as the pins), working links,
+  and a responsive layout (tested at 1024 px and 375 px). Dashboard moved to `public/map.php`;
+  its Home item and logo go back to the landing page. (Removed again later the same night.)
+- **7 Oct (late night), after professor feedback:**
+  - Landing page **removed** (too little information, not relevant); Map page is `index.php` again.
+  - Removed the EN / Guest buttons and the left Home / Map / Species / About buttons (duplicates).
+  - New shared header `partials/header.php`: Map | Encyclopedia | About, sticky while scrolling.
+    The base-map tab "Map" was renamed "Street" so it isn't confused with the Map page link.
+  - **Animal Encyclopedia** (`encyclopedia.php`): classification tree (5 vertebrate + 7
+    invertebrate groups), South Korea / Worldwide, the 24 most-recorded species per group as
+    cards (GBIF facets), detail dialog with IUCN status, top countries, taxonomy, Wikipedia and
+    GBIF links. No database: GBIF is the source; `species.php` now adds a Wikipedia summary and
+    photo (new `species_cache` columns `summary`, `wiki_url`; image prefers Wikipedia's).
+  - Wikipedia rate-limits clients without a contact link (HTTP 429): `wikipedia.php` sends a
+    User-Agent with the GitHub URL, and failed lookups are not cached.
+  - System Design rewritten in more detail (20 pages): conceptual schema (Chen), updated ERD,
+    DFDs (Wikipedia, process 5.0), wireframes of Map + Encyclopedia with "what it does" for every
+    element, the GBIF button explained (6.3), messages table (6.5), FR-12 proposed.
+  - Landing-page files were never committed (a temporary copy existed only in that session).
+- **9 Oct:** Decisions discussed (see Decisions). All work from 7 Oct committed and pushed.
 
 ## What the project is
 
@@ -74,7 +94,8 @@ by animal group / date / radius, and open a species profile with photo and taxon
   - Use case diagram, architecture diagram, and two flowcharts. Figure 3 shows the three ways
     to choose a location (A type / B Quick Location / C Locate Me) and the external services.
   - Clickable table of contents, plus PDF bookmarks.
-- Landing page **prototype** (`docs/prototypes/landing.html`, HTML mock-up only, not built into the app).
+- Landing page **prototype** (`docs/prototypes/landing.html`): built, then removed after the professor's
+  feedback (too little information, not relevant). Kept in docs only as history.
 
 ## Decisions made
 - **Animal groups:** Mammals, Birds, Reptiles, Amphibians, Fish, Invertebrates, as in the mockup.
@@ -93,6 +114,12 @@ by animal group / date / radius, and open a species profile with photo and taxon
   refreshed after 30 days), read and written by `species.php`. `saved_locations` and
   `search_history` were dropped (need accounts / no use case). Occurrences are never stored.
 - **Google Drive:** upload the `_drive.pdf` made by `fix_links.py`; its contents links work there.
+- **No animal database (9 Oct):** GBIF and Wikipedia are the data sources; only the
+  `species_cache` table is kept (speed, fewer API calls / Wikipedia rate limits, old copy if GBIF
+  is down). The site still works without MySQL. Revisit only if free-tier hosting can't run MySQL.
+- **Encyclopedia: ask the professor first (9 Oct).** Recommended direction if approved: make it
+  a local "Field Guide" for the place searched on the map (same radius), link Map ↔ Encyclopedia
+  both ways, and drop/hide "Worldwide" (obscure deep-sea species without descriptions).
 - **AI use:** commits made with AI help carry a `Co-Authored-By` line, in line with the syllabus.
 
 ## File structure
@@ -115,7 +142,9 @@ CAPR-F2026-WildlifeTracker/
 │   ├── gbif.php              GBIF client: query builder, retry ×3, sample-data fallback
 │   └── db.php                PDO connection (not used yet)
 ├── public/                   web root
-│   ├── index.php             dashboard page
+│   ├── index.php             Map page (home)
+│   ├── encyclopedia.php      Animal Encyclopedia page
+│   ├── partials/header.php   shared top bar (Map | Encyclopedia | About) + About dialog
 │   ├── css/style.css         all styles
 │   ├── js/app.js             app logic: search, filters, map, table, profile
 │   └── api/
@@ -135,17 +164,20 @@ Finalization Nov 26 · Presentation Dec 2 (Group 3 is in Presentation 1).
 - [x] Drive contents links tested: the `_drive.pdf` works; `fix_links.py` is a standard step.
 - [ ] Decide whether to keep **Fish** (remove the group in `app.js` `GROUPS` and the checkbox if not).
 - [ ] Each member writes their **individual progress PDF** (tasks, timeline, tools).
-- [ ] **System Design (Oct 17):** v1.0 complete in Downloads. Team: review it together (every
-      member must be able to explain the ERD, DFDs and wireframes; Singh must be able to explain
-      the cache code in `species.php`), adjust the contribution table if needed, then upload
-      `System_Design_v1.0_drive.pdf` and submit.
+- [ ] **System Design (Oct 17):** v1.0 (20 pages) in Downloads. Team: review it together (every
+      member must be able to explain the conceptual schema, ERD, DFDs and wireframes; Singh the
+      cache code in `species.php` and `encyclopedia.php`), adjust the contribution table if
+      needed, then upload `System_Design_v1.0_drive.pdf` and submit.
+- [ ] **Ask the professor** whether the Encyclopedia (as a local Field Guide) is in scope.
+- [ ] If yes: make it local to the map location + Map ↔ Encyclopedia links (see Decisions).
+- [ ] **Requirements Analysis v1.2** (after the professor's answer): add FR-12 Animal Encyclopedia + a use case for it; update
+      Figure 2 / Section 13 (one cache table), the header (no EN/Guest) and the removed buttons.
+- [ ] Each teammate resets their DB again (schema has new `summary`, `wiki_url` columns).
 - [x] `species_cache` wired into `species.php`. Each teammate resets their local DB:
       `DROP DATABASE wildlife_tracker`, then import `sql/schema.sql`. Still untested: the
       "GBIF down, serve old row" rule (needs GBIF to fail).
-- [ ] Landing prototype uses different animal groups (Insects, …) than the app; the wireframe
-      uses the app's six groups. Align the prototype when the landing page is built.
 - [ ] If v1.1 is revised again: its Figure 2 and Section 13 still describe three planned tables.
-- [ ] **Landing page:** review the prototype, agree changes, then build it in front of the map page.
+- [x] Landing page removed (professor feedback). Map page is the home page again (index.php).
 - [ ] Choose **one specific end user and one community-impact feature** (the instructor's
       "think outside the box" note), and update the objectives, FRs and use cases to match.
 - [ ] **Performance:** GBIF took about 15 s for Jeju in testing, against NFR-01's ~5 s target.
@@ -153,7 +185,7 @@ Finalization Nov 26 · Presentation Dec 2 (Group 3 is in Presentation 1).
       fallback appears. Consider a shorter timeout.
 - [ ] Teammates should commit from their **own GitHub accounts**; set up a GitHub Issues /
       Projects task board.
-- [ ] Update `README.md` with the new dashboard and animal groups.
+- [ ] Update `README.md` with the Map and Encyclopedia pages and the animal groups.
 - [x] Document build scripts are now in `docs/build` (see its README to rebuild).
 - [ ] Before deployment, check Esri tile terms and test on Chrome, Firefox and Edge (NFR-02)
       and at small screen widths (NFR-06).

@@ -156,8 +156,7 @@ function useCaseDiagram() {
 /* ------------------------------------------------------------------ */
 /* Figure 2 - System architecture                                      */
 /* ------------------------------------------------------------------ */
-// design = true draws the System Design version (species_cache connected to species.php)
-function architecture(design = false) {
+function architecture() {
   const W = 1160, H = 790;
   let b = '';
   // Tier container with a coloured side band carrying a rotated label (keeps arrows clear of titles)
@@ -192,19 +191,11 @@ function architecture(design = false) {
   box(cols[2][0], 298, cols[2][1], 392, 'species.php', ['Species API', 'taxonomy + photo']);
   box(cols[1][0], 446, cols[1][1], 540, 'includes/gbif.php', ['GBIF client: query builder,', 'retry ×3, sample dataset']);
 
-  if (design) {
-    // System Design: one cache table, read and written by species.php
-    b += rectXY(882, 430, 1140, 560, { fill: C.greenFill, stroke: C.green, sw: 1.6, rx: 6 });
-    b += lines(1011, 495, [{ t: 'MySQL · wildlife_tracker', s: 16.5, w: 'bold' }, { t: 'species_cache', s: 14.5, c: '#374151' }, { t: '(taxonomy + photo,', s: 13.5, i: true, c: C.grey }, { t: 'kept for 30 days)', s: 13.5, i: true, c: C.grey }]);
-    b += poly([[796, 345], [846, 345], [846, 495], [880, 495]], { marker: 'arrow' });
-    b += tag(846, 420, 'db.php', { s: 13, w: 'normal' });
-  } else {
-    // Database (designed, not yet connected)
-    b += rectXY(882, 430, 1140, 560, { fill: '#fff', stroke: C.grey, sw: 1.6, rx: 6, dash: '7 5' });
-    b += lines(1011, 495, [{ t: 'MySQL · wildlife_tracker', s: 16.5, w: 'bold' }, { t: 'saved_locations', s: 14.5, c: '#374151' }, { t: 'search_history · species_cache', s: 14.5, c: '#374151' }, { t: '(designed — not yet connected)', s: 13.5, i: true, c: C.grey }]);
-    b += poly([[812, 495], [880, 495]], { dash: '6 5' });
-    b += tag(846, 477, 'db.php', { s: 13, w: 'normal', bg: 'none' });
-  }
+  // Database (designed, not yet connected)
+  b += rectXY(882, 430, 1140, 560, { fill: '#fff', stroke: C.grey, sw: 1.6, rx: 6, dash: '7 5' });
+  b += lines(1011, 495, [{ t: 'MySQL · wildlife_tracker', s: 16.5, w: 'bold' }, { t: 'saved_locations', s: 14.5, c: '#374151' }, { t: 'search_history · species_cache', s: 14.5, c: '#374151' }, { t: '(designed — not yet connected)', s: 13.5, i: true, c: C.grey }]);
+  b += poly([[812, 495], [880, 495]], { dash: '6 5' });
+  b += tag(846, 477, 'db.php', { s: 13, w: 'normal', bg: 'none' });
 
   // Tier 3: external data services
   tier(625, 770, 'EXTERNAL', '', C.amberFill, C.amberStroke);
@@ -224,6 +215,77 @@ function architecture(design = false) {
   b += tag(mid(0), 592, 'geocoding request', { s: 13.5, w: 'normal' });
   b += tag(mid(1), 592, 'occurrence search', { s: 13.5, w: 'normal' });
   b += tag(mid(2), 592, 'species + media', { s: 13.5, w: 'normal' });
+  return svg(W, H, b);
+}
+
+/* ------------------------------------------------------------------ */
+/* System Design - architecture (map page + encyclopedia, cache, Wikipedia) */
+/* ------------------------------------------------------------------ */
+function architectureDesign() {
+  const W = 1180, H = 800;
+  let b = '';
+  const tier = (y0, y1, l1, l2, fill, stroke) => {
+    b += rectXY(20, y0, 812, y1, { fill, stroke, sw: 1.8, rx: 10 });
+    b += `<path d="M30,${y0} h28 v${y1 - y0} h-28 a10,10 0 0 1 -10,-10 v-${y1 - y0 - 20} a10,10 0 0 1 10,-10 z" fill="${stroke}"/>`;
+    const cy = (y0 + y1) / 2;
+    b += `<text transform="rotate(-90 44 ${cy})" x="44" y="${cy + 5}" font-family="${FONT}" font-size="15" font-weight="bold" fill="#fff" text-anchor="middle">${esc(l1)}${l2 ? ` · ${esc(l2)}` : ''}</text>`;
+  };
+  const box = (x0, y0, x1, y1, title, sub, o = {}) => {
+    b += rectXY(x0, y0, x1, y1, { fill: o.fill || '#fff', stroke: o.stroke || C.line, sw: 1.5, rx: 6 });
+    b += lines((x0 + x1) / 2, (y0 + y1) / 2, [{ t: title, s: o.ts || 15.5, w: 'bold' }, ...sub.map(t => ({ t, s: 13, c: '#374151' }))]);
+  };
+  const c3 = [[80, 306], [326, 552], [572, 796]];            // client tier: 3 columns
+  const c4 = [[80, 245], [259, 424], [438, 617], [631, 796]];  // server tier: 4 endpoints
+  const m3 = i => (c3[i][0] + c3[i][1]) / 2, m4 = i => (c4[i][0] + c4[i][1]) / 2;
+
+  // Tier 1: browser
+  tier(20, 205, 'CLIENT', 'browser', C.blueFill, C.blueStroke);
+  box(c3[0][0], 40, c3[0][1], 188, 'User Interface', ['index.php: map dashboard', 'encyclopedia.php', 'partials/header.php:', 'shared top bar']);
+  box(c3[1][0], 40, c3[1][1], 188, 'Client Logic', ['app.js: search, filters,', 'pins, table, profile', 'encyclopedia.js: tree,', 'cards, detail dialog']);
+  box(c3[2][0], 40, c3[2][1], 188, 'Leaflet.js', ['interactive map', 'color-coded pins', 'base-map tabs · scale', 'radius circle + label']);
+  b += rectXY(882, 40, 1160, 190, { fill: C.amberFill, stroke: C.amberStroke, sw: 1.6, rx: 6 });
+  b += lines(1021, 115, [{ t: '«external»', s: 12, i: true, c: C.grey }, { t: 'Map tiles and photos', s: 15.5, w: 'bold' },
+    { t: 'OpenStreetMap, Esri tiles', s: 13, c: '#374151' }, { t: 'iNaturalist, Wikimedia', s: 13, c: '#374151' }, { t: '(loaded by the browser)', s: 12.5, i: true, c: C.grey }]);
+  b += poly([[796, 115], [880, 115]]);
+
+  // Tier 2: server
+  tier(270, 575, 'SERVER', 'Apache + PHP', C.greenFill, C.green);
+  box(c4[0][0], 296, c4[0][1], 392, 'geocode.php', ['place name', '→ lat/lng'], { ts: 15 });
+  box(c4[1][0], 296, c4[1][1], 392, 'sightings.php', ['sightings near', 'a point + filters'], { ts: 15 });
+  box(c4[2][0], 296, c4[2][1], 392, 'encyclopedia.php', ['top species per', 'group · facts'], { ts: 15 });
+  box(c4[3][0], 296, c4[3][1], 392, 'species.php', ['taxonomy, photo,', 'summary (cached)'], { ts: 15 });
+  box(c4[1][0], 450, c4[2][1], 530, 'includes/gbif.php', ['GBIF client: retry ×3, sample dataset, gbif_get()'], { fill: '#fbfdfb' });
+  box(c4[3][0] + 46, 450, c4[3][1], 530, 'wikipedia.php', ['article summary'], { fill: '#fbfdfb', ts: 14 });
+
+  // Database: one cache table, read and written by species.php
+  b += rectXY(882, 430, 1160, 575, { fill: C.greenFill, stroke: C.green, sw: 1.6, rx: 6 });
+  b += lines(1021, 502, [{ t: 'MySQL · wildlife_tracker', s: 15.5, w: 'bold' }, { t: 'species_cache', s: 13.5, c: '#374151' },
+    { t: 'taxonomy, photo, summary', s: 12.5, i: true, c: C.grey }, { t: 'kept for 30 days', s: 12.5, i: true, c: C.grey }]);
+  b += poly([[796, 344], [846, 344], [846, 502], [880, 502]]);
+  b += tag(846, 420, 'db.php', { s: 13, w: 'normal' });
+
+  // Tier 3: external data services
+  tier(640, 780, 'EXTERNAL', '', C.amberFill, C.amberStroke);
+  box(c4[0][0], 662, c4[0][1], 758, 'Nominatim', ['OpenStreetMap', 'geocoding'], { ts: 15 });
+  box(c4[1][0], 662, c4[2][1], 758, 'GBIF API  (api.gbif.org/v1)', ['/occurrence/search · /species/{key}', '/species/{key}/media · /iucnRedListCategory'], { ts: 15 });
+  box(c4[3][0], 662, c4[3][1], 758, 'Wikipedia', ['REST API', 'page summary'], { ts: 15 });
+
+  // Browser -> PHP endpoints
+  b += poly([[m3(1), 188], [m3(1), 238]], { marker: null });
+  b += poly([[m4(0), 238], [m4(3), 238]], { marker: null });
+  [0, 1, 2, 3].forEach(i => { b += poly([[m4(i), 238], [m4(i), 294]]); });
+  b += tag((m4(0) + m4(1)) / 2 + 10, 238, 'HTTP GET → JSON', { s: 13, w: 'bold' });
+  // Endpoints -> helpers -> external services
+  b += poly([[m4(1), 392], [m4(1), 448]]);
+  b += poly([[m4(2), 392], [m4(2), 448]]);
+  b += poly([[c4[3][0] + 20, 392], [c4[3][0] + 20, 490], [c4[2][1] + 2, 490]]);
+  b += poly([[c4[3][1] - 60, 392], [c4[3][1] - 60, 448]]);
+  b += poly([[m4(0), 392], [m4(0), 660]]);
+  b += poly([[(c4[1][0] + c4[2][1]) / 2, 530], [(c4[1][0] + c4[2][1]) / 2, 660]]);
+  b += poly([[(c4[3][0] + 46 + c4[3][1]) / 2, 530], [(c4[3][0] + 46 + c4[3][1]) / 2, 660]]);
+  b += tag(m4(0), 600, 'geocoding', { s: 12.5, w: 'normal' });
+  b += tag((c4[1][0] + c4[2][1]) / 2, 600, 'occurrences, species, IUCN status', { s: 12.5, w: 'normal' });
+  b += tag((c4[3][0] + 46 + c4[3][1]) / 2, 600, 'summary', { s: 12.5, w: 'normal' });
   return svg(W, H, b);
 }
 
@@ -454,12 +516,12 @@ const KIND = {
 const ROW = 25, HEAD = 54;
 
 // Entity box: header with name and storage note, then rows of [key, attribute, type]
-function entity(x0, y0, w, name, kind, attrs) {
+function entity(x0, y0, w, name, kind, attrs, note) {
   const k = KIND[kind];
   const h = HEAD + attrs.length * ROW + 10;
   let s = rectXY(x0, y0, x0 + w, y0 + h, { fill: '#fff', stroke: k.stroke, sw: 1.8, rx: 6 });
   s += `<path d="M${x0 + 6},${y0} h${w - 12} a6,6 0 0 1 6,6 v${HEAD - 6} h-${w} v-${HEAD - 6} a6,6 0 0 1 6,-6 z" fill="${k.stroke}"/>`;
-  s += lines(x0 + w / 2, y0 + HEAD / 2, [{ t: name, s: 17, w: 'bold', c: '#fff' }, { t: k.note, s: 12.5, i: true, c: '#fff' }]);
+  s += lines(x0 + w / 2, y0 + HEAD / 2, [{ t: name, s: 17, w: 'bold', c: '#fff' }, { t: note || k.note, s: 12.5, i: true, c: '#fff' }]);
   attrs.forEach(([key, col, type], i) => {
     const cy = y0 + HEAD + 5 + ROW * i + ROW / 2;
     if (i % 2) s += `<rect x="${x0 + 1}" y="${cy - ROW / 2}" width="${w - 2}" height="${ROW}" fill="${k.fill}"/>`;
@@ -497,7 +559,7 @@ function relation(pts, kA, kB, label, lp, anchor = 'middle') {
 }
 
 function erd() {
-  const W = 1260, H = 640;
+  const W = 1260, H = 720;
   let b = '';
   // Relationships first, so the entity boxes and symbols sit on top
   b += relation([[310, 150], [450, 150]], '1', '0..*', 'returns', [380, 122]);
@@ -510,8 +572,9 @@ function erd() {
     ['', 'from_date', 'date'], ['', 'to_date', 'date'], ['', 'max_records', '30–300'],
   ]);
   b += entity(30, 420, 280, 'ANIMAL_GROUP', 'browser', [
-    ['PK', 'group_id', 'text'], ['', 'label', 'text'], ['', 'color', 'hex'], ['', 'icon', 'text'], ['', 'gbif_taxon_keys', 'int list'],
-  ]);
+    ['PK', 'group_id', 'text'], ['', 'label', 'text'], ['', 'division', 'text'], ['', 'description', 'text'],
+    ['', 'color', 'hex'], ['', 'icon', 'text'], ['', 'gbif_taxon_keys', 'int list'],
+  ], 'fixed lists: app.js, encyclopedia.php');
   b += entity(450, 60, 330, 'OCCURRENCE', 'gbif', [
     ['PK', 'occurrence_key', 'bigint'], ['FK', 'species_key', 'int (optional)'], ['FK', 'group_id', 'from class'],
     ['', 'scientific_name', 'text'], ['', 'common_name', 'text'], ['', 'taxon_class', 'text'], ['', 'latitude', 'decimal'],
@@ -521,23 +584,88 @@ function erd() {
     ['PK', 'species_key', 'INT UNSIGNED'], ['', 'scientific_name', 'VARCHAR(200)'], ['', 'vernacular_name', 'VARCHAR(200)'],
     ['', 'taxon_rank', 'VARCHAR(20)'], ['', 'kingdom', 'VARCHAR(100)'], ['', 'phylum', 'VARCHAR(100)'], ['', 'class_name', 'VARCHAR(100)'],
     ['', 'order_name', 'VARCHAR(100)'], ['', 'family', 'VARCHAR(100)'], ['', 'genus', 'VARCHAR(100)'], ['', 'species', 'VARCHAR(200)'],
-    ['', 'image_url', 'VARCHAR(500)'], ['', 'cached_at', 'TIMESTAMP'],
+    ['', 'image_url', 'VARCHAR(500)'], ['', 'summary', 'TEXT'], ['', 'wiki_url', 'VARCHAR(300)'], ['', 'cached_at', 'TIMESTAMP'],
   ]);
 
   // Legend: where the data lives, and how to read the line ends
-  b += rectXY(680, 478, 1240, 625, { fill: '#fff', stroke: '#cbd2d9', sw: 1, rx: 6 });
+  b += rectXY(680, 548, 1240, 695, { fill: '#fff', stroke: '#cbd2d9', sw: 1, rx: 6 });
   [['db', 'Stored in MySQL'], ['gbif', 'Fetched live from GBIF'], ['browser', 'Held in the browser']].forEach(([k, t], i) => {
-    const y = 512 + i * 36;
+    const y = 582 + i * 36;
     b += rect(712, y, 34, 20, { fill: KIND[k].stroke, stroke: KIND[k].stroke, rx: 3 });
     b += lines(740, y, [{ t, s: 13.5 }], 'start');
   });
   [['1', 'exactly one'], ['0..1', 'zero or one'], ['1..*', 'one or more'], ['0..*', 'zero or more']].forEach(([k, t], i) => {
-    const y = 500 + i * 33, e = 1020;
+    const y = 570 + i * 33, e = 1020;
     b += `<line x1="${e}" y1="${y - 12}" x2="${e}" y2="${y + 12}" stroke="${C.ink}" stroke-width="2.4"/>`;
     b += poly([[e, y], [e - 58, y]], { marker: null, stroke: C.ink, sw: 1.8 }) + crow([e, y], [-1, 0], k);
     b += lines(1034, y, [{ t: `${k}  ${t}`, s: 13.5 }], 'start');
   });
   return svg(W, H, b);
+}
+
+/* ------------------------------------------------------------------ */
+/* System Design - Conceptual schema (Chen notation)                   */
+/* ------------------------------------------------------------------ */
+function conceptualSchema() {
+  const W = 1300, H = 940;
+  let lns = '', shapes = '';
+  // Line between two shapes; total participation is drawn as a double line
+  const link = ([x1, y1], [x2, y2], total = false) => {
+    if (!total) { lns += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${C.ink}" stroke-width="1.6"/>`; return; }
+    const L = Math.hypot(x2 - x1, y2 - y1), ox = -(y2 - y1) / L * 3, oy = (x2 - x1) / L * 3;
+    [1, -1].forEach(k => { lns += `<line x1="${x1 + ox * k}" y1="${y1 + oy * k}" x2="${x2 + ox * k}" y2="${y2 + oy * k}" stroke="${C.ink}" stroke-width="1.5"/>`; });
+  };
+  const ent = ([x, y], name) => {
+    shapes += rect(x, y, 190, 58, { fill: C.blueFill, stroke: C.blueStroke, sw: 2, rx: 2 }) + lines(x, y, [{ t: name, s: 17, w: 'bold' }]);
+  };
+  const rel = ([x, y], name) => {
+    shapes += diamond(x, y, 170, 74, { fill: C.decFill, stroke: C.decStroke, sw: 2 }) + lines(x, y, [{ t: name, s: 13, w: 'bold' }]);
+  };
+  // Attribute oval: o.key underlines the name, o.multi draws a double oval, o.derived a dashed one
+  const attr = ([x, y], name, o = {}) => {
+    const rx = Math.max(52, name.length * 4.3 + 18), ry = 21;
+    shapes += `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="#fff" stroke="${C.green}" stroke-width="1.6"${o.derived ? ' stroke-dasharray="5 4"' : ''}/>`;
+    if (o.multi) shapes += `<ellipse cx="${x}" cy="${y}" rx="${rx - 5}" ry="${ry - 5}" fill="none" stroke="${C.green}" stroke-width="1.3"/>`;
+    shapes += lines(x, y, [{ t: name, s: 13.5, w: o.key ? 'bold' : 'normal' }]);
+    if (o.key) shapes += `<line x1="${x - name.length * 3.9}" y1="${y + 9}" x2="${x + name.length * 3.9}" y2="${y + 9}" stroke="${C.ink}" stroke-width="1.2"/>`;
+  };
+  const card = ([x, y], t) => { shapes += lines(x, y, [{ t, s: 15, w: 'bold', c: C.errStroke }]); };
+  const has = (e, pts, specs) => pts.forEach((p, i) => { link(e, p); attr(p, ...specs[i]); });
+
+  const S = [360, 230], G = [360, 640], O = [940, 230], P = [940, 640];
+  const R1 = [650, 230], R2 = [360, 435], R3 = [650, 640], R4 = [940, 435], R5 = [760, 357];
+
+  // Relationships with cardinality (red) and participation
+  link(S, R1); link(R1, O);                 card([470, 214], '1'); card([830, 214], 'N');
+  link(S, R2, true); link(R2, G);           card([376, 305], 'M'); card([376, 568], 'N');
+  link(G, R3); link(R3, P, true);           card([470, 624], '1'); card([830, 624], 'N');
+  link(O, R4); link(R4, P);                 card([956, 305], 'N'); card([956, 568], '1');
+  link(G, R5); link(R5, O, true);           card([455, 548], '1'); card([888, 304], 'N');
+
+  // Attributes
+  has(S, [[205, 110], [360, 100], [520, 110]], [['place_name'], ['radius_km'], ['max_records']]);
+  link(S, [175, 235]); attr([175, 235], 'location');
+  has([175, 235], [[70, 175], [70, 300]], [['latitude'], ['longitude']]);
+  link(S, [525, 335]); attr([525, 335], 'date_range');
+  has([525, 335], [[455, 400], [605, 395]], [['from_date'], ['to_date']]);
+
+  has(G, [[175, 645], [185, 555], [215, 765], [385, 800], [555, 765]],
+    [['group_id', { key: true }], ['taxon_keys', { multi: true }], ['name'], ['division'], ['description']]);
+
+  has(O, [[960, 95], [780, 110], [1110, 110], [1185, 185], [1190, 265], [1165, 340], [1060, 350]],
+    [['occurrence_key', { key: true }], ['latitude'], ['longitude'], ['event_date'], ['locality'], ['country'], ['photo_url']]);
+
+  has(P, [[1160, 590], [1180, 665], [1130, 745], [965, 790], [790, 760], [705, 705], [1150, 505]],
+    [['species_key', { key: true }], ['scientific_name'], ['common_name'], ['taxonomy (kingdom … species)'], ['summary'], ['image_url'],
+      ['record_count', { derived: true }]]);
+
+  ent(S, 'SEARCH'); ent(G, 'ANIMAL_GROUP'); ent(O, 'OCCURRENCE'); ent(P, 'SPECIES');
+  rel(R1, 'RETURNS'); rel(R2, 'FILTERS BY'); rel(R3, 'INCLUDES'); rel(R4, 'IDENTIFIED AS'); rel(R5, 'CLASSIFIES');
+
+  // Legend
+  let lg = rectXY(20, 868, 1280, 920, { fill: '#fff', stroke: '#cbd2d9', sw: 1, rx: 6 });
+  lg += lines(650, 894, [{ t: 'Rectangle = entity  ·  diamond = relationship  ·  oval = attribute (underlined = key, double = multivalued, dashed = derived)  ·  double line = total participation  ·  1, N, M = cardinality', s: 13, c: C.grey }]);
+  return svg(W, H, lns + shapes + lg);
 }
 
 /* ------------------------------------------------------------------ */
@@ -555,7 +683,7 @@ function dfdExt(x0, y0, x1, y1, name, sub) {
   const cy = (y0 + y1) / 2;
   return rectXY(x0 + 5, y0 + 5, x1 + 5, y1 + 5, { fill: '#cbd5e1', stroke: 'none', rx: 2 }) +
     rectXY(x0, y0, x1, y1, { fill: C.extFill, stroke: C.extStroke, sw: 1.8, rx: 2 }) +
-    lines((x0 + x1) / 2, cy, [...name.split('\n').map(t => ({ t, s: 16, w: 'bold' })), ...(sub ? [{ t: sub, s: 12, i: true, c: C.grey }] : [])]);
+    lines((x0 + x1) / 2, cy, [...name.split('\n').map(t => ({ t, s: 16, w: 'bold' })), ...(sub ? sub.split('\n').map(t => ({ t, s: 12, i: true, c: C.grey })) : [])]);
 }
 // Data store: open-ended box with an ID compartment
 function dfdStore(x0, cy, w, id, name, sub) {
@@ -585,32 +713,36 @@ function dfdLegend(x, y) {
 
 // Level 0: the whole system as one process, with every external entity
 function dfdContext() {
-  const W = 1300, H = 650;
+  const W = 1300, H = 720;
   let b = '';
   b += flow([[250, 100], [600, 100], [600, 223]], 'GPS position (with permission)', [425, 86]);
-  b += flow([[250, 290], [513, 290]], 'search and filter choices', [382, 276]);
-  b += flow([[250, 330], [513, 330]], 'selected sighting', [382, 316]);
-  b += flow([[515, 370], [252, 370]], 'map, sightings table,\nspecies profile, messages', [382, 394]);
+  b += flow([[250, 290], [513, 290]], 'search, filters, group choice', [382, 276]);
+  b += flow([[250, 330], [513, 330]], 'selected sighting or species', [382, 316]);
+  b += flow([[515, 370], [252, 370]], 'map, sightings table, species\nprofile, encyclopedia cards', [382, 394]);
   b += flow([[700, 223], [700, 85], [1048, 85]], 'place name', [875, 71]);
   b += flow([[1050, 120], [740, 120], [740, 223]], 'coordinates (lat/lng)', [895, 106]);
   b += flow([[785, 295], [1048, 295]], 'occurrence query; species key', [917, 281]);
-  b += flow([[1050, 365], [787, 365]], 'occurrence records;\ntaxonomy + photo links', [917, 389]);
+  b += flow([[1050, 365], [787, 365]], 'occurrence records, species lists;\ntaxonomy, photo links, IUCN status', [917, 389]);
   b += flow([[1050, 560], [740, 560], [740, 437]], 'map tiles', [895, 546]);
   b += flow([[250, 560], [560, 560], [560, 437]], 'sighting photos', [405, 546]);
 
   b += dfdProc(650, 330, 270, 210, '0', 'WildTrack\nSystem', 'browser + PHP server');
   b += dfdExt(40, 60, 250, 140, 'Device\nGeolocation');
   b += dfdExt(40, 270, 250, 390, 'User', '(no login)');
-  b += dfdExt(40, 520, 250, 600, 'Photo Hosts', 'GBIF media links');
+  b += dfdExt(40, 520, 250, 600, 'Photo Hosts', 'iNaturalist, Wikimedia, …');
   b += dfdExt(1050, 60, 1260, 140, 'Nominatim', 'OpenStreetMap geocoding');
   b += dfdExt(1050, 270, 1260, 390, 'GBIF API', 'occurrence + species');
   b += dfdExt(1050, 520, 1260, 600, 'Map Tile\nServices');
+  // Wikipedia: species summaries for the Encyclopedia
+  b += flow([[625, 437], [625, 618]], 'scientific\nname', [578, 596]);
+  b += flow([[675, 620], [675, 439]], 'summary,\nphoto', [720, 596]);
+  b += dfdExt(545, 620, 755, 700, 'Wikipedia', 'article summaries');
   return svg(W, H, b);
 }
 
 // Level 1: the four main processes and the two data stores
 function dfdLevel1() {
-  const W = 1300, H = 1075, X = 560, PW = 260, PH = 120;
+  const W = 1300, H = 1480, X = 560, PW = 260;
   const L = X - PW / 2, R = X + PW / 2;
   let b = '';
   // Left: device and user
@@ -619,11 +751,15 @@ function dfdLevel1() {
   b += flow([[220, 390], [L - 2, 390]], 'filter choices: groups,\ndates, radius, max records', [324, 362]);
   b += flow([[L, 610], [222, 610]], 'pins, table, legend,\nstatus messages', [324, 582]);
   b += flow([[220, 665], [L - 2, 665]], 'clicked pin or “View”', [324, 651]);
-  b += flow([[L, 870], [222, 870]], 'species profile', [324, 856]);
+  b += flow([[L, 880], [222, 880]], 'species profile (map page)', [324, 866]);
+  b += flow([[220, 1240], [L - 2, 1240]], 'group and region choice,\nclicked card', [324, 1212]);
+  b += flow([[L, 1300], [222, 1300]], 'species cards and\ndetail dialog', [324, 1326]);
   // Down the middle
   b += flow([[X, 210], [X, 328]], 'coordinates +\nplace name', [480, 269]);
   b += flow([[X, 450], [X, 568]], 'sightings (JSON)', [480, 520]);
-  b += flow([[X, 690], [X, 808]], 'selected sighting\n+ species key', [475, 749]);
+  b += flow([[X, 690], [X, 798]], 'selected sighting\n+ species key', [475, 744]);
+  b += flow([[470, 1208], [470, 962]], 'species keys', [400, 1085]);
+  b += flow([[540, 962], [540, 1208]], 'species\ndetails', [592, 1150]);
   // Right: external services
   b += flow([[R, 130], [1078, 130]], 'place name', [885, 116]);
   b += flow([[1080, 170], [R + 2, 170]], 'lat/lng', [885, 184]);
@@ -631,27 +767,34 @@ function dfdLevel1() {
   b += flow([[1080, 410], [R + 2, 410]], 'occurrence records', [885, 424]);
   b += flow([[1080, 590], [R + 2, 590]], 'map tiles', [885, 576]);
   b += flow([[1080, 675], [R + 2, 675]], 'photos', [885, 661]);
-  b += flow([[R, 850], [1078, 850]], 'species key', [885, 836]);
-  b += flow([[1080, 890], [R + 2, 890]], 'taxonomy + photo link', [885, 904]);
+  b += flow([[R, 815], [1078, 815]], 'species key', [885, 801]);
+  b += flow([[1080, 850], [R + 2, 850]], 'taxonomy, photo link', [885, 864]);
+  b += flow([[R, 905], [1078, 905]], 'scientific name', [885, 891]);
+  b += flow([[1080, 945], [R + 2, 945]], 'summary, photo', [885, 959]);
+  b += flow([[R, 1240], [1078, 1240]], 'group taxon keys, country;\nspecies key (facts)', [885, 1212]);
+  b += flow([[1080, 1300], [R + 2, 1300]], 'most-recorded species, counts,\nIUCN status, top countries', [885, 1326]);
   // Data stores
   b += flow([[760, 505], [640, 505], [640, 452]], 'sample records', [700, 491]);
-  b += flow([[520, 930], [520, 980]], 'new species row', [445, 955]);
-  b += flow([[600, 982], [600, 932]], 'cached species', [670, 957]);
+  b += flow([[680, 962], [680, 1068], [798, 1068]], 'new species row', [740, 1054]);
+  b += flow([[800, 1094], [640, 1094], [640, 962]], 'cached species', [740, 1110]);
 
-  b += dfdProc(X, 150, PW, PH, '1.0', 'Resolve\nLocation', 'app.js · geocode.php');
-  b += dfdProc(X, 390, PW, PH, '2.0', 'Retrieve\nSightings', 'sightings.php · gbif.php');
-  b += dfdProc(X, 630, PW, PH, '3.0', 'Display Map\nand Sightings', 'app.js · Leaflet.js');
-  b += dfdProc(X, 870, PW, PH, '4.0', 'Show Species\nProfile', 'app.js · species.php');
+  b += dfdProc(X, 150, PW, 120, '1.0', 'Resolve\nLocation', 'app.js · geocode.php');
+  b += dfdProc(X, 390, PW, 120, '2.0', 'Retrieve\nSightings', 'sightings.php · gbif.php');
+  b += dfdProc(X, 630, PW, 120, '3.0', 'Display Map\nand Sightings', 'app.js · Leaflet.js');
+  b += dfdProc(X, 880, PW, 160, '4.0', 'Get Species\nDetails', 'species.php · wikipedia.php');
+  b += dfdProc(X, 1270, PW, 120, '5.0', 'Browse\nEncyclopedia', 'encyclopedia.js · .php');
   b += dfdStore(760, 505, 260, 'D2', 'Sample Dataset', 'gbif.php · used if GBIF is down');
-  b += dfdStore(430, 1010, 260, 'D1', 'Species Cache', 'MySQL · species_cache');
+  b += dfdStore(800, 1081, 260, 'D1', 'Species Cache', 'MySQL · species_cache');
   b += dfdExt(40, 55, 220, 140, 'Device\nGeolocation');
-  b += dfdExt(40, 165, 220, 950, 'User', '(no login)');
+  b += dfdExt(40, 165, 220, 1340, 'User', '(no login)');
   b += dfdExt(1080, 105, 1260, 195, 'Nominatim', 'geocoding API');
   b += dfdExt(1080, 345, 1260, 435, 'GBIF\nOccurrence API');
   b += dfdExt(1080, 558, 1260, 622, 'Map Tile Services');
   b += dfdExt(1080, 643, 1260, 707, 'Photo Hosts');
-  b += dfdExt(1080, 825, 1260, 915, 'GBIF\nSpecies API');
-  b += dfdLegend(790, 960);
+  b += dfdExt(1080, 790, 1260, 870, 'GBIF\nSpecies API');
+  b += dfdExt(1080, 890, 1260, 970, 'Wikipedia', 'REST API');
+  b += dfdExt(1080, 1215, 1260, 1325, 'GBIF API', 'occurrence facets,\nIUCN Red List');
+  b += dfdLegend(790, 1365);
   return svg(W, H, b);
 }
 
@@ -671,22 +814,27 @@ const wbar = (x, y, w, h = 8) => `<rect x="${x}" y="${y - h / 2}" width="${w}" h
 const callout = (x, y, n) => `<circle cx="${x}" cy="${y}" r="13" fill="${C.green}"/>` +
   lines(x, y, [{ t: String(n), s: 13.5, w: 'bold', c: '#fff' }]);
 
+// Top bar of both pages: logo, subtitle, and the Map | Encyclopedia | About links
+function wfTopbar(W, active) {
+  let b = rectXY(0, 0, W, 54, { fill: '#fff', stroke: WF.line, sw: 1, rx: 0 });
+  b += wimg(20, 15, 44, 39) + wtxt(54, 27, 'WildTrack', { s: 17, w: 'bold' });
+  b += wtxt(160, 27, 'Wildlife Sighting Mapping and Species Distribution Tracker', { s: 12.5, c: WF.dark });
+  [['Map', 1010, 1080], ['Encyclopedia', 1090, 1200], ['About', 1210, 1282]].forEach(([t, x0, x1]) => {
+    if (t === active) b += rectXY(x0, 13, x1, 41, { fill: WF.box, stroke: 'none', rx: 5 });
+    b += wtxt((x0 + x1) / 2, 27, t, { a: 'middle', s: 13, w: t === active ? 'bold' : 'normal' });
+  });
+  return b;
+}
+
 function wfDashboard() {
   const W = 1300, H = 870;
   let b = rectXY(0, 0, W, H, { fill: WF.fill, stroke: 'none', rx: 0 });
-  // Top bar
-  b += rectXY(0, 0, W, 54, { fill: '#fff', stroke: WF.line, sw: 1, rx: 0 });
-  b += wimg(20, 15, 44, 39) + wtxt(54, 27, 'WildTrack', { s: 17, w: 'bold' });
-  b += wtxt(160, 27, 'Wildlife Sighting Mapping and Species Distribution Tracker', { s: 12.5, c: WF.dark });
-  b += wbtn(1110, 14, 1180, 40, 'EN ▾') + wbtn(1192, 14, 1282, 40, 'Guest ▾');
+  b += wfTopbar(W, 'Map');
 
-  // Sidebar
+  // Sidebar: search settings only (drawn 120 px higher than the coordinates below)
   b += rectXY(0, 54, 280, H, { fill: '#fff', stroke: WF.line, sw: 1, rx: 0 });
-  ['Home', 'Map', 'Species', 'About'].forEach((t, i) => {
-    if (!i) b += rectXY(14, 64, 266, 90, { fill: WF.box, stroke: 'none', rx: 5 });
-    b += wtxt(30, 77 + i * 28, t, { w: i ? 'normal' : 'bold' });
-  });
   const title = (y, t) => wtxt(18, y, t, { s: 13.5, w: 'bold' });
+  b += '<g transform="translate(0,-120)">';
   b += title(200, 'Search Location');
   b += wbox(18, 214, 262, 244) + wtxt(30, 229, 'Enter a place name…', { c: '#9ca3af', i: true });
   b += wbtn(18, 252, 262, 280, 'Locate Me', true);
@@ -703,6 +851,7 @@ function wfDashboard() {
   b += title(658, 'Observation Date');
   b += wbox(18, 672, 128, 700) + wtxt(28, 686, 'From', { c: '#9ca3af', s: 12 }) + wtxt(140, 686, '→', { a: 'middle' }) + wbox(152, 672, 262, 700) + wtxt(162, 686, 'To', { c: '#9ca3af', s: 12 });
   b += wbox(18, 718, 262, 746) + wtxt(30, 732, 'Filters  (Max records: 75)', { s: 12.5 }) + wtxt(250, 732, '▾', { a: 'end' });
+  b += '</g>';
 
   // Map card
   b += wbox(300, 72, 940, 500, { fill: '#fff' });
@@ -714,7 +863,7 @@ function wfDashboard() {
     b += `<path d="M${x},${y} c-9,-12 -9,-22 0,-22 c9,0 9,10 0,22z" fill="${WF.dark}"/>`;
   });
   b += wbox(316, 86, 520, 114, { rx: 5 }) + rectXY(318, 88, 382, 112, { fill: WF.box, stroke: 'none', rx: 4 });
-  ['Map', 'Satellite', 'Topographic'].forEach((t, i) => { b += wtxt([350, 410, 478][i], 100, t, { a: 'middle', s: 12, w: i ? 'normal' : 'bold' }); });
+  ['Street', 'Satellite', 'Topographic'].forEach((t, i) => { b += wtxt([350, 410, 478][i], 100, t, { a: 'middle', s: 12, w: i ? 'normal' : 'bold' }); });
   b += wbox(760, 86, 924, 260) + wtxt(774, 104, 'Animal Groups', { s: 12.5, w: 'bold' });
   ['Mammals', 'Birds', 'Reptiles', 'Amphibians', 'Fish', 'Invertebrates'].forEach((t, i) => { const y = 128 + i * 22; b += `<circle cx="782" cy="${y}" r="6" fill="${WF.line}"/>` + wtxt(796, y, t, { s: 12 }); });
   b += wbox(890, 400, 922, 432) + wtxt(906, 416, '+', { a: 'middle', s: 16, w: 'bold' }) + wbox(890, 432, 922, 464) + wtxt(906, 448, '−', { a: 'middle', s: 16, w: 'bold' });
@@ -753,73 +902,77 @@ function wfDashboard() {
   b += wbtn(974, 790, 1270, 826, 'Explore on GBIF Network ↗', true);
 
   // Callouts (see key in the document)
-  [[268, 229, 1], [268, 329, 2], [268, 422, 3], [268, 470, 4], [268, 686, 5], [266, 732, 6],
-    [532, 100, 7], [916, 172, 8], [612, 230, 9], [926, 540, 10], [1274, 300, 11], [1274, 808, 12]]
+  [[996, 27, 1], [268, 109, 2], [268, 209, 3], [268, 302, 4], [268, 350, 5], [268, 566, 6], [266, 612, 7],
+    [532, 100, 8], [916, 172, 9], [612, 230, 10], [926, 540, 11], [1274, 300, 12], [1274, 808, 13]]
     .forEach(([x, y, n]) => { b += callout(x, y, n); });
-  return svg(W, H, b);
+  return svg(FW, H, b);
 }
 
-function wfLanding() {
-  const W = 1100, H = 1290, cx = W / 2;
-  let b = rectXY(0, 0, W, H, { fill: '#fff', stroke: 'none', rx: 0 });
-  // Navigation bar and notice strip
-  b += rectXY(0, 0, W, 60, { fill: '#fff', stroke: WF.line, sw: 1, rx: 0 });
-  b += wimg(24, 18, 48, 42) + wtxt(58, 30, 'WildTrack', { s: 17, w: 'bold' });
-  ['Explore Map', 'How it works', 'Animal groups', 'About'].forEach((t, i) => { b += wtxt(230 + i * 120, 30, t, { s: 13 }); });
-  b += wtxt(860, 30, 'Data from GBIF ↗', { a: 'end', s: 12.5, w: 'bold' });
-  b += wbtn(880, 16, 1056, 44, 'Open the map →', true);
-  b += rectXY(0, 60, W, 96, { fill: WF.fill, stroke: 'none', rx: 0 });
-  b += wtxt(cx, 78, 'No account needed. Search any place and see the animals recorded there — live from GBIF.', { a: 'middle', s: 12.5, c: WF.dark });
+function wfEncyclopedia() {
+  const W = 1300, H = 870, FW = 1820;   // W = the page; the detail dialog is drawn beside it
+  let b = rectXY(0, 0, FW, H, { fill: '#fff', stroke: 'none', rx: 0 }) + rectXY(0, 0, W, H, { fill: WF.fill, stroke: WF.line, sw: 1, rx: 0 });
+  b += wfTopbar(W, 'Encyclopedia');
 
-  // Hero
-  b += wimg(0, 96, W, 430);
-  b += rectXY(250, 160, 850, 380, { fill: 'rgba(255,255,255,0.92)', stroke: WF.line, sw: 1, rx: 8 });
-  b += wtxt(cx, 205, 'Discover the wildlife living around you.', { a: 'middle', s: 28, w: 'bold' });
-  b += wtxt(cx, 248, 'Search any place and see real animal sightings on a map —', { a: 'middle', s: 14, c: WF.dark });
-  b += wtxt(cx, 270, 'birds, mammals, insects and more.', { a: 'middle', s: 14, c: WF.dark });
-  b += wbtn(370, 300, 540, 340, 'Explore the map', true) + wbtn(560, 300, 730, 340, 'How it works');
-  b += wtxt(cx, 362, 'Free · Open data · No login', { a: 'middle', s: 12, c: WF.dark });
-
-  // Features
-  b += wtxt(cx, 470, 'With WildTrack, you can:', { a: 'middle', s: 20, w: 'bold' });
-  [['Search', 'any place, or use your location'], ['See', 'color-coded sightings on a map'], ['Filter', 'by group, date and radius'],
-    ['Learn', 'names, photos and taxonomy'], ['Verify', 'every record at GBIF']].forEach(([t, s], i) => {
-    const x0 = 40 + i * 206;
-    b += wbox(x0, 500, x0 + 190, 640, { fill: WF.fill }) + `<circle cx="${x0 + 95}" cy="538" r="22" fill="${WF.box}" stroke="${WF.line}"/>`;
-    b += wtxt(x0 + 95, 586, t, { a: 'middle', s: 15, w: 'bold' }) + wtxt(x0 + 95, 612, s, { a: 'middle', s: 11.5, c: WF.dark });
-  });
-
-  // Animal groups (the six groups used by the app)
-  b += wtxt(cx, 700, 'Animal groups you can explore', { a: 'middle', s: 20, w: 'bold' });
-  ['Mammals', 'Birds', 'Reptiles', 'Amphibians', 'Fish', 'Invertebrates'].forEach((t, i) => {
-    const x = 125 + i * 170;
-    b += `<circle cx="${x}" cy="768" r="36" fill="${WF.box}" stroke="${WF.line}"/>` + wtxt(x, 826, t, { a: 'middle', s: 13.5, w: 'bold' });
-  });
-
-  // How it works
-  b += rectXY(0, 870, W, 1060, { fill: WF.fill, stroke: 'none', rx: 0 });
-  b += wtxt(cx, 908, 'How it works', { a: 'middle', s: 20, w: 'bold' });
-  [['Pick a place', 'type a city, tap a preset, or Locate Me'], ['See what lives there', 'colored pins within 5–100 km'], ['Tap to learn more', 'photo, taxonomy, GBIF link']]
-    .forEach(([t, s], i) => {
-      const x0 = 70 + i * 330;
-      b += wbox(x0, 935, x0 + 300, 1035) + `<circle cx="${x0 + 34}" cy="968" r="16" fill="${WF.dark}"/>` + wtxt(x0 + 34, 968, String(i + 1), { a: 'middle', s: 14, w: 'bold', c: '#fff' });
-      b += wtxt(x0 + 62, 968, t, { s: 15, w: 'bold' }) + wtxt(x0 + 24, 1006, s, { s: 12, c: WF.dark });
+  // Sidebar: region and classification tree
+  b += rectXY(0, 54, 280, H, { fill: '#fff', stroke: WF.line, sw: 1, rx: 0 });
+  const title = (y, t) => wtxt(18, y, t, { s: 13.5, w: 'bold' });
+  b += title(84, 'Recorded in');
+  b += wbox(18, 98, 120, 122, { rx: 12, fill: WF.dark, stroke: WF.dark }) + wtxt(69, 110, 'South Korea', { a: 'middle', s: 11.5, w: 'bold', c: '#fff' });
+  b += wbox(128, 98, 216, 122, { rx: 12 }) + wtxt(172, 110, 'Worldwide', { a: 'middle', s: 11.5 });
+  const tree = (y, head, note, items) => {
+    b += title(y, head) + wtxt(18, y + 20, note, { s: 11.5, c: WF.dark });
+    items.forEach((t, i) => {
+      const cy = y + 46 + i * 28;
+      if (t === 'Mammals') b += rectXY(12, cy - 13, 268, cy + 13, { fill: WF.box, stroke: 'none', rx: 5 });
+      b += `<circle cx="34" cy="${cy}" r="10" fill="${WF.box}" stroke="${WF.line}"/>` + wtxt(54, cy, t, { s: 12.5, w: t === 'Mammals' ? 'bold' : 'normal' });
     });
+  };
+  tree(160, 'Vertebrates', 'Animals with a backbone.', ['Mammals', 'Birds', 'Reptiles', 'Amphibians', 'Fish']);
+  tree(360, 'Invertebrates', 'Animals without a backbone.', ['Insects', 'Spiders & relatives', 'Crabs & shrimps', 'Snails & shellfish', 'Segmented worms', 'Jellyfish & corals', 'Starfish & urchins']);
 
-  // Map preview and call to action
-  b += wtxt(70, 1110, 'A map anyone can read', { s: 22, w: 'bold' });
-  b += wtxt(70, 1145, 'Built for hikers, students and eco-clubs —', { s: 14, c: WF.dark });
-  b += wtxt(70, 1167, 'not just researchers. No sign-up, no jargon.', { s: 14, c: WF.dark });
-  b += wbtn(70, 1190, 250, 1228, 'Start exploring →', true);
-  b += wimg(560, 1085, 1030, 1235);
+  // Group introduction
+  b += wbox(300, 72, 1282, 222, { fill: '#fff' });
+  b += wtxt(318, 92, 'Animals › Vertebrates › Mammals', { s: 11.5, c: WF.dark });
+  b += `<circle cx="345" cy="132" r="24" fill="${WF.box}" stroke="${WF.line}"/>` + wtxt(384, 124, 'Mammals', { s: 20, w: 'bold' }) + wtxt(384, 146, 'Mammalia', { s: 12, i: true, c: WF.dark });
+  b += wbar(318, 178, 700) + wbar(318, 196, 520);
+  b += wtxt(318, 212, '196,397 records in South Korea on GBIF. Below: the most-recorded species, most records first.', { s: 11.5, c: WF.dark });
 
-  // Footer
-  b += rectXY(0, 1250, W, H, { fill: WF.dark, stroke: 'none', rx: 0 });
-  b += wtxt(24, 1270, 'WildTrack · CAPR-F2026 Group 3 · Data: GBIF.org · Maps: © OpenStreetMap contributors', { s: 12, c: '#fff' });
+  // Species cards (4 x 2)
+  for (let r = 0; r < 2; r++) for (let c = 0; c < 4; c++) {
+    const x0 = 300 + c * 249, y0 = 238 + r * 312;
+    b += wbox(x0, y0, x0 + 233, y0 + 296, { fill: '#fff' });
+    b += wimg(x0, y0, x0 + 233, y0 + 140);
+    b += wbar(x0 + 14, y0 + 160, 130, 10) + wbar(x0 + 14, y0 + 180, 90, 7);
+    b += wbar(x0 + 14, y0 + 208, 200, 6) + wbar(x0 + 14, y0 + 222, 200, 6) + wbar(x0 + 14, y0 + 236, 150, 6);
+    b += wtxt(x0 + 14, y0 + 270, '● 49,657 records', { s: 11.5, w: 'bold', c: WF.dark });
+  }
 
-  [[1076, 30, 1], [862, 320, 2], [1060, 570, 3], [1070, 768, 4], [1060, 985, 5], [262, 1209, 6]]
+  // Detail dialog: opens over the page when a card is clicked (drawn beside it here)
+  const dx0 = 1350, dy0 = 100, dx1 = 1790, dy1 = 730;
+  b += wtxt((dx0 + dx1) / 2, 72, 'Species detail dialog (opens when a card is clicked)', { a: 'middle', s: 13, w: 'bold', c: WF.dark });
+  b += `<path d="M1240,390 C1290,390 1300,390 ${dx0 - 4},390" fill="none" stroke="${WF.dark}" stroke-width="1.5" stroke-dasharray="6 4" marker-end="url(#arrow)"/>`;
+  b += rectXY(dx0 + 6, dy0 + 6, dx1 + 6, dy1 + 6, { fill: 'rgba(0,0,0,0.12)', stroke: 'none', rx: 8 });
+  b += wbox(dx0, dy0, dx1, dy1, { fill: '#fff', rx: 8 });
+  b += wimg(dx0, dy0, dx1, dy0 + 220) + `<circle cx="${dx1 - 24}" cy="${dy0 + 24}" r="14" fill="#fff" stroke="${WF.line}"/>` + wtxt(dx1 - 24, dy0 + 24, '✕', { a: 'middle', s: 12 });
+  b += wtxt(dx0 + 22, dy0 + 252, 'Chinese Water Deer', { s: 19, w: 'bold' }) + wtxt(dx0 + 22, dy0 + 276, 'Hydropotes inermis Swinhoe, 1870', { s: 12, i: true, c: WF.dark });
+  b += wbox(dx0 + 22, dy0 + 292, dx0 + 112, dy0 + 314, { rx: 11, fill: WF.dark, stroke: WF.dark }) + wtxt(dx0 + 67, dy0 + 303, 'Vulnerable', { a: 'middle', s: 11, w: 'bold', c: '#fff' });
+  b += wbox(dx0 + 120, dy0 + 292, dx0 + 290, dy0 + 314, { rx: 11, fill: WF.box }) + wtxt(dx0 + 205, dy0 + 303, '52,860 records worldwide', { a: 'middle', s: 11 });
+  [338, 354, 370, 386].forEach((y, i) => { b += wbar(dx0 + 22, dy0 + y, i === 3 ? 260 : 396, 7); });
+  b += wtxt(dx0 + 22, dy0 + 420, 'WHERE IT IS RECORDED MOST', { s: 11, w: 'bold', c: WF.dark });
+  [['South Korea', 110], ['United Kingdom', 130], ['China', 70], ['Russia', 70]].forEach(([t, w], i, arr) => {
+    const x = dx0 + 22 + arr.slice(0, i).reduce((a, [, ww]) => a + ww + 8, 0);
+    b += wbox(x, dy0 + 434, x + w, dy0 + 456, { rx: 11 }) + wtxt(x + w / 2, dy0 + 445, t, { a: 'middle', s: 11 });
+  });
+  b += wtxt(dx0 + 22, dy0 + 490, 'CLASSIFICATION', { s: 11, w: 'bold', c: WF.dark });
+  b += wtxt(dx0 + 22, dy0 + 512, 'Animalia › Chordata › Mammalia › Artiodactyla › Cervidae › …', { s: 12 });
+  b += wbtn(dx0 + 22, dy0 + 548, dx0 + 232, dy0 + 584, 'Read more on Wikipedia', true) + wbtn(dx0 + 244, dy0 + 548, dx0 + 420, dy0 + 584, 'Explore on GBIF ↗');
+
+  // Callouts (see key in the document)
+  [[1088, 27, 1], [234, 110, 2], [268, 260, 3], [268, 500, 4], [1268, 92, 5], [944, 212, 6], [530, 238, 7],
+    [dx0 - 14, dy0 + 260, 8], [dx0 + 306, dy0 + 303, 9], [dx0 - 14, dy0 + 445, 10], [dx0 - 14, dy0 + 512, 11],
+    [dx0 + 210, dy0 + 600, 12], [dx0 + 432, dy0 + 566, 13]]
     .forEach(([x, y, n]) => { b += callout(x, y, n); });
-  return svg(W, H, b);
+  return svg(FW, H, b);
 }
 
 /* ------------------------------------------------------------------ */
@@ -842,7 +995,7 @@ const figs = {
   // Requirements Analysis v1.1
   usecase: useCaseDiagram, architecture: () => architecture(), flow_search: flowSearch, flow_species: flowSpecies,
   // System Design
-  architecture_design: () => architecture(true), erd, dfd_context: dfdContext, dfd_level1: dfdLevel1,
-  wf_landing: wfLanding, wf_dashboard: wfDashboard,
+  architecture_design: architectureDesign, conceptual: conceptualSchema, erd, dfd_context: dfdContext, dfd_level1: dfdLevel1,
+  wf_dashboard: wfDashboard, wf_encyclopedia: wfEncyclopedia,
 };
 for (const [k, f] of Object.entries(figs)) if (!only || only === k) render(k, f());
