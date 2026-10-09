@@ -555,14 +555,6 @@ function buildGroupControls() {
         `<div class="legend-item">${groupIconHtml(key, 16)} ${g.label}</div>`).join('');
 }
 
-function handleNav(link) {
-    document.querySelectorAll('.nav-item').forEach(a => a.classList.toggle('active', a === link));
-    const target = link.dataset.nav;
-    if (target === 'about') $('about-dialog').showModal();
-    else if (target === 'species') $('sightings-section').scrollIntoView({ behavior: 'smooth' });
-    else if (target === 'map') $('map-section').scrollIntoView({ behavior: 'smooth' });
-    else window.scrollTo({ top: 0, behavior: 'smooth' });
-}
 
 // =============================================================================
 // Event Listeners & Initializer
@@ -622,10 +614,6 @@ document.addEventListener('DOMContentLoaded', () => {
         renderTable();
     });
 
-    document.querySelectorAll('.nav-item').forEach(link => link.addEventListener('click', (e) => {
-        e.preventDefault();
-        handleNav(link);
-    }));
 
     window.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') $('profile-close').click();

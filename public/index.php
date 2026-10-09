@@ -1,5 +1,6 @@
 <?php
-// public/index.php - Wildlife Sighting Mapping & Species Distribution Tracker
+// public/index.php - map dashboard (home page)
+$page = 'map';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -23,34 +24,12 @@
 </head>
 <body>
 
-    <!-- Top bar -->
-    <header class="topbar">
-        <div class="brand">
-            <i class="fa-solid fa-paw brand-icon"></i>
-            <span class="brand-name">WildTrack</span>
-        </div>
-        <span class="brand-divider"></span>
-        <span class="brand-subtitle">Wildlife Sighting Mapping and Species Distribution Tracker</span>
-        <div class="topbar-actions">
-            <button class="topbar-btn" type="button" title="Language (more coming soon)">
-                <i class="fa-solid fa-globe"></i> EN <i class="fa-solid fa-chevron-down caret"></i>
-            </button>
-            <button class="topbar-btn" type="button" title="Accounts are not required">
-                <span class="avatar"><i class="fa-solid fa-user"></i></span> Guest <i class="fa-solid fa-chevron-down caret"></i>
-            </button>
-        </div>
-    </header>
+<?php include __DIR__ . '/partials/header.php'; ?>
 
     <div class="layout">
 
-        <!-- Left sidebar: navigation and filters -->
+        <!-- Left sidebar: search settings and filters -->
         <aside class="sidebar">
-            <nav class="side-nav">
-                <a href="#" class="nav-item active" data-nav="home"><i class="fa-solid fa-house"></i> Home</a>
-                <a href="#" class="nav-item" data-nav="map"><i class="fa-regular fa-map"></i> Map</a>
-                <a href="#" class="nav-item" data-nav="species"><i class="fa-solid fa-paw"></i> Species</a>
-                <a href="#" class="nav-item" data-nav="about"><i class="fa-solid fa-circle-info"></i> About</a>
-            </nav>
 
             <section class="side-section">
                 <h3 class="side-title"><i class="fa-solid fa-location-dot"></i> Search Location</h3>
@@ -117,7 +96,7 @@
                 <div id="map"></div>
 
                 <div class="basemap-tabs">
-                    <button class="active" data-layer="map">Map</button>
+                    <button class="active" data-layer="map" title="Street map (OpenStreetMap)">Street</button>
                     <button data-layer="satellite">Satellite</button>
                     <button data-layer="topo">Topographic</button>
                 </div>
@@ -195,15 +174,6 @@
         </aside>
     </div>
 
-    <!-- About dialog -->
-    <dialog id="about-dialog">
-        <h2>About WildTrack</h2>
-        <p>WildTrack shows real animal sightings recorded near any place, using open data from the
-           Global Biodiversity Information Facility (GBIF). No account is needed.</p>
-        <p class="about-small">CAPR-F2026 Capstone &bull; Group 3: Gupta Aman Kumar, Singh Shubham Kumar, Paudel Amrit.<br>
-           Occurrence data: GBIF.org &bull; Maps: &copy; OpenStreetMap contributors, Esri.</p>
-        <form method="dialog"><button class="btn-primary">Close</button></form>
-    </dialog>
 
     <div class="toast-container" id="toast-container"></div>
 
