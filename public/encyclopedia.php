@@ -1,5 +1,5 @@
 <?php
-// public/encyclopedia.php - Animal Encyclopedia: browse the best-known animals of each group.
+// public/encyclopedia.php - Animal Encyclopedia: browse the best-known animals of each group in South Korea.
 // All content is live: the list comes from GBIF (api/encyclopedia.php) and each card from
 // api/species.php (GBIF taxonomy + Wikipedia summary, cached in species_cache).
 $page = 'encyclopedia';
@@ -71,14 +71,11 @@ $tree = [
 
     <div class="ency-layout">
 
-        <!-- Left: region and classification tree -->
+        <!-- Left: classification tree -->
         <aside class="sidebar">
             <section class="side-section">
-                <h3 class="side-title"><i class="fa-solid fa-earth-asia"></i> Recorded in</h3>
-                <div class="chips" id="region-chips">
-                    <button class="chip active" data-region="KR">South Korea</button>
-                    <button class="chip" data-region="">Worldwide</button>
-                </div>
+                <h3 class="side-title"><i class="fa-solid fa-earth-asia"></i> Animals of South Korea</h3>
+                <p class="tree-note">Each group lists the species with the most GBIF records in South Korea.</p>
             </section>
 
             <?php foreach ($tree as $division => $d): ?>
