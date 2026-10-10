@@ -1,18 +1,18 @@
 // =============================================================================
 // encyclopedia.js - Animal Encyclopedia page (encyclopedia.php)
-// 1. The user picks a group in the sidebar (all lists are for South Korea).
+// 1. The user picks a region and a group in the sidebar.
 // 2. api/encyclopedia.php?action=top lists the group's most-recorded species (GBIF).
 // 3. Each card is filled from api/species.php (taxonomy, photo, Wikipedia summary).
 // 4. Clicking a card opens the detail dialog, with extra facts from action=facts.
 // =============================================================================
 
 const $ = id => document.getElementById(id);
-const COUNTRY = 'KR';                // the Encyclopedia only covers South Korea
-const state = { group: null };
+const state = { region: 'KR', group: null };
 const speciesCache = new Map();   // speciesKey -> promise of species.php data (one request each)
 
 const escapeHtml = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const fmt = n => Number(n).toLocaleString('en-US');
+const regionName = new Intl.DisplayNames(['en'], { type: 'region' });
 
 // IUCN Red List categories: label and badge color
 const IUCN = {
@@ -51,6 +51,7 @@ function currentGroupButton() {
 
 function showIntro(btn, total) {
     const d = btn.dataset;
+    const where = state.region ? `in ${regionName.of(state.region)}` : 'worldwide';
     $('crumbs').textContent = `Animals › ${d.division} › ${d.name}`;
     $('intro-icon').innerHTML = btn.querySelector('.tree-icon').innerHTML;
     $('intro-icon').style.cssText = `color:${d.color};background:${d.color}1f`;
@@ -59,40 +60,40 @@ function showIntro(btn, total) {
     $('intro-desc').textContent = d.desc;
     $('intro-facts').innerHTML = total === undefined
         ? '<i class="fa-solid fa-spinner fa-spin"></i> Asking GBIF for the most-recorded species…'
-        : `<b>${fmt(total)}</b> records in South Korea on GBIF. Below are the most-recorded species in South Korea, most records first.`;
+        : `<b>${fmt(total)}</b> records ${where} on GBIF. Below are the most-recorded species ${where}, most records first.`;
 }
 
 async function loadGroup() {
     const btn = currentGroupButton();
     document.querySelectorAll('.tree-item').forEach(b => b.classList.toggle('active', b === btn));
-    history.replaceState(null, '', `#${state.group}`);
+    history.replaceState(null, '', `#${state.group}${state.region ? '' : '-world'}`);
     showIntro(btn);
 
     const grid = $('species-grid');
     grid.innerHTML = Array.from({ length: 8 }, () => '<div class="sp-card skeleton"></div>').join('');
 
-    const requested = state.group;
+    const requested = `${state.group}|${state.region}`;
     let data;
     try {
-        data = await getJson(`api/encyclopedia.php?action=top&taxa=${btn.dataset.taxa}&country=${COUNTRY}`);
+        data = await getJson(`api/encyclopedia.php?action=top&taxa=${btn.dataset.taxa}&country=${state.region}`);
     } catch (e) {
         grid.innerHTML = `<div class="grid-message"><i class="fa-solid fa-triangle-exclamation"></i>
             Could not load the list from GBIF (${escapeHtml(e.message)}).
             <button class="btn-primary" onclick="loadGroup()">Try again</button></div>`;
         return;
     }
-    if (requested !== state.group) return;   // the user already chose another group
+    if (requested !== `${state.group}|${state.region}`) return;   // the user already chose something else
 
     showIntro(btn, data.total);
     if (!data.species.length) {
-        grid.innerHTML = '<div class="grid-message">GBIF has no records of this group in South Korea yet.</div>';
+        grid.innerHTML = '<div class="grid-message">GBIF has no records of this group here. Try "Worldwide".</div>';
         return;
     }
     grid.innerHTML = data.species.map(s => cardHtml(s, null)).join('');
     await eachLimited(data.species, 6, async s => {
         const sp = await getSpecies(s.speciesKey);
         const card = grid.querySelector(`[data-key="${s.speciesKey}"]`);
-        if (card && requested === state.group) card.outerHTML = cardHtml(s, sp);
+        if (card && requested === `${state.group}|${state.region}`) card.outerHTML = cardHtml(s, sp);
     });
 }
 
@@ -151,6 +152,8 @@ async function openSpecies(key, records) {
             <p class="sp-sci">${escapeHtml(sp?.scientificName || '')}</p>
             <div class="detail-badges" id="detail-badges"><span class="badge muted"><i class="fa-solid fa-spinner fa-spin"></i> Loading facts…</span></div>
             <p class="detail-summary">${escapeHtml(summaryText(sp))}</p>
+            <h4>Where it is recorded most</h4>
+            <div id="detail-countries" class="detail-countries">…</div>
             <h4>Classification</h4>
             <p class="detail-taxonomy">${ranks.filter(r => sp?.[r]).map(r => `<span title="${r}">${escapeHtml(sp[r])}</span>`).join(' › ') || 'Not available'}</p>
             <div class="detail-links">
@@ -160,15 +163,20 @@ async function openSpecies(key, records) {
         </div>`;
     $('species-dialog').showModal();
 
-    // Conservation status from GBIF; the record count is the one from the South Korea list
-    const korea = `<span class="badge muted"><i class="fa-solid fa-location-dot"></i> ${fmt(records)} records in South Korea</span>`;
     try {
         const f = await getJson(`api/encyclopedia.php?action=facts&speciesKey=${key}`);
         const [label, color] = IUCN[f.iucn?.code] || IUCN.NE;
         $('detail-badges').innerHTML =
-            `<span class="badge" style="background:${color}" title="IUCN Red List of Threatened Species">${label}</span> ${korea}`;
+            `<span class="badge" style="background:${color}" title="IUCN Red List of Threatened Species">${label}</span>
+             <span class="badge muted"><i class="fa-solid fa-location-dot"></i> ${fmt(f.records ?? records)} records worldwide</span>`;
+        // GBIF uses codes like "ZZ" for records without a country: leave those out
+        const countries = f.countries.map(c => ({ ...c, name: regionName.of(c.code) })).filter(c => c.name !== 'Unknown Region');
+        $('detail-countries').innerHTML = countries.length
+            ? countries.map(c => `<span>${escapeHtml(c.name)} <b>${fmt(c.records)}</b></span>`).join('')
+            : 'No country information.';
     } catch {
-        $('detail-badges').innerHTML = korea;
+        $('detail-badges').innerHTML = `<span class="badge muted">${fmt(records)} records in this list</span>`;
+        $('detail-countries').textContent = 'Could not load from GBIF.';
     }
 }
 
@@ -180,10 +188,20 @@ document.querySelectorAll('.tree-item').forEach(btn => btn.addEventListener('cli
     loadGroup();
 }));
 
+document.querySelectorAll('#region-chips .chip').forEach(chip => chip.addEventListener('click', () => {
+    document.querySelectorAll('#region-chips .chip').forEach(c => c.classList.toggle('active', c === chip));
+    state.region = chip.dataset.region;
+    loadGroup();
+}));
+
 // Close the dialog by clicking outside it
 $('species-dialog').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.close(); });
 
-// The address remembers the group, e.g. encyclopedia.php#birds
-const hashGroup = location.hash.slice(1);
+// The address remembers the choice, e.g. encyclopedia.php#birds or #birds-world
+const [hashGroup, hashWorld] = location.hash.slice(1).split('-');
 state.group = document.querySelector(`.tree-item[data-key="${hashGroup}"]`) ? hashGroup : 'mammals';
+if (hashWorld === 'world') {
+    state.region = '';
+    document.querySelectorAll('#region-chips .chip').forEach(c => c.classList.toggle('active', c.dataset.region === ''));
+}
 loadGroup();
