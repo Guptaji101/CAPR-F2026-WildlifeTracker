@@ -80,8 +80,6 @@
 .badge { padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; color: #fff; }
 .badge.muted { background: var(--green-50); color: var(--green-900); font-weight: 600; }
 .detail-summary { margin-top: 14px; font-size: 14.5px; line-height: 1.65; color: var(--text); }
-.detail-countries { display: flex; flex-wrap: wrap; gap: 8px; font-size: 13px; }
-.detail-countries span { padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; }
 .detail-taxonomy { font-size: 13.5px; color: var(--text); line-height: 1.7; }
 .detail-links { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
 .detail-links .btn-primary { width: auto; padding: 0 18px; }

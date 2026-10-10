@@ -4,7 +4,7 @@
  * database. The cards themselves (names, photo, summary, taxonomy) come from species.php.
  *
  *   ?action=top&taxa=212[,…][&country=KR]   most-recorded species in a group (24 at most)
- *   ?action=facts&speciesKey=2481197         IUCN Red List status, record count, top countries
+ *   ?action=facts&speciesKey=2481197         IUCN Red List status (conservation status)
  */
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../../includes/gbif.php';
@@ -47,15 +47,10 @@ if ($action === 'facts') {
     $speciesKey = (int)($_GET['speciesKey'] ?? 0);
     if (!$speciesKey) fail(400, 'speciesKey is required');
 
-    // Each part is optional: a missing answer is left empty instead of failing the request
-    $iucn   = gbif_get(GBIF . "/species/{$speciesKey}/iucnRedListCategory");
-    $counts = gbif_get(GBIF . "/occurrence/search?taxonKey={$speciesKey}&limit=0&facet=country&facetLimit=5");
-
+    // Missing status (not assessed, or GBIF unreachable) is returned as null, not an error
+    $iucn = gbif_get(GBIF . "/species/{$speciesKey}/iucnRedListCategory");
     echo json_encode([
-        'iucn'      => $iucn ? ['code' => $iucn['code'] ?? null, 'category' => $iucn['category'] ?? null] : null,
-        'records'   => $counts['count'] ?? null,
-        'countries' => array_map(fn($c) => ['code' => $c['name'], 'records' => $c['count']],
-                                 $counts['facets'][0]['counts'] ?? []),
+        'iucn' => $iucn ? ['code' => $iucn['code'] ?? null, 'category' => $iucn['category'] ?? null] : null,
     ]);
     exit;
 }
