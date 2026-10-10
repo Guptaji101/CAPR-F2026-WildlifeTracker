@@ -11,15 +11,17 @@ Run it at `http://localhost/CAPR-F2026-WildlifeTracker/public/` (XAMPP, Apache o
 - **This is a graded student project.** The syllabus allows AI help but students must be able to
   explain every change. Keep changes small, explain them in plain words, and don't rewrite large
   parts of the app unless asked.
-- **Commits:** end every commit message made with AI help with
-  `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. Only commit or push when asked.
+- **Commits:** the user makes every commit and push personally. Never run `git commit` or
+  `git push`; instead list the changed files and suggest a commit message. A message for work
+  made with AI help ends with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 - **Keep code and documents in sync.** If app behavior changes, the requirements document (use
   cases, FRs, figures) may need updating too. Point this out.
 - **Requirements document:** edit `docs/build/build.js` (text) and `docs/build/diagrams.js`
   (figures), never the generated Word file. Rebuild steps are in `docs/build/README.md`. The
   latest output is also copied to the user's `Downloads` folder. Check that the file isn't open
   in Word first.
-- **Open decisions:** ask before removing the Fish animal group, or adding accounts or a database.
+- **No revision history** in any document or PDF (removed 10 Oct at the user's request; don't add it back).
+- **Fish stays** as an animal group (decided 10 Oct). Ask before adding accounts or another database.
 - **Secrets:** `config/config.php` is git-ignored; never commit it.
 - **Browser caching:** CSS/JS links are versioned by file time in `public/index.php` and `public/encyclopedia.php`;
   keep that.
@@ -43,5 +45,5 @@ Then open the app in the browser: on the Map page the pins, the table and the Sp
 on the Encyclopedia page the cards fill with photos and summaries.
 
 ## End of every session
-Update **NOTES.md** (what was done, decisions, to-dos), then commit and push it, so the next
-session starts from the latest state.
+Update **NOTES.md** (what was done, decisions, to-dos) and remind the user to commit and push it,
+so the next session starts from the latest state.

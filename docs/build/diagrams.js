@@ -191,11 +191,11 @@ function architecture() {
   box(cols[2][0], 298, cols[2][1], 392, 'species.php', ['Species API', 'taxonomy + photo']);
   box(cols[1][0], 446, cols[1][1], 540, 'includes/gbif.php', ['GBIF client: query builder,', 'retry ×3, sample dataset']);
 
-  // Database (designed, not yet connected)
-  b += rectXY(882, 430, 1140, 560, { fill: '#fff', stroke: C.grey, sw: 1.6, rx: 6, dash: '7 5' });
-  b += lines(1011, 495, [{ t: 'MySQL · wildlife_tracker', s: 16.5, w: 'bold' }, { t: 'saved_locations', s: 14.5, c: '#374151' }, { t: 'search_history · species_cache', s: 14.5, c: '#374151' }, { t: '(designed — not yet connected)', s: 13.5, i: true, c: C.grey }]);
-  b += poly([[812, 495], [880, 495]], { dash: '6 5' });
-  b += tag(846, 477, 'db.php', { s: 13, w: 'normal', bg: 'none' });
+  // Database: one cache table, read and written by species.php
+  b += rectXY(882, 430, 1140, 560, { fill: C.greenFill, stroke: C.green, sw: 1.6, rx: 6 });
+  b += lines(1011, 495, [{ t: 'MySQL · wildlife_tracker', s: 16.5, w: 'bold' }, { t: 'species_cache', s: 14.5, c: '#374151' }, { t: '(species details,', s: 13.5, i: true, c: C.grey }, { t: 'kept for 30 days)', s: 13.5, i: true, c: C.grey }]);
+  b += poly([[796, 345], [846, 345], [846, 495], [880, 495]]);
+  b += tag(846, 420, 'db.php', { s: 13, w: 'normal' });
 
   // Tier 3: external data services
   tier(625, 770, 'EXTERNAL', '', C.amberFill, C.amberStroke);
@@ -771,8 +771,8 @@ function dfdLevel1() {
   b += flow([[1080, 850], [R + 2, 850]], 'taxonomy, photo link', [885, 864]);
   b += flow([[R, 905], [1078, 905]], 'scientific name', [885, 891]);
   b += flow([[1080, 945], [R + 2, 945]], 'summary, photo', [885, 959]);
-  b += flow([[R, 1240], [1078, 1240]], 'group taxon keys, country;\nspecies key (facts)', [885, 1212]);
-  b += flow([[1080, 1300], [R + 2, 1300]], 'most-recorded species, counts,\nIUCN status, top countries', [885, 1326]);
+  b += flow([[R, 1240], [1078, 1240]], 'group taxon keys, South Korea;\nspecies key (facts)', [885, 1212]);
+  b += flow([[1080, 1300], [R + 2, 1300]], 'most-recorded species,\nrecord counts, IUCN status', [885, 1326]);
   // Data stores
   b += flow([[760, 505], [640, 505], [640, 452]], 'sample records', [700, 491]);
   b += flow([[680, 962], [680, 1068], [798, 1068]], 'new species row', [740, 1054]);
@@ -913,12 +913,12 @@ function wfEncyclopedia() {
   let b = rectXY(0, 0, FW, H, { fill: '#fff', stroke: 'none', rx: 0 }) + rectXY(0, 0, W, H, { fill: WF.fill, stroke: WF.line, sw: 1, rx: 0 });
   b += wfTopbar(W, 'Encyclopedia');
 
-  // Sidebar: region and classification tree
+  // Sidebar: classification tree (all lists are for South Korea)
   b += rectXY(0, 54, 280, H, { fill: '#fff', stroke: WF.line, sw: 1, rx: 0 });
   const title = (y, t) => wtxt(18, y, t, { s: 13.5, w: 'bold' });
-  b += title(84, 'Recorded in');
-  b += wbox(18, 98, 120, 122, { rx: 12, fill: WF.dark, stroke: WF.dark }) + wtxt(69, 110, 'South Korea', { a: 'middle', s: 11.5, w: 'bold', c: '#fff' });
-  b += wbox(128, 98, 216, 122, { rx: 12 }) + wtxt(172, 110, 'Worldwide', { a: 'middle', s: 11.5 });
+  b += title(84, 'Animals of South Korea');
+  b += wtxt(18, 106, 'Each group lists the species with the most', { s: 11.5, c: WF.dark });
+  b += wtxt(18, 122, 'GBIF records in South Korea.', { s: 11.5, c: WF.dark });
   const tree = (y, head, note, items) => {
     b += title(y, head) + wtxt(18, y + 20, note, { s: 11.5, c: WF.dark });
     items.forEach((t, i) => {
@@ -948,7 +948,7 @@ function wfEncyclopedia() {
   }
 
   // Detail dialog: opens over the page when a card is clicked (drawn beside it here)
-  const dx0 = 1350, dy0 = 100, dx1 = 1790, dy1 = 730;
+  const dx0 = 1350, dy0 = 100, dx1 = 1790, dy1 = 660;
   b += wtxt((dx0 + dx1) / 2, 72, 'Species detail dialog (opens when a card is clicked)', { a: 'middle', s: 13, w: 'bold', c: WF.dark });
   b += `<path d="M1240,390 C1290,390 1300,390 ${dx0 - 4},390" fill="none" stroke="${WF.dark}" stroke-width="1.5" stroke-dasharray="6 4" marker-end="url(#arrow)"/>`;
   b += rectXY(dx0 + 6, dy0 + 6, dx1 + 6, dy1 + 6, { fill: 'rgba(0,0,0,0.12)', stroke: 'none', rx: 8 });
@@ -956,21 +956,16 @@ function wfEncyclopedia() {
   b += wimg(dx0, dy0, dx1, dy0 + 220) + `<circle cx="${dx1 - 24}" cy="${dy0 + 24}" r="14" fill="#fff" stroke="${WF.line}"/>` + wtxt(dx1 - 24, dy0 + 24, '✕', { a: 'middle', s: 12 });
   b += wtxt(dx0 + 22, dy0 + 252, 'Chinese Water Deer', { s: 19, w: 'bold' }) + wtxt(dx0 + 22, dy0 + 276, 'Hydropotes inermis Swinhoe, 1870', { s: 12, i: true, c: WF.dark });
   b += wbox(dx0 + 22, dy0 + 292, dx0 + 112, dy0 + 314, { rx: 11, fill: WF.dark, stroke: WF.dark }) + wtxt(dx0 + 67, dy0 + 303, 'Vulnerable', { a: 'middle', s: 11, w: 'bold', c: '#fff' });
-  b += wbox(dx0 + 120, dy0 + 292, dx0 + 290, dy0 + 314, { rx: 11, fill: WF.box }) + wtxt(dx0 + 205, dy0 + 303, '52,860 records worldwide', { a: 'middle', s: 11 });
+  b += wbox(dx0 + 120, dy0 + 292, dx0 + 290, dy0 + 314, { rx: 11, fill: WF.box }) + wtxt(dx0 + 205, dy0 + 303, '49,657 records in South Korea', { a: 'middle', s: 11 });
   [338, 354, 370, 386].forEach((y, i) => { b += wbar(dx0 + 22, dy0 + y, i === 3 ? 260 : 396, 7); });
-  b += wtxt(dx0 + 22, dy0 + 420, 'WHERE IT IS RECORDED MOST', { s: 11, w: 'bold', c: WF.dark });
-  [['South Korea', 110], ['United Kingdom', 130], ['China', 70], ['Russia', 70]].forEach(([t, w], i, arr) => {
-    const x = dx0 + 22 + arr.slice(0, i).reduce((a, [, ww]) => a + ww + 8, 0);
-    b += wbox(x, dy0 + 434, x + w, dy0 + 456, { rx: 11 }) + wtxt(x + w / 2, dy0 + 445, t, { a: 'middle', s: 11 });
-  });
-  b += wtxt(dx0 + 22, dy0 + 490, 'CLASSIFICATION', { s: 11, w: 'bold', c: WF.dark });
-  b += wtxt(dx0 + 22, dy0 + 512, 'Animalia › Chordata › Mammalia › Artiodactyla › Cervidae › …', { s: 12 });
-  b += wbtn(dx0 + 22, dy0 + 548, dx0 + 232, dy0 + 584, 'Read more on Wikipedia', true) + wbtn(dx0 + 244, dy0 + 548, dx0 + 420, dy0 + 584, 'Explore on GBIF ↗');
+  b += wtxt(dx0 + 22, dy0 + 420, 'CLASSIFICATION', { s: 11, w: 'bold', c: WF.dark });
+  b += wtxt(dx0 + 22, dy0 + 442, 'Animalia › Chordata › Mammalia › Artiodactyla › Cervidae › …', { s: 12 });
+  b += wbtn(dx0 + 22, dy0 + 478, dx0 + 232, dy0 + 514, 'Read more on Wikipedia', true) + wbtn(dx0 + 244, dy0 + 478, dx0 + 420, dy0 + 514, 'Explore on GBIF ↗');
 
   // Callouts (see key in the document)
-  [[1088, 27, 1], [234, 110, 2], [268, 260, 3], [268, 500, 4], [1268, 92, 5], [944, 212, 6], [530, 238, 7],
-    [dx0 - 14, dy0 + 260, 8], [dx0 + 306, dy0 + 303, 9], [dx0 - 14, dy0 + 445, 10], [dx0 - 14, dy0 + 512, 11],
-    [dx0 + 210, dy0 + 600, 12], [dx0 + 432, dy0 + 566, 13]]
+  [[1088, 27, 1], [264, 84, 2], [268, 260, 3], [268, 500, 4], [1268, 92, 5], [944, 212, 6], [530, 238, 7],
+    [dx0 - 14, dy0 + 260, 8], [dx0 + 312, dy0 + 303, 9], [dx0 - 14, dy0 + 442, 10],
+    [dx0 + 210, dy0 + 530, 11], [dx0 + 432, dy0 + 496, 12]]
     .forEach(([x, y, n]) => { b += callout(x, y, n); });
   return svg(FW, H, b);
 }

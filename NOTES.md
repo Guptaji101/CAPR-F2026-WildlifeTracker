@@ -1,6 +1,6 @@
 # Handoff Notes — WildTrack (CAPR-F2026, Group 3)
 
-_Last updated: 9 Oct 2026_
+_Last updated: 10 Oct 2026_
 
 ## How to resume in a new Claude Code chat
 1. Start Claude Code in this folder (`C:\xampp\htdocs\CAPR-F2026-WildlifeTracker`).
@@ -52,6 +52,14 @@ _Last updated: 9 Oct 2026_
     element, the GBIF button explained (6.3), messages table (6.5), FR-12 proposed.
   - Landing-page files were never committed (a temporary copy existed only in that session).
 - **9 Oct:** Decisions discussed (see Decisions). All work from 7 Oct committed and pushed.
+- **10 Oct:** Encyclopedia now covers **South Korea only**: the Worldwide switch and the
+  "Where it is recorded most" country list were removed; the dialog shows the species' records
+  in South Korea. System Design text, Figure 5 (DFD) and Figure 7 (wireframe) updated.
+  Professor consultation moved to next Wednesday; Requirements Analysis unchanged until then.
+- **10 Oct (later):** Requirements Analysis **v1.2** (`Downloads\Week3_Requirements_Analysis_v1.2.*`):
+  factual fixes only (one connected cache table in Sections 9, 11, 12 and Figure 2; caching
+  removed from Section 13; "Street" base map in FR-02 / UC-02). Revision History removed from
+  **both** PDFs. The Encyclopedia (FR-12 / UC-12) is still waiting for the professor.
 
 ## What the project is
 
@@ -119,7 +127,10 @@ by animal group / date / radius, and open a species profile with photo and taxon
   is down). The site still works without MySQL. Revisit only if free-tier hosting can't run MySQL.
 - **Encyclopedia: ask the professor first (9 Oct).** Recommended direction if approved: make it
   a local "Field Guide" for the place searched on the map (same radius), link Map ↔ Encyclopedia
-  both ways, and drop/hide "Worldwide" (obscure deep-sea species without descriptions).
+  both ways. ("Worldwide" was removed on 10 Oct.)
+- **No revision history** in any PDF (10 Oct, user's decision).
+- **Fish kept** as an animal group (10 Oct).
+- **End user / community-impact feature:** dropped as not relevant now (10 Oct).
 - **AI use:** commits made with AI help carry a `Co-Authored-By` line, in line with the syllabus.
 
 ## File structure
@@ -130,7 +141,7 @@ CAPR-F2026-WildlifeTracker/
 ├── README.md                 project summary and team
 ├── docs/build/               scripts that generate the documents + figures
 │   ├── common.js             shared helpers (text, tables, figures, page styles)
-│   ├── build.js              Requirements Analysis v1.1 text
+│   ├── build.js              Requirements Analysis v1.2 text
 │   ├── design.js             System Design v1.0 text
 │   ├── diagrams.js           all figures (use case, architecture, flowcharts, ERD, DFDs)
 │   ├── finalize.ps1          Word: update contents page, export PDF
@@ -162,24 +173,21 @@ Finalization Nov 26 · Presentation Dec 2 (Group 3 is in Presentation 1).
       a viewer; rebuild with `docs/build` (see its README) and copy it over. Confirm the
       Requirement Specification submission and add a contribution row for the v1.1 revision.
 - [x] Drive contents links tested: the `_drive.pdf` works; `fix_links.py` is a standard step.
-- [ ] Decide whether to keep **Fish** (remove the group in `app.js` `GROUPS` and the checkbox if not).
 - [ ] Each member writes their **individual progress PDF** (tasks, timeline, tools).
 - [ ] **System Design (Oct 17):** v1.0 (20 pages) in Downloads. Team: review it together (every
       member must be able to explain the conceptual schema, ERD, DFDs and wireframes; Singh the
       cache code in `species.php` and `encyclopedia.php`), adjust the contribution table if
       needed, then upload `System_Design_v1.0_drive.pdf` and submit.
-- [ ] **Ask the professor** whether the Encyclopedia (as a local Field Guide) is in scope.
+- [ ] **Ask the professor on Wed 14 Oct** (no classes the week of 9 Oct) whether the Encyclopedia
+      (as a local Field Guide) is in scope. Requirements Analysis stays unchanged until then.
 - [ ] If yes: make it local to the map location + Map ↔ Encyclopedia links (see Decisions).
-- [ ] **Requirements Analysis v1.2** (after the professor's answer): add FR-12 Animal Encyclopedia + a use case for it; update
-      Figure 2 / Section 13 (one cache table), the header (no EN/Guest) and the removed buttons.
+- [x] Requirements Analysis v1.2 made (factual fixes). Still to add after the professor's answer:
+      FR-12 Animal Encyclopedia, UC-12, Wikipedia as actor/dependency, use case diagram, traceability.
 - [ ] Each teammate resets their DB again (schema has new `summary`, `wiki_url` columns).
 - [x] `species_cache` wired into `species.php`. Each teammate resets their local DB:
       `DROP DATABASE wildlife_tracker`, then import `sql/schema.sql`. Still untested: the
       "GBIF down, serve old row" rule (needs GBIF to fail).
-- [ ] If v1.1 is revised again: its Figure 2 and Section 13 still describe three planned tables.
 - [x] Landing page removed (professor feedback). Map page is the home page again (index.php).
-- [ ] Choose **one specific end user and one community-impact feature** (the instructor's
-      "think outside the box" note), and update the objectives, FRs and use cases to match.
 - [ ] **Performance:** GBIF took about 15 s for Jeju in testing, against NFR-01's ~5 s target.
       The 30 s timeout in `config.php` means a hanging GBIF takes up to ~90 s before the
       fallback appears. Consider a shorter timeout.

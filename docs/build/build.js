@@ -1,4 +1,4 @@
-// Builds the revised Week 3 Requirements Analysis document (v1.1).
+// Builds the Week 3 Requirements Analysis document (v1.2).
 const {
   Paragraph, AlignmentType, GREEN, LIGHT, GREY, TW,
   P, H1, H2, H3, bullet, steps, figure, table, spacer, titleBlock, writeDoc,
@@ -13,7 +13,7 @@ const OBJ = [
 
 const FR = [
   ['FR-01', 'Location Search', 'The system shall allow users to set the search location by entering a place name, which is resolved to coordinates through geocoding, or by using the device\'s current location.', 'Must'],
-  ['FR-02', 'Interactive Map', 'The system shall display an interactive map that users can pan and zoom, with a choice of standard (Map), Satellite, or Topographic base map.', 'Must'],
+  ['FR-02', 'Interactive Map', 'The system shall display an interactive map that users can pan and zoom, with a choice of Street, Satellite, or Topographic base map.', 'Must'],
   ['FR-03', 'Sightings Display', 'The system shall display the wildlife sightings recorded within the search radius of the selected location as map pins and in a paged sightings table, retrieved live from the GBIF Occurrence API.', 'Must'],
   ['FR-04', 'Animal Group Filter', 'The system shall allow users to filter sightings by one or more animal groups: Mammals, Birds, Reptiles, Amphibians, Fish, and Invertebrates.', 'Must'],
   ['FR-05', 'Date Range Filter', 'The system shall allow users to filter sightings by observation date using a From date and a To date.', 'Should'],
@@ -74,7 +74,7 @@ const UC = [
       'System redraws the map, the sighting pins, and the radius circle at the new zoom level, and updates the scale bar.',
     ],
     alt: [
-      ['A1 – If the user wants a different base map:', ['User clicks the "Satellite" or "Topographic" tab above the map.', 'System replaces the base map; the pins and the radius circle stay in place.']],
+      ['A1 – If the user wants a different base map:', ['User clicks the "Satellite" or "Topographic" tab above the map (or "Street" to return to the standard map).', 'System replaces the base map; the pins and the radius circle stay in place.']],
       ['A2 – If the user wants to return to the search location:', ['User clicks the Recenter button below the zoom buttons.', 'System moves the map back to the current search location.']],
     ],
     post: 'The map shows the area and base map chosen by the user. Panning and zooming do not change the search location or reload sightings; a new area is searched with UC-01.',
@@ -279,7 +279,7 @@ const add = (...xs) => xs.flat().forEach(x => body.push(x));
 
 // Title block
 add(titleBlock('Requirements Analysis Document', 'Wildlife Sighting Mapping and Species Distribution Tracker',
-  'CAPR-F2026 | Group 3 | Week 3 Submission (Revised) | Document Version: v1.1'));
+  'CAPR-F2026 | Group 3 | Week 3 Submission (Revised) | Document Version: v1.2'));
 
 // 1. Project Information
 add(H1('1. Project Information'),
@@ -296,11 +296,6 @@ add(H1('1. Project Information'),
     ['Singh Shubham Kumar', '2530028', 'Backend Developer'],
     ['Paudel Amrit', '2530048', 'Full-stack Developer / QA'],
   ]),
-  H2('Revision History'),
-  table([1100, 1700, TW - 2800], ['Version', 'Date', 'Description'], [
-    ['v1.0', '16 Sep 2026', 'Initial requirements analysis (Week 3 submission).'],
-    ['v1.1', '29 Sep 2026', 'Reorganized to follow the Week 4 study-case method (objectives → requirements → actors → use cases → design traceability); detailed use case specifications; flowchart-style diagrams replace the text diagrams; requirements and use cases updated for the redesigned dashboard (sidebar filters, Recent Sightings table, Species Profile panel).'],
-  ]),
 );
 
 // 2. Introduction
@@ -308,8 +303,8 @@ add(H1('2. Introduction'),
   H2('2.1 Purpose'),
   P('This document defines the problem, stakeholders, scope, project objectives, functional requirements (FR), non-functional requirements (NFR), actors, and use cases for the Wildlife Sighting Mapping and Species Distribution Tracker — a map-based web application that makes global biodiversity data locally accessible to non-specialists. It also shows how the requirements connect to the system design through diagrams and a traceability table.'),
   H2('2.2 Scope of This Document'),
-  P('This is the Requirements Analysis deliverable for Week 3, revised as version 1.1. It establishes what the system must do (functional requirements), how well it must perform (non-functional requirements), who interacts with it (actors), and how each interaction works (use cases). Every requirement below reflects the team\'s actual working prototype at the time of writing, rather than speculative or planned-only features; items not yet implemented are listed separately in Section 13 rather than presented as completed requirements.'),
-  P('Version 1.1 follows the method introduced in the Week 4 study case: project objectives → functional requirements → actors → use cases → requirements-to-design traceability. Each use case now has preconditions, a main flow, alternative flows, and a postcondition, and the text-based diagrams have been replaced with a use case diagram, an architecture diagram, and two flowcharts. Requirement wording has been updated to match the prototype as of 29 September 2026.'),
+  P('This is the Requirements Analysis deliverable for Week 3 (version 1.2). It establishes what the system must do (functional requirements), how well it must perform (non-functional requirements), who interacts with it (actors), and how each interaction works (use cases). Every requirement below reflects the team\'s actual working prototype at the time of writing, rather than speculative or planned-only features; items not yet implemented are listed separately in Section 13 rather than presented as completed requirements.'),
+  P('The document follows the method introduced in the Week 4 study case: project objectives → functional requirements → actors → use cases → requirements-to-design traceability. Each use case has preconditions, a main flow, alternative flows, and a postcondition, and the system is illustrated with a use case diagram, an architecture diagram, and two flowcharts. The detailed design (database, data flow and user interface) is described in the separate System Design document. Requirement wording matches the working prototype as of October 2026.'),
   H2('2.3 Definitions'),
   table([2600, TW - 2600], ['Term', 'Definition'], [
     ['GBIF', 'Global Biodiversity Information Facility - an international open-data platform holding over 2 billion species occurrence records'],
@@ -416,7 +411,7 @@ add(H1('8. Non-Functional Requirements'),
 
 // 9. Actors
 add(H1('9. Actors'),
-  P('Actors are the roles that interact with WildTrack. As the Week 4 study case points out, actors are not necessarily database entities: the MySQL tables (saved_locations, search_history, species_cache) are internal data stores, not actors.', { keepNext: true }),
+  P('Actors are the roles that interact with WildTrack. As the Week 4 study case points out, actors are not necessarily database entities: the MySQL table species_cache is an internal data store (a cache of species details), not an actor.', { keepNext: true }),
   table([2500, 2100, TW - 4600], ['Actor', 'Type', 'Description'], [
     ['**User**', 'Primary actor (person)', 'Any visitor who uses WildTrack in a web browser, without an account. Starts every use case.'],
     ['**Nominatim Geocoding Service**', 'Secondary actor (external system)', 'OpenStreetMap\'s geocoding API. Converts a place name into coordinates for UC-01 and UC-11.'],
@@ -454,7 +449,7 @@ UC.forEach(u => add(H3(`${u.id} – ${u.name}`), useCaseTable(u)));
 // 11. Architecture and process flow
 add(H1('11. System Architecture and Process Flow'),
   H2('11.1 System Architecture'),
-  P('WildTrack has three tiers (Figure 2). The browser tier renders the interface with Leaflet.js and calls three small PHP endpoints. The server tier (Apache + PHP; XAMPP for local development, with Render or Railway planned for deployment) forwards each request to an external open-data service and returns simplified JSON. Map tiles are loaded by the browser directly from the tile services. Settings and credentials are kept in config/config.php, which is excluded from the GitHub repository (NFR-03). The MySQL schema is designed but not yet connected (Section 13).', { keepNext: true }),
+  P('WildTrack has three tiers (Figure 2). The browser tier renders the interface with Leaflet.js and calls three small PHP endpoints. The server tier (Apache + PHP; XAMPP for local development, with Render or Railway planned for deployment) forwards each request to an external open-data service and returns simplified JSON. Map tiles are loaded by the browser directly from the tile services. Settings and credentials are kept in config/config.php, which is excluded from the GitHub repository (NFR-03). The MySQL database holds one table, species_cache: species.php saves the details of every species it looks up and reuses them for 30 days, so repeated requests do not call GBIF again (NFR-01). The database design is described in the System Design document.', { keepNext: true }),
   figure('architecture.png', 672, 'Figure 2 – System architecture'),
   H2('11.2 Process Flow: Searching and Displaying Sightings'),
   P('Figure 3 shows the processing flow behind UC-01, UC-03 to UC-06, UC-10, and UC-11, including the three ways of choosing a location: (A) typing a place name or (B) clicking a Quick Location chip, both geocoded by Nominatim, or (C) clicking "Locate Me", which uses the browser Geolocation API. When the page first opens, the default search (Busan, 10 km, all groups) runs straight to the query step. Standard flowchart symbols are used: rounded boxes for start and end, rectangles for processes, diamonds for decisions, and parallelograms for input and output. Red shapes on the left are messages to the user. The amber boxes on the right are the external services each step calls, joined by dashed two-way arrows labelled with what is sent and returned. The green tag on a step names the use case it belongs to.', { keepNext: true }),
@@ -477,15 +472,14 @@ add(H1('12. Requirements-to-Design Traceability'),
     ['Obj. 2', 'FR-03 Sightings Display', 'UC-03 View Nearby Sightings', 'Map pins and Recent Sightings table (loadSightings(), renderMarkers(), renderTable()); sightings.php + gbif.php → GBIF Occurrence API'],
     ['Obj. 2', 'FR-06 Search Radius', 'UC-06 Adjust Search Radius', 'Search Radius chips, radius circle and label (updateRadiusCircle()); geoDistance parameter in gbif.php (capped at 100 km)'],
     ['Obj. 2', 'FR-08 Map Legend', 'UC-08 Read Map Legend', 'Animal Groups legend on the map (buildGroupControls() and GROUPS colors in app.js)'],
-    ['Obj. 3', 'FR-07 Species Details', 'UC-07 View Species Details', 'Species Profile panel (showProfile(), renderTaxonomy() in app.js); species.php → GBIF Species API; occurrence photos; species_cache table (planned)'],
+    ['Obj. 3', 'FR-07 Species Details', 'UC-07 View Species Details', 'Species Profile panel (showProfile(), renderTaxonomy() in app.js); species.php → GBIF Species API; occurrence photos; species_cache table (cache of species details)'],
     ['Obj. 3', 'FR-09 GBIF Source Link', 'UC-09 Verify Record on GBIF', '"Explore on GBIF Network" button; gbifUrl returned by species.php'],
   ]),
 );
 
 // 13. Future enhancements
 add(H1('13. Planned Future Enhancements (Not Yet Implemented)'),
-  P('The following items are structurally prepared for (e.g. database tables already designed) but are not part of the current working system, and are explicitly not claimed as completed requirements at this stage:'),
-  bullet('Species detail caching (a species_cache database table has been designed to reduce repeated API calls, but is not yet wired into the application logic).'),
+  P('The following items are not part of the current working system and are explicitly not claimed as completed requirements at this stage:'),
   bullet('Optional citizen-reporting layer allowing users to submit their own sightings.'),
   bullet('Saved/favorite locations per user session.', { after: 120 }),
 );
@@ -518,9 +512,9 @@ add(H1('15. Individual Contribution (Week 3)'),
 
 /* ---------------- document ---------------- */
 writeDoc({
-  file: 'Week3_Requirements_Analysis_v1.1.docx',
-  title: 'Requirements Analysis Document - Wildlife Sighting Mapping and Species Distribution Tracker (v1.1)',
+  file: 'Week3_Requirements_Analysis_v1.2.docx',
+  title: 'Requirements Analysis Document - Wildlife Sighting Mapping and Species Distribution Tracker (v1.2)',
   description: 'Week 3 requirements analysis, revised',
-  footer: 'CAPR-F2026 | Group 3 | Requirements Analysis v1.1',
+  footer: 'CAPR-F2026 | Group 3 | Requirements Analysis v1.2',
   body,
 });

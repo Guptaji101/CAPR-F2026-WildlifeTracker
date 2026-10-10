@@ -1,7 +1,7 @@
 # Document builds
 
 Scripts that generate the team's documents (Word + PDF) and their figures:
-- **Week3_Requirements_Analysis_v1.1**: text in `build.js`
+- **Week3_Requirements_Analysis_v1.2**: text in `build.js`
 - **System_Design_v1.0**: text in `design.js`
 
 Figures for both are in `diagrams.js`. Edit those files, then rebuild. Don't edit the generated
