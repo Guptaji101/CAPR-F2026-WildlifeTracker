@@ -35,7 +35,7 @@ add(H1('1. Project Information'),
 /* ------------------------------------------------------------------ */
 add(H1('2. Introduction'),
   H2('2.1 Purpose'),
-  P('The Requirements Analysis (v1.2) describes **what** WildTrack must do. This System Design describes **how** it does it: which parts the system is made of and what each part is responsible for, which data it uses and where that data is kept, how data moves between the user, the system and the external services, and what every screen element does. It is written so that a team member who did not build a part can still understand, test and explain it.'),
+  P('The Requirements Analysis (v1.3) describes **what** WildTrack must do. This System Design describes **how** it does it: which parts the system is made of and what each part is responsible for, which data it uses and where that data is kept, how data moves between the user, the system and the external services, and what every screen element does. It is written so that a team member who did not build a part can still understand, test and explain it.'),
   H2('2.2 Scope'),
   bullet('**Architecture (Section 3):** the three tiers, every component and file, and what happens during one search.'),
   bullet('**Data design (Section 4):** what is stored and why, the conceptual schema, the entity-relationship diagram, the data dictionary of the species_cache table, and the cache rules.'),
@@ -62,11 +62,11 @@ add(H1('2. Introduction'),
   ]),
   H2('2.5 Related Documents'),
   table([4200, TW - 4200], ['Document', 'Used For'], [
-    ['Requirements Analysis Document v1.2', 'Functional requirements (FR-01 to FR-11), non-functional requirements (NFR-01 to NFR-08), and use cases (UC-01 to UC-11) referenced throughout this document.'],
+    ['Requirements Analysis Document v1.3', 'Functional requirements (FR-01 to FR-12), non-functional requirements (NFR-01 to NFR-08), and use cases (UC-01 to UC-12) referenced throughout this document.'],
     ['sql/schema.sql (GitHub repository)', 'The database schema described in Section 4.6.'],
   ]),
   spacer(60),
-  P('The Animal Encyclopedia was added after the Requirements Analysis v1.2 was written. In this document it is traced to a proposed requirement, **FR-12 Animal Encyclopedia**: "The system shall let users browse the most-recorded animals of each animal group in South Korea, with a photo, a short description, the conservation status and the classification of each species." FR-12 and its use case will be added in the next revision of the Requirements Analysis.', { italics: true, color: GREY }),
+  P('The Animal Encyclopedia was approved by the instructor in October 2026. It is covered by **FR-12 Animal Encyclopedia** and **UC-12 Browse Animal Encyclopedia** in the Requirements Analysis v1.3.', { italics: true, color: GREY }),
 );
 
 /* ------------------------------------------------------------------ */
@@ -296,16 +296,16 @@ add(H1('6. User Interface Design', { newPage: true }),
 /* 7. Traceability                                                     */
 /* ------------------------------------------------------------------ */
 add(H1('7. Design-to-Requirements Traceability', { newPage: true }),
-  P('Each design element below is linked to the requirements and use cases it supports. FR-12 is the proposed Encyclopedia requirement (Section 2.5).', { keepNext: true }),
+  P('Each design element below is linked to the requirements and use cases it supports. FR-12 is the Animal Encyclopedia requirement (Section 2.5).', { keepNext: true }),
   table([3300, 2500, TW - 5800], ['Design Element', 'Requirements', 'Use Cases'], [
     ['Process 1.0 Resolve Location', 'FR-01, FR-11', 'UC-01, UC-11'],
     ['Process 2.0 Retrieve Sightings', 'FR-03, FR-04, FR-05, FR-06, NFR-01, NFR-04', 'UC-03, UC-04, UC-05, UC-06'],
     ['Process 3.0 Display Map and Sightings', 'FR-02, FR-03, FR-08, FR-10', 'UC-02, UC-03, UC-08, UC-10'],
     ['Process 4.0 Get Species Details', 'FR-07, FR-09, NFR-01', 'UC-07, UC-09'],
-    ['Process 5.0 Browse Encyclopedia', 'FR-12 (proposed), FR-09', '(new use case, next revision)'],
-    ['D1 Species Cache (species_cache table)', 'FR-07, FR-12, NFR-01, NFR-04', 'UC-07'],
+    ['Process 5.0 Browse Encyclopedia', 'FR-12, FR-09', 'UC-12'],
+    ['D1 Species Cache (species_cache table)', 'FR-07, FR-12, NFR-01, NFR-04', 'UC-07, UC-12'],
     ['D2 Sample Dataset', 'NFR-04', 'UC-03 (A3)'],
-    ['ANIMAL_GROUP entity (app.js, encyclopedia.php)', 'FR-04, FR-08, FR-12', 'UC-04, UC-08'],
+    ['ANIMAL_GROUP entity (app.js, encyclopedia.php)', 'FR-04, FR-08, FR-12', 'UC-04, UC-08, UC-12'],
     ['Shared header (Map, Encyclopedia, About)', 'FR-02, NFR-05, NFR-06', 'All'],
     ['Messages and loading states (Section 6.5)', 'FR-10, NFR-04', 'UC-10'],
     ['No accounts; no stored searches or locations', 'NFR-05', 'All'],

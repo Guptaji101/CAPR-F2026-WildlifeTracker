@@ -75,10 +75,10 @@ function onEllipse(e, tx, ty) {
 /* Figure 1 - Use case diagram                                         */
 /* ------------------------------------------------------------------ */
 function useCaseDiagram() {
-  const W = 1190, H = 900;
+  const W = 1190, H = 1050;
   let b = '';
   // System boundary
-  b += rectXY(150, 18, 975, 882, { fill: '#FBFDFB', stroke: C.green, sw: 2, rx: 10 });
+  b += rectXY(150, 18, 975, 1032, { fill: '#FBFDFB', stroke: C.green, sw: 2, rx: 10 });
   b += lines(562, 44, [{ t: 'WildTrack — Wildlife Sighting Mapping & Species Distribution Tracker', s: 17.5, w: 'bold', c: C.green }]);
 
   const A = 380, B = 790;
@@ -93,13 +93,14 @@ function useCaseDiagram() {
     UC07: a(630, 'UC-07', 'View Species Details'),
     UC08: a(735, 'UC-08', 'Read Map Legend'),
     UC02: a(830, 'UC-02', 'Explore Map'),
+    UC12: a(950, 'UC-12', 'Browse Animal Encyclopedia'),
     UC03: c(360, 'UC-03', 'View Nearby Sightings'),
     UC10: c(470, 'UC-10', 'View Search Status'),
     UC09: c(735, 'UC-09', 'Verify Record on GBIF'),
   };
 
   // Primary actor: User (stick figure)
-  const ax = 72, ay = 392;
+  const ax = 72, ay = 460;
   let actor = `<g stroke="${C.ink}" stroke-width="2.2" fill="none" stroke-linecap="round">` +
     `<circle cx="${ax}" cy="${ay + 15}" r="15" fill="#fff"/>` +
     `<line x1="${ax}" y1="${ay + 30}" x2="${ax}" y2="${ay + 82}"/>` +
@@ -112,7 +113,7 @@ function useCaseDiagram() {
   // Associations: User -> left tip of each directly initiated use case
   const origin = [ax + 30, ay + 52];
   let assoc = '';
-  ['UC11', 'UC01', 'UC04', 'UC05', 'UC06', 'UC07', 'UC08', 'UC02'].forEach(k => {
+  ['UC11', 'UC01', 'UC04', 'UC05', 'UC06', 'UC07', 'UC08', 'UC02', 'UC12'].forEach(k => {
     assoc += poly([origin, [uc[k].cx - uc[k].rx, uc[k].cy]], { marker: null, stroke: C.ink, sw: 1.5 });
   });
 
@@ -121,6 +122,10 @@ function useCaseDiagram() {
   const ext = (cy, name) => rect(EX, cy, 160, 66, { fill: C.extFill, stroke: C.extStroke, rx: 4 }) +
     lines(EX, cy, [{ t: '«external system»', s: 13, i: true, c: C.grey }, ...name.split('\n').map(t => ({ t, s: 16.5, w: 'bold' }))]);
   let exts = ext(195, 'Nominatim\nGeocoding') + ext(525, 'GBIF API') + ext(830, 'Map Tile\nServices');
+  // UC-12: GBIF is drawn a second time here so its line doesn't cross the other use cases
+  exts += ext(925, 'GBIF API') + lines(EX, 968, [{ t: '(same actor as above)', s: 11.5, i: true, c: C.grey }]) + ext(1010, 'Wikipedia');
+  exts += poly([[1010, 925], [uc.UC12.cx + uc.UC12.rx, uc.UC12.cy]], { marker: null, stroke: C.ink, sw: 1.5 });
+  exts += poly([[1010, 1010], onEllipse(uc.UC12, 1010, 1010)], { marker: null, stroke: C.ink, sw: 1.5 });
   const tipR = e => [e.cx + e.rx, e.cy];
   exts += poly([[1010, 195], tipR(uc.UC01)], { marker: null, stroke: C.ink, sw: 1.5 });
   exts += poly([[1012, 500], tipR(uc.UC03)], { marker: null, stroke: C.ink, sw: 1.5 });

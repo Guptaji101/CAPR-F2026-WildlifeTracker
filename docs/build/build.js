@@ -1,4 +1,4 @@
-// Builds the Week 3 Requirements Analysis document (v1.2).
+// Builds the Week 3 Requirements Analysis document (v1.3).
 const {
   Paragraph, AlignmentType, GREEN, LIGHT, GREY, TW,
   P, H1, H2, H3, bullet, steps, figure, table, spacer, titleBlock, writeDoc,
@@ -23,6 +23,7 @@ const FR = [
   ['FR-09', 'GBIF Source Link', 'The system shall provide a link from the species detail panel that opens the corresponding official GBIF page in a new browser tab.', 'Should'],
   ['FR-10', 'Search Status', 'The system shall display the search status and the result count, including clear messages when a location is not found, no sightings match the filters, or a data service is unavailable.', 'Must'],
   ['FR-11', 'Quick-Access Locations', 'The system shall provide quick-access chips for commonly checked locations (e.g. Busan, Seoul, Jeju Island).', 'Could'],
+  ['FR-12', 'Animal Encyclopedia', 'The system shall provide an Animal Encyclopedia that lets users browse the most-recorded animals of each animal group in South Korea, showing for each species a photo, a short description, its conservation status, and its classification.', 'Should'],
 ];
 
 const NFR = [
@@ -244,6 +245,34 @@ const UC = [
     ],
     post: 'The map and the results show the selected location.',
   },
+  {
+    id: 'UC-12', name: 'Browse Animal Encyclopedia', secondary: 'GBIF API; Wikipedia', reqs: 'FR-12 (messages: FR-10)',
+    rel: 'None. It reuses the species details service of UC-07 (species.php).',
+    goal: 'Learn about the animals most often recorded in South Korea, group by group.',
+    pre: ['The application is open in a web browser.'],
+    trigger: 'The user clicks "Encyclopedia" in the header.',
+    main: [
+      'User clicks "Encyclopedia" in the header.',
+      'System shows the classification tree, with five vertebrate groups (Mammals, Birds, Reptiles, Amphibians, Fish) and seven invertebrate groups (Insects, Spiders & relatives, Crabs & shrimps, Snails & shellfish, Segmented worms, Jellyfish & corals, Starfish & urchins), and opens Mammals.',
+      'User clicks a group in the tree.',
+      'System shows the group introduction (name, scientific name, and a short description) and the number of GBIF records of the group in South Korea.',
+      'System requests the 24 most-recorded species of the group in South Korea from the GBIF API (encyclopedia.php).',
+      'System shows a card for each species with photo, English and scientific name, the beginning of its Wikipedia description, and its number of records, filling in each card as its details arrive (species.php).',
+      'User clicks a card.',
+      'System opens the detail dialog with a larger photo, the full description, the IUCN Red List conservation status, the number of records in South Korea, and the classification (Kingdom to Species).',
+      'User reads the entry and closes the dialog with the close button (X), the Esc key, or a click outside it.',
+    ],
+    alt: [
+      ['A1 – If the species list cannot be loaded from GBIF (step 5):', ['System displays "Could not load the list from GBIF" with a "Try again" button.', 'User clicks "Try again"; the flow resumes at step 5.']],
+      ['A2 – If the group has no records in South Korea (step 5):', ['System displays "GBIF has no records of this group in South Korea yet."']],
+      ['A3 – If a species has no English Wikipedia article (step 6):', ['System shows a short description built from its classification (family and order) instead.']],
+      ['A4 – If a species has no photo (step 6):', ['System shows the group icon in place of the photo.']],
+      ['A5 – If the conservation status cannot be loaded (step 8):', ['System shows the number of records only.']],
+      ['A6 – If the user wants to know more (step 9):', ['User clicks "Read more on Wikipedia" or "Explore on GBIF".', 'System opens the Wikipedia article or the GBIF species page in a new browser tab; the Encyclopedia stays open.']],
+      ['A7 – If the user opens a link to a group, for example encyclopedia.php#birds (step 1):', ['System opens that group directly; the flow continues at step 4.']],
+    ],
+    post: 'The user has seen the best-known animals of the chosen group in South Korea and, for any of them, its description, conservation status, and classification.',
+  },
 ];
 
 function useCaseTable(u) {
@@ -279,7 +308,7 @@ const add = (...xs) => xs.flat().forEach(x => body.push(x));
 
 // Title block
 add(titleBlock('Requirements Analysis Document', 'Wildlife Sighting Mapping and Species Distribution Tracker',
-  'CAPR-F2026 | Group 3 | Week 3 Submission (Revised) | Document Version: v1.2'));
+  'CAPR-F2026 | Group 3 | Week 3 Submission (Revised) | Document Version: v1.3'));
 
 // 1. Project Information
 add(H1('1. Project Information'),
@@ -303,7 +332,7 @@ add(H1('2. Introduction'),
   H2('2.1 Purpose'),
   P('This document defines the problem, stakeholders, scope, project objectives, functional requirements (FR), non-functional requirements (NFR), actors, and use cases for the Wildlife Sighting Mapping and Species Distribution Tracker — a map-based web application that makes global biodiversity data locally accessible to non-specialists. It also shows how the requirements connect to the system design through diagrams and a traceability table.'),
   H2('2.2 Scope of This Document'),
-  P('This is the Requirements Analysis deliverable for Week 3 (version 1.2). It establishes what the system must do (functional requirements), how well it must perform (non-functional requirements), who interacts with it (actors), and how each interaction works (use cases). Every requirement below reflects the team\'s actual working prototype at the time of writing, rather than speculative or planned-only features; items not yet implemented are listed separately in Section 13 rather than presented as completed requirements.'),
+  P('This is the Requirements Analysis deliverable for Week 3 (version 1.3). It establishes what the system must do (functional requirements), how well it must perform (non-functional requirements), who interacts with it (actors), and how each interaction works (use cases). Every requirement below reflects the team\'s actual working prototype at the time of writing, rather than speculative or planned-only features; items not yet implemented are listed separately in Section 13 rather than presented as completed requirements.'),
   P('The document follows the method introduced in the Week 4 study case: project objectives → functional requirements → actors → use cases → requirements-to-design traceability. Each use case has preconditions, a main flow, alternative flows, and a postcondition, and the system is illustrated with a use case diagram, an architecture diagram, and two flowcharts. The detailed design (database, data flow and user interface) is described in the separate System Design document. Requirement wording matches the working prototype as of October 2026.'),
   H2('2.3 Definitions'),
   table([2600, TW - 2600], ['Term', 'Definition'], [
@@ -359,6 +388,7 @@ add(H1('5. Project Scope'),
   bullet('A Recent Sightings table with photo, species name, animal group, date, location, and coordinates.'),
   bullet('Filtering by one or more animal groups, observation date range, and search radius.'),
   bullet('A Species Profile panel with photo (where available), taxonomy, observation details, and a link to the GBIF source record.'),
+  bullet('An Animal Encyclopedia describing the most-recorded animals of each group in South Korea, with a photo, a short Wikipedia description, the conservation status, and the classification.'),
   bullet('A responsive interface usable without login.', { after: 120 }),
   H2('5.2 The System Will Not Include'),
   bullet('Building a new data collection network or hardware/sensors.'),
@@ -395,7 +425,7 @@ add(H1('7. Functional Requirements'),
     ['Users need to see real sightings near the chosen place', '**FR-03** Sightings Display'],
     ['Users need to widen or narrow the area searched', '**FR-06** Search Radius'],
     ['Users need to understand what the marker colors mean', '**FR-08** Map Legend'],
-    objRow(3, 2, 'Users need details about the animal behind a sighting', '**FR-07** Species Details'),
+    objRow(3, 3, 'Users need details about the animal behind a sighting', '**FR-07** Species Details'),
     ['Users need to check the original source of a record', '**FR-09** GBIF Source Link'],
   ]),
   H2('7.2 Functional Requirement List'),
@@ -415,8 +445,9 @@ add(H1('9. Actors'),
   table([2500, 2100, TW - 4600], ['Actor', 'Type', 'Description'], [
     ['**User**', 'Primary actor (person)', 'Any visitor who uses WildTrack in a web browser, without an account. Starts every use case.'],
     ['**Nominatim Geocoding Service**', 'Secondary actor (external system)', 'OpenStreetMap\'s geocoding API. Converts a place name into coordinates for UC-01 and UC-11.'],
-    ['**GBIF API**', 'Secondary actor (external system)', 'Supplies occurrence (sighting) records, species taxonomy, and species photos for UC-03 (and the filters that reuse it) and UC-07.'],
+    ['**GBIF API**', 'Secondary actor (external system)', 'Supplies occurrence (sighting) records, species taxonomy, and species photos for UC-03 (and the filters that reuse it) and UC-07, and the lists of most-recorded species and their conservation status for UC-12.'],
     ['**Map Tile Services**', 'Secondary actor (external system)', 'OpenStreetMap and Esri tile servers. Supply the base map images for UC-02.'],
+    ['**Wikipedia**', 'Secondary actor (external system)', 'Wikipedia\'s page summary API. Supplies the short description and photo of each species in the Animal Encyclopedia (UC-12).'],
   ]),
   spacer(60),
   P('The stakeholder groups in Section 4.1 (hikers, students, eco-clubs, and the general public) all use the system through the single User role, because the system has no accounts or user roles at this stage. Organizations such as GBIF and OpenStreetMap remain stakeholders (Section 4.2); only their APIs act as secondary actors.'),
@@ -428,18 +459,19 @@ add(H1('10. Use Cases'),
   H2('10.1 Actor–Use Case List'),
   P('What interactions does each actor have with the system?', { keepNext: true }),
   table([3000, 4580, TW - 7580], ['Actor', 'Use Case', 'UC #'], [
-    [{ t: '**User**', rowSpan: 11 }, ucNames[0], 'UC-01'],
+    [{ t: '**User**', rowSpan: UC.length }, ucNames[0], 'UC-01'],
     ...UC.slice(1).map(u => [u.name, u.id]),
     ['Nominatim Geocoding Service (secondary)', 'Search Location', 'UC-01'],
-    ['GBIF API (secondary)', 'View Nearby Sightings; View Species Details', 'UC-03, UC-07'],
+    ['GBIF API (secondary)', 'View Nearby Sightings; View Species Details; Browse Animal Encyclopedia', 'UC-03, UC-07, UC-12'],
     ['Map Tile Services (secondary)', 'Explore Map', 'UC-02'],
+    ['Wikipedia (secondary)', 'Browse Animal Encyclopedia', 'UC-12'],
   ]),
   H2('10.2 Connecting Functional Requirements to Use Cases'),
   P('Each functional requirement is realized by exactly one use case, so every requirement can be traced to a user interaction.', { keepNext: true }),
   table([4000, 4080, TW - 8080], ['Functional Requirement', 'Related Use Case', 'UC #'],
     FR.map(([id, n], i) => [`${id} ${n}`, UC[i].name, UC[i].id])),
   H2('10.3 Use Case Diagram'),
-  P('Figure 1 shows the User as the only primary actor, because the system has no login or user roles. The three external systems are secondary actors that support individual use cases. «include» marks behavior that always runs as part of another use case (for example, every search loads the nearby sightings); «extend» marks optional behavior (opening the GBIF record from the Species Profile panel).', { keepNext: true }),
+  P('Figure 1 shows the User as the only primary actor, because the system has no login or user roles. The four external systems are secondary actors that support individual use cases. «include» marks behavior that always runs as part of another use case (for example, every search loads the nearby sightings); «extend» marks optional behavior (opening the GBIF record from the Species Profile panel).', { keepNext: true }),
   figure('usecase.png', 672, 'Figure 1 – Use case diagram'),
   H2('10.4 Use Case Specifications'),
   P('Each use case follows the template from the Week 4 study case (ID, name, primary actor, goal, preconditions, main flow, alternative flows, postcondition), with secondary actors, related requirements, relationships, and a trigger added for precision. In the flows, "User" is the primary actor and "System" is WildTrack (browser and PHP server together). Quoted text is the exact message shown by the prototype.'),
@@ -449,8 +481,8 @@ UC.forEach(u => add(H3(`${u.id} – ${u.name}`), useCaseTable(u)));
 // 11. Architecture and process flow
 add(H1('11. System Architecture and Process Flow'),
   H2('11.1 System Architecture'),
-  P('WildTrack has three tiers (Figure 2). The browser tier renders the interface with Leaflet.js and calls three small PHP endpoints. The server tier (Apache + PHP; XAMPP for local development, with Render or Railway planned for deployment) forwards each request to an external open-data service and returns simplified JSON. Map tiles are loaded by the browser directly from the tile services. Settings and credentials are kept in config/config.php, which is excluded from the GitHub repository (NFR-03). The MySQL database holds one table, species_cache: species.php saves the details of every species it looks up and reuses them for 30 days, so repeated requests do not call GBIF again (NFR-01). The database design is described in the System Design document.', { keepNext: true }),
-  figure('architecture.png', 672, 'Figure 2 – System architecture'),
+  P('WildTrack has three tiers (Figure 2). The browser tier renders the interface with Leaflet.js and calls four small PHP endpoints. The server tier (Apache + PHP; XAMPP for local development, with Render or Railway planned for deployment) forwards each request to an external open-data service and returns simplified JSON. The Animal Encyclopedia (encyclopedia.php) gets its species lists from GBIF and the species descriptions from Wikipedia. Map tiles and photos are loaded by the browser directly from their hosts. Settings and credentials are kept in config/config.php, which is excluded from the GitHub repository (NFR-03). The MySQL database holds one table, species_cache: species.php saves the details of every species it looks up and reuses them for 30 days, so repeated requests do not call GBIF again (NFR-01). The database design is described in the System Design document.', { keepNext: true }),
+  figure('architecture_design.png', 640, 'Figure 2 – System architecture'),
   H2('11.2 Process Flow: Searching and Displaying Sightings'),
   P('Figure 3 shows the processing flow behind UC-01, UC-03 to UC-06, UC-10, and UC-11, including the three ways of choosing a location: (A) typing a place name or (B) clicking a Quick Location chip, both geocoded by Nominatim, or (C) clicking "Locate Me", which uses the browser Geolocation API. When the page first opens, the default search (Busan, 10 km, all groups) runs straight to the query step. Standard flowchart symbols are used: rounded boxes for start and end, rectangles for processes, diamonds for decisions, and parallelograms for input and output. Red shapes on the left are messages to the user. The amber boxes on the right are the external services each step calls, joined by dashed two-way arrows labelled with what is sent and returned. The green tag on a step names the use case it belongs to.', { keepNext: true }),
   figure('flow_search.png', 672, 'Figure 3 – Flowchart: searching and displaying sightings'),
@@ -474,6 +506,7 @@ add(H1('12. Requirements-to-Design Traceability'),
     ['Obj. 2', 'FR-08 Map Legend', 'UC-08 Read Map Legend', 'Animal Groups legend on the map (buildGroupControls() and GROUPS colors in app.js)'],
     ['Obj. 3', 'FR-07 Species Details', 'UC-07 View Species Details', 'Species Profile panel (showProfile(), renderTaxonomy() in app.js); species.php → GBIF Species API; occurrence photos; species_cache table (cache of species details)'],
     ['Obj. 3', 'FR-09 GBIF Source Link', 'UC-09 Verify Record on GBIF', '"Explore on GBIF Network" button; gbifUrl returned by species.php'],
+    ['Obj. 3', 'FR-12 Animal Encyclopedia', 'UC-12 Browse Animal Encyclopedia', 'Encyclopedia page (encyclopedia.php, encyclopedia.js); api/encyclopedia.php → GBIF occurrence facets and IUCN status; species.php + wikipedia.php → Wikipedia summaries; species_cache table'],
   ]),
 );
 
@@ -493,6 +526,7 @@ add(H1('14. Assumptions and Dependencies'),
     ['OpenStreetMap tiles', 'Tile provider', 'Free; requires attribution'],
     ['Esri World Imagery / World Topographic tiles', 'Tile provider', 'Optional satellite and topographic base maps; attribution shown on the map'],
     ['Sighting photos (GBIF media links, mostly iNaturalist)', 'External content', 'Loaded directly from the source; shown in the table and Species Profile'],
+    ['Wikipedia page summary API', 'External dependency', 'Free; species descriptions and photos for the Encyclopedia; requires a user-agent with contact information; text licensed CC BY-SA'],
     ['Browser Geolocation API', 'Browser feature', 'Used by "Locate Me"; requires the user\'s permission'],
     ['Font Awesome and Google Fonts', 'UI resources (CDN)', 'Icons and fonts loaded from public CDNs'],
     ['XAMPP', 'Local development environment', 'Apache + MySQL + PHP'],
@@ -512,9 +546,9 @@ add(H1('15. Individual Contribution (Week 3)'),
 
 /* ---------------- document ---------------- */
 writeDoc({
-  file: 'Week3_Requirements_Analysis_v1.2.docx',
-  title: 'Requirements Analysis Document - Wildlife Sighting Mapping and Species Distribution Tracker (v1.2)',
+  file: 'Week3_Requirements_Analysis_v1.3.docx',
+  title: 'Requirements Analysis Document - Wildlife Sighting Mapping and Species Distribution Tracker (v1.3)',
   description: 'Week 3 requirements analysis, revised',
-  footer: 'CAPR-F2026 | Group 3 | Requirements Analysis v1.2',
+  footer: 'CAPR-F2026 | Group 3 | Requirements Analysis v1.3',
   body,
 });
