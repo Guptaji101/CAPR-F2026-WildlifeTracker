@@ -15,12 +15,10 @@ _Last updated: 14 Oct 2026_
 ## Where things stand (14 Oct 2026)
 - **Website:** Map page (`index.php`) + Animal Encyclopedia (`encyclopedia.php`, South Korea
   only), shared header, phone layout, UX review fixes, Map <-> Encyclopedia links with a
-  remembered search and a species filter. Korea-only place search, Korean Quick Locations and
-  the "Find an Animal" search (14 Oct, later): **not committed yet** (see the session log).
+  remembered search and a species filter. Everything is committed and pushed.
 - **Documents (in `Downloads`):** `Week3_Requirements_Analysis_v1.3 (final version).docx`
-  (26 pages) and `System_Design_v1.1 (final version).docx` (25 pages), plus `.pdf` and
-  `_drive.pdf` (the one to upload to Google Drive). Both match the website as of 14 Oct
-  (including FR-13 / UC-13 Animal Name Search).
+  (25 pages) and `System_Design_v1.1 (final version).docx` (22 pages), plus `.pdf` and
+  `_drive.pdf` (the one to upload to Google Drive). Both match the website as of 14 Oct.
 - **Submitted:** Proposal, Requirements Specification, System Design (Oct 12). Professor approved
   the Encyclopedia.
 - **Next deadlines:** Working Prototype **Nov 3** (Week 10), testing report (Week 12),
@@ -107,30 +105,6 @@ _Last updated: 14 Oct 2026_
   filters on the **species** (`index.php?species=<key>&name=…`) with a "Showing only …" bar and
   a "Show all animals" button. The `?group=` link was removed. Docs updated (SD 6.1, 6.2, 6.4 #13,
   Figure 7; Requirements UC-03 A6, UC-12 A8).
-- **14 Oct (Korea focus + animal search):**
-  - Quick Locations: Tokyo and Vancouver replaced by **Seoraksan** and **Suncheon Bay**.
-  - Place search limited to **South Korea** (`countrycodes=kr` in `geocode.php`, user's decision),
-    English place names (`accept-language=en`), and the message "Found: <place>" so the user sees
-    what was found (inside Korea "Tokyo" finds a shop). Not found: "Place not found in South Korea …".
-  - **Find an Animal** box (FR-13 / UC-13): `api/animal.php` turns a name into a GBIF species key in
-    3 steps: (1) GBIF `species/match` (scientific names), (2) Wikipedia → Wikidata P846 "GBIF ID"
-    (English names; `wiki_gbif_key()` in `wikipedia.php`), (3) "Did you mean…" list: 50 GBIF
-    common-name matches, sorted by records in South Korea (one facet request), top 5 shown.
-    Then the existing species filter ("Showing only …") is used. No sightings near the place →
-    message + table text ("No Tiger sightings within 10 km of Busan…").
-  - Tested: tiger (found, 0 sightings → message), Eurasian magpie, Pica pica, water deer,
-    mandarin duck, magpie (suggestions: Oriental/Black-billed/Azure-winged Magpie), nonsense
-    name, empty box, Tokyo/Vancouver; desktop, 800 px and 375 px.
-  - Bug fixed: `safeJsonFetch()` showed raw JSON ("HTTP 404: {…}") instead of the server's message.
-  - Why not GBIF's own name search alone: "tiger" returns *Palliolum tigerinum* etc.; GBIF
-    `species/match` only knows scientific names. Wikipedia lookups can hit rate limits (HTTP 429)
-    if many are sent quickly; the contact User-Agent helps. A lookup takes ~1–10 s.
-  - Docs: Requirements v1.3 (26 pages): FR-01, new FR-13, UC-01/03/10/11 edits, new UC-13, Figure 1
-    (use case diagram), Figure 2 (architecture: 5 endpoints), scope, actors, traceability,
-    dependencies (Wikidata). System Design v1.1 (25 pages): components, 3.3 example, Figure 1
-    (architecture), Figure 4 (context DFD), Figure 5 (Level 1 DFD: new process 6.0 Find Animal),
-    5.4–5.6, Figure 6 (wireframe #15 Find an Animal) and key, 6.5, 6.6 messages, 6.7, traceability.
-    Both kept as v1.3 / v1.1 (no version bump); no revision history.
 
 ## What the project is
 
@@ -203,10 +177,6 @@ by animal group / date / radius, and open a species profile with photo and taxon
 - **Fish kept** as an animal group (10 Oct).
 - **End user / community-impact feature:** dropped as not relevant now (10 Oct).
 - **AI use:** commits made with AI help carry a `Co-Authored-By` line, in line with the syllabus.
-- **South Korea focus (14 Oct):** the place search only finds places in South Korea; the Quick
-  Locations are all Korean. "Locate Me" still works anywhere.
-- **Animal name lookup (14 Oct):** 3-step chain (GBIF match → Wikipedia/Wikidata → "Did you
-  mean…" list), chosen over a suggestion list alone, because GBIF's name search can't find "tiger".
 
 ## File structure
 ```
@@ -236,7 +206,6 @@ CAPR-F2026-WildlifeTracker/
 │   └── api/
 │       ├── geocode.php       place name → lat/lng (Nominatim)
 │       ├── sightings.php     occurrences near a point (GBIF), with filters
-│       ├── animal.php        animal name → GBIF species key (match, Wikipedia/Wikidata, suggestions)
 │       └── species.php       taxonomy + photo for a speciesKey (MySQL cache, else GBIF)
 └── sql/schema.sql            species_cache only (used by species.php)
 ```
@@ -269,12 +238,7 @@ Finalization Nov 26 · Presentation Dec 2 (Group 3 is in Presentation 1).
       usability test; check whether MySQL is available (the site also runs without it).
 - [ ] Teammates should commit from their **own GitHub accounts**; set up a GitHub Issues /
       Projects task board.
-- [ ] Update `README.md` with the Map and Encyclopedia pages, the animal groups and the
-      Find an Animal search (South Korea only).
-- [ ] Commit and push the 14 Oct Korea-focus + Find an Animal work (two commits, see the chat).
-- [ ] Optional: Requirements 7.1 table (objectives → FRs) has no row for FR-12 Encyclopedia
-      (FR-13 was added); add one if the team wants it complete.
-- [ ] Testing: add test cases for UC-13 (tiger, magpie list, scientific name, nonsense name).
+- [ ] Update `README.md` with the Map and Encyclopedia pages and the animal groups.
 - [x] Document build scripts are now in `docs/build` (see its README to rebuild).
 - [ ] Before deployment, check Esri tile terms and test on Chrome, Firefox and Edge (NFR-02)
       and at small screen widths (NFR-06).

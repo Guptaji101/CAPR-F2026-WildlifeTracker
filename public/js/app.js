@@ -69,7 +69,6 @@ function showSpeciesFilter() {
 function clearSpeciesFilter() {
     state.speciesFilter = null;
     showSpeciesFilter();
-    $('animal-input').value = '';
     history.replaceState(null, '', location.pathname);   // remove ?species=… from the address
 }
 
@@ -157,16 +156,16 @@ function showToast(message, type = 'info') {
 async function safeJsonFetch(url) {
     const res = await fetch(url);
     const text = await res.text();
-    let data;
     try {
-        data = JSON.parse(text);
+        const data = JSON.parse(text);
+        if (!res.ok && data.error) {
+            throw new Error(data.error);
+        }
+        return data;
     } catch (e) {
         if (!res.ok) throw new Error(`HTTP ${res.status}: ${text.slice(0, 80)}`);
         throw e;
     }
-    // Show the server's own message ("Place not found in South Korea …"), not the raw JSON
-    if (!res.ok && data.error) throw new Error(data.error);
-    return data;
 }
 
 let slowTimer = null;
@@ -265,8 +264,7 @@ async function handleSearch() {
 
         map.flyTo([state.currentLat, state.currentLng], 12, { duration: 1.2 });
         updateRadiusCircle();
-        // Say which place was found: inside Korea, "Tokyo" finds a shop called "Tokyo Milk Cheese Factory"
-        showToast(`Found: ${state.currentLocationName.replace(/, South Korea$/, '')}`);
+        showToast(`Located "${query}" successfully!`);
         if (isPhoneLayout()) setFiltersOpen(false);
 
         await loadSightings();
@@ -317,56 +315,6 @@ function useCurrentLocation() {
         },
         { timeout: 10000, enableHighAccuracy: true }
     );
-}
-
-// =============================================================================
-// Find an Animal: typed name -> GBIF species key (api/animal.php) -> species filter
-// =============================================================================
-async function findAnimal() {
-    const query = $('animal-input').value.trim();
-    $('animal-suggest').hidden = true;
-    if (!query) {
-        showToast('Type an animal name, for example "water deer" or "Pica pica"', 'error');
-        return;
-    }
-
-    setLoading(true, `Looking up "${query}"...`);
-    try {
-        const data = await safeJsonFetch(`api/animal.php?q=${encodeURIComponent(query)}`);
-        if (data.found) {
-            showAnimal(data.found);
-        } else {
-            // Several animals have this name: let the user pick one
-            setLoading(false);
-            showSuggestions(data.suggestions || []);
-        }
-    } catch (err) {
-        console.error(err);
-        showToast(err.message, 'error');
-        setLoading(false);
-    }
-}
-
-// Filter the map on one species (the same filter the Encyclopedia's "See … on the map" uses)
-function showAnimal(animal) {
-    state.speciesFilter = { key: animal.key, name: animal.name };
-    showSpeciesFilter();
-    $('animal-input').value = animal.name;
-    $('animal-suggest').hidden = true;
-    // The address keeps the filter, so reloading the page or sharing the link shows the same animal
-    history.replaceState(null, '', `?species=${animal.key}&name=${encodeURIComponent(animal.name)}`);
-    if (isPhoneLayout()) setFiltersOpen(false);
-    loadSightings();
-}
-
-function showSuggestions(list) {
-    const box = $('animal-suggest');
-    box.innerHTML = 'Did you mean…' + list.map(a => `
-        <button type="button" data-key="${a.key}" data-name="${escapeHtml(a.name)}">
-            <span>${escapeHtml(a.name)} <i>${escapeHtml(a.scientificName)}</i></span>
-            <small>${a.koreaRecords ? a.koreaRecords.toLocaleString() + ' in Korea' : 'not in Korea'}</small>
-        </button>`).join('');
-    box.hidden = false;
 }
 
 // =============================================================================
@@ -446,10 +394,9 @@ async function loadSightings() {
         state.sightings = data.results || [];
         state.page = 0;
         const place = ($('location-input').value || state.currentLocationName || 'this place').split(',')[0];
-        const noAnimal = `No ${state.speciesFilter?.name} sightings within ${state.radiusKm} km of ${place}. Try a larger radius, or show all animals.`;
-        renderAll(state.speciesFilter ? noAnimal : undefined);
-        // The table is below the map, so a filtered search with no results also shows a message on top
-        if (state.speciesFilter && !state.sightings.length && !data.fallback) showToast(noAnimal, 'error');
+        renderAll(state.speciesFilter
+            ? `No ${state.speciesFilter.name} sightings within ${state.radiusKm} km of ${place}. Try a larger radius, or show all animals.`
+            : undefined);
 
         if (data.fallback) {
             // NFR-04: GBIF was unreachable, so the server sent its built-in sample records
@@ -724,7 +671,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const params = new URLSearchParams(location.search);
     if (Number(params.get('species')) > 0) {
         state.speciesFilter = { key: Number(params.get('species')), name: params.get('name') || 'this species' };
-        $('animal-input').value = params.get('name') || '';
     }
     showSpeciesFilter();
     $('species-filter-clear').addEventListener('click', () => { clearSpeciesFilter(); loadSightings(); });
@@ -735,14 +681,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Enter') handleSearch();
     });
     $('search-btn').addEventListener('click', handleSearch);
-    $('animal-input').addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') findAnimal();
-    });
-    $('animal-btn').addEventListener('click', findAnimal);
-    $('animal-suggest').addEventListener('click', (e) => {
-        const btn = e.target.closest('button');
-        if (btn) showAnimal({ key: Number(btn.dataset.key), name: btn.dataset.name });
-    });
     $('filters-toggle').addEventListener('click', () => setFiltersOpen(!$('layout').classList.contains('filters-open')));
     $('locate-btn').addEventListener('click', useCurrentLocation);
 

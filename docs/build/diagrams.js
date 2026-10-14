@@ -75,33 +75,32 @@ function onEllipse(e, tx, ty) {
 /* Figure 1 - Use case diagram                                         */
 /* ------------------------------------------------------------------ */
 function useCaseDiagram() {
-  const W = 1190, H = 1145;
+  const W = 1190, H = 1050;
   let b = '';
   // System boundary
-  b += rectXY(150, 18, 975, 1127, { fill: '#FBFDFB', stroke: C.green, sw: 2, rx: 10 });
+  b += rectXY(150, 18, 975, 1032, { fill: '#FBFDFB', stroke: C.green, sw: 2, rx: 10 });
   b += lines(562, 44, [{ t: 'WildTrack — Wildlife Sighting Mapping & Species Distribution Tracker', s: 17.5, w: 'bold', c: C.green }]);
 
   const A = 380, B = 790;
   const a = (cy, id, n) => ({ cx: A, cy, rx: 145, ry: 31, id, n });
   const c = (cy, id, n) => ({ cx: B, cy, rx: 140, ry: 31, id, n });
   const uc = {
-    UC13: a(100, 'UC-13', 'Search Animal by Name'),
-    UC11: a(195, 'UC-11', 'Select Quick-Access Location'),
-    UC01: a(290, 'UC-01', 'Search Location'),
-    UC04: a(413, 'UC-04', 'Filter by Animal Group'),
-    UC05: a(507, 'UC-05', 'Filter by Date Range'),
-    UC06: a(601, 'UC-06', 'Adjust Search Radius'),
-    UC07: a(725, 'UC-07', 'View Species Details'),
-    UC08: a(830, 'UC-08', 'Read Map Legend'),
-    UC02: a(925, 'UC-02', 'Explore Map'),
-    UC12: a(1045, 'UC-12', 'Browse Animal Encyclopedia'),
-    UC03: c(455, 'UC-03', 'View Nearby Sightings'),
-    UC10: c(565, 'UC-10', 'View Search Status'),
-    UC09: c(830, 'UC-09', 'Verify Record on GBIF'),
+    UC11: a(100, 'UC-11', 'Select Quick-Access Location'),
+    UC01: a(195, 'UC-01', 'Search Location'),
+    UC04: a(318, 'UC-04', 'Filter by Animal Group'),
+    UC05: a(412, 'UC-05', 'Filter by Date Range'),
+    UC06: a(506, 'UC-06', 'Adjust Search Radius'),
+    UC07: a(630, 'UC-07', 'View Species Details'),
+    UC08: a(735, 'UC-08', 'Read Map Legend'),
+    UC02: a(830, 'UC-02', 'Explore Map'),
+    UC12: a(950, 'UC-12', 'Browse Animal Encyclopedia'),
+    UC03: c(360, 'UC-03', 'View Nearby Sightings'),
+    UC10: c(470, 'UC-10', 'View Search Status'),
+    UC09: c(735, 'UC-09', 'Verify Record on GBIF'),
   };
 
   // Primary actor: User (stick figure)
-  const ax = 72, ay = 555;
+  const ax = 72, ay = 460;
   let actor = `<g stroke="${C.ink}" stroke-width="2.2" fill="none" stroke-linecap="round">` +
     `<circle cx="${ax}" cy="${ay + 15}" r="15" fill="#fff"/>` +
     `<line x1="${ax}" y1="${ay + 30}" x2="${ax}" y2="${ay + 82}"/>` +
@@ -114,7 +113,7 @@ function useCaseDiagram() {
   // Associations: User -> left tip of each directly initiated use case
   const origin = [ax + 30, ay + 52];
   let assoc = '';
-  ['UC13', 'UC11', 'UC01', 'UC04', 'UC05', 'UC06', 'UC07', 'UC08', 'UC02', 'UC12'].forEach(k => {
+  ['UC11', 'UC01', 'UC04', 'UC05', 'UC06', 'UC07', 'UC08', 'UC02', 'UC12'].forEach(k => {
     assoc += poly([origin, [uc[k].cx - uc[k].rx, uc[k].cy]], { marker: null, stroke: C.ink, sw: 1.5 });
   });
 
@@ -122,21 +121,16 @@ function useCaseDiagram() {
   const EX = 1090;
   const ext = (cy, name) => rect(EX, cy, 160, 66, { fill: C.extFill, stroke: C.extStroke, rx: 4 }) +
     lines(EX, cy, [{ t: '«external system»', s: 13, i: true, c: C.grey }, ...name.split('\n').map(t => ({ t, s: 16.5, w: 'bold' }))]);
-  const same = cy => lines(EX, cy, [{ t: '(same actor as below)', s: 11.5, i: true, c: C.grey }]);
-  const line = (p1, p2) => poly([p1, p2], { marker: null, stroke: C.ink, sw: 1.5 });
-  // UC-13: GBIF and Wikipedia are drawn again at the top so their lines don't cross the other use cases
-  let exts = ext(70, 'GBIF API') + same(113) + ext(160, 'Wikipedia') + same(203);
-  exts += line([1010, 70], onEllipse(uc.UC13, 1010, 70)) + line([1010, 160], onEllipse(uc.UC13, 1010, 160));
-  exts += ext(290, 'Nominatim\nGeocoding') + ext(620, 'GBIF API') + ext(925, 'Map Tile\nServices');
+  let exts = ext(195, 'Nominatim\nGeocoding') + ext(525, 'GBIF API') + ext(830, 'Map Tile\nServices');
   // UC-12: GBIF is drawn a second time here so its line doesn't cross the other use cases
-  exts += ext(1020, 'GBIF API') + lines(EX, 1063, [{ t: '(same actor as above)', s: 11.5, i: true, c: C.grey }]) + ext(1105, 'Wikipedia');
-  exts += line([1010, 1020], [uc.UC12.cx + uc.UC12.rx, uc.UC12.cy]);
-  exts += line([1010, 1105], onEllipse(uc.UC12, 1010, 1105));
+  exts += ext(925, 'GBIF API') + lines(EX, 968, [{ t: '(same actor as above)', s: 11.5, i: true, c: C.grey }]) + ext(1010, 'Wikipedia');
+  exts += poly([[1010, 925], [uc.UC12.cx + uc.UC12.rx, uc.UC12.cy]], { marker: null, stroke: C.ink, sw: 1.5 });
+  exts += poly([[1010, 1010], onEllipse(uc.UC12, 1010, 1010)], { marker: null, stroke: C.ink, sw: 1.5 });
   const tipR = e => [e.cx + e.rx, e.cy];
-  exts += line([1010, 290], tipR(uc.UC01));
-  exts += line([1012, 595], tipR(uc.UC03));
-  exts += line([1010, 635], onEllipse(uc.UC07, 1010, 635));
-  exts += line([1010, 925], tipR(uc.UC02));
+  exts += poly([[1010, 195], tipR(uc.UC01)], { marker: null, stroke: C.ink, sw: 1.5 });
+  exts += poly([[1012, 500], tipR(uc.UC03)], { marker: null, stroke: C.ink, sw: 1.5 });
+  exts += poly([[1010, 540], onEllipse(uc.UC07, 1010, 540)], { marker: null, stroke: C.ink, sw: 1.5 });
+  exts += poly([[1010, 830], tipR(uc.UC02)], { marker: null, stroke: C.ink, sw: 1.5 });
 
   // «include» / «extend» dependencies (dashed, open arrow to the target)
   let deps = '';
@@ -147,10 +141,6 @@ function useCaseDiagram() {
     const lx = p1[0] + (p2[0] - p1[0]) * t + dx, ly = p1[1] + (p2[1] - p1[1]) * t;
     deps += tag(lx, ly, label, { s: 13.5, w: 'normal', c: C.extStroke, anchor: dx ? 'start' : 'middle' });
   };
-  // UC-13 -> UC-03 goes round the right of UC-11 instead of through it
-  const bend = [600, 190], end13 = onEllipse(uc.UC03, ...bend);
-  deps += poly([onEllipse(uc.UC13, 600, 260), bend, end13], { marker: 'open', dash: '7 5', stroke: C.extStroke, sw: 1.5 });
-  deps += tag(bend[0] + (end13[0] - bend[0]) * 0.55 + 12, bend[1] + (end13[1] - bend[1]) * 0.55, '«include»', { s: 13.5, w: 'normal', c: C.extStroke, anchor: 'start' });
   dep('UC11', 'UC01', '«include»', 0.5, 12);
   dep('UC01', 'UC03', '«include»', 0.42);
   dep('UC04', 'UC03', '«include»', 0.42);
@@ -250,14 +240,13 @@ function architectureDesign() {
     b += lines((x0 + x1) / 2, (y0 + y1) / 2, [{ t: title, s: o.ts || 15.5, w: 'bold' }, ...sub.map(t => ({ t, s: 13, c: '#374151' }))]);
   };
   const c3 = [[80, 306], [326, 552], [572, 796]];            // client tier: 3 columns
-  // server tier: 5 endpoints, 12 px apart
-  const c5 = [0, 1, 2, 3, 4].map(i => [80 + i * 145.6, 80 + i * 145.6 + 133.6]);
-  const m3 = i => (c3[i][0] + c3[i][1]) / 2, m5 = i => (c5[i][0] + c5[i][1]) / 2;
+  const c4 = [[80, 245], [259, 424], [438, 617], [631, 796]];  // server tier: 4 endpoints
+  const m3 = i => (c3[i][0] + c3[i][1]) / 2, m4 = i => (c4[i][0] + c4[i][1]) / 2;
 
   // Tier 1: browser
   tier(20, 205, 'CLIENT', 'browser', C.blueFill, C.blueStroke);
   box(c3[0][0], 40, c3[0][1], 188, 'User Interface', ['index.php: map dashboard', 'encyclopedia.php', 'partials/header.php:', 'shared top bar']);
-  box(c3[1][0], 40, c3[1][1], 188, 'Client Logic', ['app.js: search, filters,', 'animal search, pins,', 'table, profile', 'encyclopedia.js: tree,', 'cards, detail dialog']);
+  box(c3[1][0], 40, c3[1][1], 188, 'Client Logic', ['app.js: search, filters,', 'pins, table, profile', 'encyclopedia.js: tree,', 'cards, detail dialog']);
   box(c3[2][0], 40, c3[2][1], 188, 'Leaflet.js', ['interactive map', 'color-coded pins', 'base-map tabs · scale', 'radius circle + label']);
   b += rectXY(882, 40, 1160, 190, { fill: C.amberFill, stroke: C.amberStroke, sw: 1.6, rx: 6 });
   b += lines(1021, 115, [{ t: '«external»', s: 12, i: true, c: C.grey }, { t: 'Map tiles and photos', s: 15.5, w: 'bold' },
@@ -266,14 +255,12 @@ function architectureDesign() {
 
   // Tier 2: server
   tier(270, 575, 'SERVER', 'Apache + PHP', C.greenFill, C.green);
-  box(c5[0][0], 296, c5[0][1], 392, 'geocode.php', ['place in Korea', '→ lat/lng'], { ts: 14 });
-  box(c5[1][0], 296, c5[1][1], 392, 'sightings.php', ['sightings near', 'a point + filters'], { ts: 14 });
-  box(c5[2][0], 296, c5[2][1], 392, 'encyclopedia.php', ['top species per', 'group · facts'], { ts: 14 });
-  box(c5[3][0], 296, c5[3][1], 392, 'animal.php', ['animal name', '→ species key'], { ts: 14 });
-  box(c5[4][0], 296, c5[4][1], 392, 'species.php', ['taxonomy, photo,', 'summary (cached)'], { ts: 14 });
-  const gx0 = c5[1][0], gx1 = c5[3][1], wx0 = c5[4][0] + 26, wx1 = c5[4][1];
-  box(gx0, 450, gx1, 530, 'includes/gbif.php', ['GBIF client: retry ×3, sample dataset, gbif_get()'], { fill: '#fbfdfb' });
-  box(wx0, 450, wx1, 530, 'wikipedia.php', ['summary,', 'GBIF key'], { fill: '#fbfdfb', ts: 13.5 });
+  box(c4[0][0], 296, c4[0][1], 392, 'geocode.php', ['place name', '→ lat/lng'], { ts: 15 });
+  box(c4[1][0], 296, c4[1][1], 392, 'sightings.php', ['sightings near', 'a point + filters'], { ts: 15 });
+  box(c4[2][0], 296, c4[2][1], 392, 'encyclopedia.php', ['top species per', 'group · facts'], { ts: 15 });
+  box(c4[3][0], 296, c4[3][1], 392, 'species.php', ['taxonomy, photo,', 'summary (cached)'], { ts: 15 });
+  box(c4[1][0], 450, c4[2][1], 530, 'includes/gbif.php', ['GBIF client: retry ×3, sample dataset, gbif_get()'], { fill: '#fbfdfb' });
+  box(c4[3][0] + 46, 450, c4[3][1], 530, 'wikipedia.php', ['article summary'], { fill: '#fbfdfb', ts: 14 });
 
   // Database: one cache table, read and written by species.php
   b += rectXY(882, 430, 1160, 575, { fill: C.greenFill, stroke: C.green, sw: 1.6, rx: 6 });
@@ -284,31 +271,26 @@ function architectureDesign() {
 
   // Tier 3: external data services
   tier(640, 780, 'EXTERNAL', '', C.amberFill, C.amberStroke);
-  box(c5[0][0], 662, c5[0][1], 758, 'Nominatim', ['OpenStreetMap', 'geocoding'], { ts: 15 });
-  box(gx0, 662, gx1, 758, 'GBIF API  (api.gbif.org/v1)', ['/occurrence/search · /species/{key} · /species/match', '/species/search · /species/{key}/media · /iucnRedListCategory'], { ts: 15 });
-  box(c5[4][0], 662, c5[4][1], 758, 'Wikipedia', ['page summary', 'and query API;', 'Wikidata'], { ts: 15 });
+  box(c4[0][0], 662, c4[0][1], 758, 'Nominatim', ['OpenStreetMap', 'geocoding'], { ts: 15 });
+  box(c4[1][0], 662, c4[2][1], 758, 'GBIF API  (api.gbif.org/v1)', ['/occurrence/search · /species/{key}', '/species/{key}/media · /iucnRedListCategory'], { ts: 15 });
+  box(c4[3][0], 662, c4[3][1], 758, 'Wikipedia', ['REST API', 'page summary'], { ts: 15 });
 
   // Browser -> PHP endpoints
   b += poly([[m3(1), 188], [m3(1), 238]], { marker: null });
-  b += poly([[m5(0), 238], [m5(4), 238]], { marker: null });
-  [0, 1, 2, 3, 4].forEach(i => { b += poly([[m5(i), 238], [m5(i), 294]]); });
-  b += tag((m5(0) + m5(1)) / 2 + 10, 238, 'HTTP GET → JSON', { s: 13, w: 'bold' });
-  // Endpoints -> helpers
-  [1, 2].forEach(i => { b += poly([[m5(i), 392], [m5(i), 448]]); });
-  b += poly([[m5(3) - 20, 392], [m5(3) - 20, 448]]);                                   // animal.php -> gbif.php
-  const sx = c5[4][0] + 12;                                                              // species.php -> gbif.php
-  b += poly([[sx, 392], [sx, 490], [gx1 + 2, 490]]);
-  b += poly([[(wx0 + wx1) / 2 + 12, 392], [(wx0 + wx1) / 2 + 12, 448]]);                // species.php -> wikipedia.php
-  // animal.php -> wikipedia.php, with a small hop where it crosses the species.php line
-  const ay = 420, ax0 = c5[3][1] - 22, ax1 = (wx0 + wx1) / 2 - 12;
-  b += `<path d="M${ax0},392 V${ay} H${sx - 6} a6,6 0 0 1 12,0 H${ax1} V448" fill="none" stroke="${C.line}" stroke-width="1.7" stroke-linejoin="round" marker-end="url(#arrow)"/>`;
-  // Helpers -> external services
-  b += poly([[m5(0), 392], [m5(0), 660]]);
-  b += poly([[(gx0 + gx1) / 2, 530], [(gx0 + gx1) / 2, 660]]);
-  b += poly([[(wx0 + wx1) / 2, 530], [(wx0 + wx1) / 2, 660]]);
-  b += tag(m5(0), 600, 'geocoding', { s: 12.5, w: 'normal' });
-  b += tag((gx0 + gx1) / 2, 600, 'occurrences, species, names, IUCN status', { s: 12.5, w: 'normal' });
-  b += tag((wx0 + wx1) / 2, 600, 'summary, key', { s: 12.5, w: 'normal' });
+  b += poly([[m4(0), 238], [m4(3), 238]], { marker: null });
+  [0, 1, 2, 3].forEach(i => { b += poly([[m4(i), 238], [m4(i), 294]]); });
+  b += tag((m4(0) + m4(1)) / 2 + 10, 238, 'HTTP GET → JSON', { s: 13, w: 'bold' });
+  // Endpoints -> helpers -> external services
+  b += poly([[m4(1), 392], [m4(1), 448]]);
+  b += poly([[m4(2), 392], [m4(2), 448]]);
+  b += poly([[c4[3][0] + 20, 392], [c4[3][0] + 20, 490], [c4[2][1] + 2, 490]]);
+  b += poly([[c4[3][1] - 60, 392], [c4[3][1] - 60, 448]]);
+  b += poly([[m4(0), 392], [m4(0), 660]]);
+  b += poly([[(c4[1][0] + c4[2][1]) / 2, 530], [(c4[1][0] + c4[2][1]) / 2, 660]]);
+  b += poly([[(c4[3][0] + 46 + c4[3][1]) / 2, 530], [(c4[3][0] + 46 + c4[3][1]) / 2, 660]]);
+  b += tag(m4(0), 600, 'geocoding', { s: 12.5, w: 'normal' });
+  b += tag((c4[1][0] + c4[2][1]) / 2, 600, 'occurrences, species, IUCN status', { s: 12.5, w: 'normal' });
+  b += tag((c4[3][0] + 46 + c4[3][1]) / 2, 600, 'summary', { s: 12.5, w: 'normal' });
   return svg(W, H, b);
 }
 
@@ -739,12 +721,12 @@ function dfdContext() {
   const W = 1300, H = 720;
   let b = '';
   b += flow([[250, 100], [600, 100], [600, 223]], 'GPS position (with permission)', [425, 86]);
-  b += flow([[250, 290], [513, 290]], 'search, filters, animal name', [382, 276]);
+  b += flow([[250, 290], [513, 290]], 'search, filters, group choice', [382, 276]);
   b += flow([[250, 330], [513, 330]], 'selected sighting or species', [382, 316]);
   b += flow([[515, 370], [252, 370]], 'map, sightings table, species\nprofile, encyclopedia cards', [382, 394]);
   b += flow([[700, 223], [700, 85], [1048, 85]], 'place name', [875, 71]);
   b += flow([[1050, 120], [740, 120], [740, 223]], 'coordinates (lat/lng)', [895, 106]);
-  b += flow([[785, 295], [1048, 295]], 'occurrence query; species key;\nanimal name', [917, 270]);
+  b += flow([[785, 295], [1048, 295]], 'occurrence query; species key', [917, 281]);
   b += flow([[1050, 365], [787, 365]], 'occurrence records, species lists;\ntaxonomy, photo links, IUCN status', [917, 389]);
   b += flow([[1050, 560], [740, 560], [740, 437]], 'map tiles', [895, 546]);
   b += flow([[250, 560], [560, 560], [560, 437]], 'sighting photos', [405, 546]);
@@ -757,88 +739,67 @@ function dfdContext() {
   b += dfdExt(1050, 270, 1260, 390, 'GBIF API', 'occurrence + species');
   b += dfdExt(1050, 520, 1260, 600, 'Map Tile\nServices');
   // Wikipedia: species summaries for the Encyclopedia
-  b += flow([[625, 437], [625, 618]], 'scientific or\nanimal name', [560, 596]);
-  b += flow([[675, 620], [675, 439]], 'summary, photo,\nGBIF key', [738, 596]);
-  b += dfdExt(545, 620, 755, 700, 'Wikipedia', 'articles · Wikidata');
+  b += flow([[625, 437], [625, 618]], 'scientific\nname', [578, 596]);
+  b += flow([[675, 620], [675, 439]], 'summary,\nphoto', [720, 596]);
+  b += dfdExt(545, 620, 755, 700, 'Wikipedia', 'article summaries');
   return svg(W, H, b);
 }
 
-// Level 1: the main processes and the two data stores
+// Level 1: the four main processes and the two data stores
 function dfdLevel1() {
-  const W = 1300, H = 1680, X = 560, PW = 260;
+  const W = 1300, H = 1480, X = 560, PW = 260;
   const L = X - PW / 2, R = X + PW / 2;
-  const S = y => y + 200;   // everything from process 2.0 down sits 200 px lower to make room for 6.0
-  const CX = 470;           // x of the 1.0 -> 2.0 flow, which the User's flows to 6.0 hop over
-  // Horizontal flow with a small hop where it crosses the 1.0 -> 2.0 flow
-  const hopFlow = (x0, x1, y, label, [lx, ly]) => {
-    const r = 6, dir = Math.sign(x1 - x0);
-    const d = `M${x0},${y} H${CX - dir * r} a${r},${r} 0 0 ${dir > 0 ? 1 : 0} ${dir * 2 * r},0 H${x1}`;
-    const Ls = label.split('\n'), s = 13;
-    const tw = Math.max(...Ls.map(l => l.length)) * s * 0.55 + 10, th = Ls.length * s * 1.28 + 4;
-    return `<path d="${d}" fill="none" stroke="${C.line}" stroke-width="1.7" marker-end="url(#arrow)"/>` +
-      `<rect x="${lx - tw / 2}" y="${ly - th / 2}" width="${tw}" height="${th}" fill="#fff"/>` + lines(lx, ly, Ls.map(t => ({ t, s })));
-  };
   let b = '';
   // Left: device and user
   b += flow([[220, 100], [L - 2, 100]], 'GPS position', [324, 86]);
   b += flow([[220, 180], [L - 2, 180]], 'place name or\nQuick Location', [324, 152]);
-  b += hopFlow(220, 508, 345, 'animal name;\nchoice from the list', [330, 317]);
-  b += hopFlow(510, 222, 405, '“Did you mean…” list', [330, 421]);
-  b += flow([[220, S(390)], [L - 2, S(390)]], 'filter choices: groups,\ndates, radius, max records', [324, S(362)]);
-  b += flow([[L, S(610)], [222, S(610)]], 'pins, table, legend,\nstatus messages', [324, S(582)]);
-  b += flow([[220, S(665)], [L - 2, S(665)]], 'clicked pin or “View”', [324, S(651)]);
-  b += flow([[L, S(880)], [222, S(880)]], 'species profile (map page)', [324, S(866)]);
-  b += flow([[220, S(1240)], [L - 2, S(1240)]], 'group and region choice,\nclicked card', [324, S(1212)]);
-  b += flow([[L, S(1300)], [222, S(1300)]], 'species cards and\ndetail dialog', [324, S(1326)]);
+  b += flow([[220, 390], [L - 2, 390]], 'filter choices: groups,\ndates, radius, max records', [324, 362]);
+  b += flow([[L, 610], [222, 610]], 'pins, table, legend,\nstatus messages', [324, 582]);
+  b += flow([[220, 665], [L - 2, 665]], 'clicked pin or “View”', [324, 651]);
+  b += flow([[L, 880], [222, 880]], 'species profile (map page)', [324, 866]);
+  b += flow([[220, 1240], [L - 2, 1240]], 'group and region choice,\nclicked card', [324, 1212]);
+  b += flow([[L, 1300], [222, 1300]], 'species cards and\ndetail dialog', [324, 1326]);
   // Down the middle
-  b += flow([[CX, 210], [CX, S(328)]], 'coordinates +\nplace name', [395, 262]);
-  b += flow([[600, 455], [600, S(328)]], 'species key', [650, 494]);
-  b += flow([[X, S(450)], [X, S(568)]], 'sightings (JSON)', [480, S(520)]);
-  b += flow([[X, S(690)], [X, S(798)]], 'selected sighting\n+ species key', [475, S(744)]);
-  b += flow([[470, S(1208)], [470, S(962)]], 'species keys', [400, S(1085)]);
-  b += flow([[540, S(962)], [540, S(1208)]], 'species\ndetails', [592, S(1150)]);
+  b += flow([[X, 210], [X, 328]], 'coordinates +\nplace name', [480, 269]);
+  b += flow([[X, 450], [X, 568]], 'sightings (JSON)', [480, 520]);
+  b += flow([[X, 690], [X, 798]], 'selected sighting\n+ species key', [475, 744]);
+  b += flow([[470, 1208], [470, 962]], 'species keys', [400, 1085]);
+  b += flow([[540, 962], [540, 1208]], 'species\ndetails', [592, 1150]);
   // Right: external services
   b += flow([[R, 130], [1078, 130]], 'place name', [885, 116]);
   b += flow([[1080, 170], [R + 2, 170]], 'lat/lng', [885, 184]);
-  b += flow([[R, 308], [1078, 308]], 'animal name', [885, 294]);
-  b += flow([[1080, 340], [R + 2, 340]], 'species key, or species + Korean record counts', [885, 354]);
-  b += flow([[R, 395], [1078, 395]], 'English name', [885, 381]);
-  b += flow([[1080, 430], [R + 2, 430]], 'article → GBIF key (Wikidata)', [885, 444]);
-  b += flow([[R, S(370)], [1078, S(370)]], 'location, radius, taxon keys,\ndates, limit', [885, S(344)]);
-  b += flow([[1080, S(410)], [R + 2, S(410)]], 'occurrence records', [885, S(424)]);
-  b += flow([[1080, S(590)], [R + 2, S(590)]], 'map tiles', [885, S(576)]);
-  b += flow([[1080, S(675)], [R + 2, S(675)]], 'photos', [885, S(661)]);
-  b += flow([[R, S(815)], [1078, S(815)]], 'species key', [885, S(801)]);
-  b += flow([[1080, S(850)], [R + 2, S(850)]], 'taxonomy, photo link', [885, S(864)]);
-  b += flow([[R, S(905)], [1078, S(905)]], 'scientific name', [885, S(891)]);
-  b += flow([[1080, S(945)], [R + 2, S(945)]], 'summary, photo', [885, S(959)]);
-  b += flow([[R, S(1240)], [1078, S(1240)]], 'group taxon keys, South Korea;\nspecies key (facts)', [885, S(1212)]);
-  b += flow([[1080, S(1300)], [R + 2, S(1300)]], 'most-recorded species,\nrecord counts, IUCN status', [885, S(1326)]);
+  b += flow([[R, 370], [1078, 370]], 'location, radius, taxon keys,\ndates, limit', [885, 344]);
+  b += flow([[1080, 410], [R + 2, 410]], 'occurrence records', [885, 424]);
+  b += flow([[1080, 590], [R + 2, 590]], 'map tiles', [885, 576]);
+  b += flow([[1080, 675], [R + 2, 675]], 'photos', [885, 661]);
+  b += flow([[R, 815], [1078, 815]], 'species key', [885, 801]);
+  b += flow([[1080, 850], [R + 2, 850]], 'taxonomy, photo link', [885, 864]);
+  b += flow([[R, 905], [1078, 905]], 'scientific name', [885, 891]);
+  b += flow([[1080, 945], [R + 2, 945]], 'summary, photo', [885, 959]);
+  b += flow([[R, 1240], [1078, 1240]], 'group taxon keys, South Korea;\nspecies key (facts)', [885, 1212]);
+  b += flow([[1080, 1300], [R + 2, 1300]], 'most-recorded species,\nrecord counts, IUCN status', [885, 1326]);
   // Data stores
-  b += flow([[760, S(505)], [640, S(505)], [640, S(452)]], 'sample records', [700, S(491)]);
-  b += flow([[680, S(962)], [680, S(1068)], [798, S(1068)]], 'new species row', [740, S(1054)]);
-  b += flow([[800, S(1094)], [640, S(1094)], [640, S(962)]], 'cached species', [740, S(1110)]);
+  b += flow([[760, 505], [640, 505], [640, 452]], 'sample records', [700, 491]);
+  b += flow([[680, 962], [680, 1068], [798, 1068]], 'new species row', [740, 1054]);
+  b += flow([[800, 1094], [640, 1094], [640, 962]], 'cached species', [740, 1110]);
 
   b += dfdProc(X, 150, PW, 120, '1.0', 'Resolve\nLocation', 'app.js · geocode.php');
-  b += dfdProc(600, 375, 180, 160, '6.0', 'Find\nAnimal', 'animal.php');
-  b += dfdProc(X, S(390), PW, 120, '2.0', 'Retrieve\nSightings', 'sightings.php · gbif.php');
-  b += dfdProc(X, S(630), PW, 120, '3.0', 'Display Map\nand Sightings', 'app.js · Leaflet.js');
-  b += dfdProc(X, S(880), PW, 160, '4.0', 'Get Species\nDetails', 'species.php · wikipedia.php');
-  b += dfdProc(X, S(1270), PW, 120, '5.0', 'Browse\nEncyclopedia', 'encyclopedia.js · .php');
-  b += dfdStore(760, S(505), 260, 'D2', 'Sample Dataset', 'gbif.php · used if GBIF is down');
-  b += dfdStore(800, S(1081), 260, 'D1', 'Species Cache', 'MySQL · species_cache');
+  b += dfdProc(X, 390, PW, 120, '2.0', 'Retrieve\nSightings', 'sightings.php · gbif.php');
+  b += dfdProc(X, 630, PW, 120, '3.0', 'Display Map\nand Sightings', 'app.js · Leaflet.js');
+  b += dfdProc(X, 880, PW, 160, '4.0', 'Get Species\nDetails', 'species.php · wikipedia.php');
+  b += dfdProc(X, 1270, PW, 120, '5.0', 'Browse\nEncyclopedia', 'encyclopedia.js · .php');
+  b += dfdStore(760, 505, 260, 'D2', 'Sample Dataset', 'gbif.php · used if GBIF is down');
+  b += dfdStore(800, 1081, 260, 'D1', 'Species Cache', 'MySQL · species_cache');
   b += dfdExt(40, 55, 220, 140, 'Device\nGeolocation');
-  b += dfdExt(40, 165, 220, S(1340), 'User', '(no login)');
+  b += dfdExt(40, 165, 220, 1340, 'User', '(no login)');
   b += dfdExt(1080, 105, 1260, 195, 'Nominatim', 'geocoding API');
-  b += dfdExt(1080, 288, 1260, 358, 'GBIF\nSpecies API', 'match · name search');
-  b += dfdExt(1080, 378, 1260, 448, 'Wikipedia', 'query API + Wikidata');
-  b += dfdExt(1080, S(345), 1260, S(435), 'GBIF\nOccurrence API');
-  b += dfdExt(1080, S(558), 1260, S(622), 'Map Tile Services');
-  b += dfdExt(1080, S(643), 1260, S(707), 'Photo Hosts');
-  b += dfdExt(1080, S(790), 1260, S(870), 'GBIF\nSpecies API');
-  b += dfdExt(1080, S(890), 1260, S(970), 'Wikipedia', 'REST API');
-  b += dfdExt(1080, S(1215), 1260, S(1325), 'GBIF API', 'occurrence facets,\nIUCN Red List');
-  b += dfdLegend(790, S(1365));
+  b += dfdExt(1080, 345, 1260, 435, 'GBIF\nOccurrence API');
+  b += dfdExt(1080, 558, 1260, 622, 'Map Tile Services');
+  b += dfdExt(1080, 643, 1260, 707, 'Photo Hosts');
+  b += dfdExt(1080, 790, 1260, 870, 'GBIF\nSpecies API');
+  b += dfdExt(1080, 890, 1260, 970, 'Wikipedia', 'REST API');
+  b += dfdExt(1080, 1215, 1260, 1325, 'GBIF API', 'occurrence facets,\nIUCN Red List');
+  b += dfdLegend(790, 1365);
   return svg(W, H, b);
 }
 
@@ -883,20 +844,18 @@ function wfDashboard() {
   b += wbox(18, 214, 262, 244) + wtxt(30, 229, 'Enter a place name…', { c: '#9ca3af', i: true });
   b += wbtn(18, 252, 262, 280, 'Locate Me', true);
   b += wtxt(18, 300, 'Quick Locations', { s: 12, c: WF.dark });
-  [['Busan', 18, 74], ['Seoul', 80, 134], ['Jeju Island', 140, 216], ['Ulsan', 18, 70], ['Hallasan', 76, 144], ['Seoraksan', 150, 230], ['…', 236, 262]]
+  [['Busan', 18, 74], ['Seoul', 80, 134], ['Jeju Island', 140, 216], ['Ulsan', 18, 70], ['Hallasan', 76, 144], ['Tokyo', 150, 204], ['…', 210, 240]]
     .forEach(([t, x0, x1], i) => { const y = i < 3 ? 314 : 344; b += wbox(x0, y, x1 - 4, y + 24, { rx: 12, fill: i ? '#fff' : WF.box }) + wtxt((x0 + x1 - 4) / 2, y + 12, t, { a: 'middle', s: 11.5 }); });
-  b += title(396, 'Find an Animal');
-  b += wbox(18, 410, 262, 440) + wtxt(30, 425, 'Animal name (e.g. water deer)…', { c: '#9ca3af', i: true });
-  b += title(466, 'Search Radius');
-  ['5', '10', '25', '50', '100'].forEach((t, i) => { const x0 = 18 + i * 47; b += wbox(x0, 480, x0 + 42, 504, { rx: 12, fill: i === 1 ? WF.box : '#fff' }) + wtxt(x0 + 21, 492, `${t} km`, { a: 'middle', s: 11 }); });
-  b += title(532, 'Animal Groups');
+  b += title(396, 'Search Radius');
+  ['5', '10', '25', '50', '100'].forEach((t, i) => { const x0 = 18 + i * 47; b += wbox(x0, 410, x0 + 42, 434, { rx: 12, fill: i === 1 ? WF.box : '#fff' }) + wtxt(x0 + 21, 422, `${t} km`, { a: 'middle', s: 11 }); });
+  b += title(462, 'Animal Groups');
   ['Mammals', 'Birds', 'Reptiles', 'Amphibians', 'Fish', 'Invertebrates'].forEach((t, i) => {
-    const y = 556 + i * 26;
+    const y = 486 + i * 26;
     b += wbox(20, y - 7, 34, y + 7, { rx: 2, fill: WF.dark, stroke: WF.dark }) + `<circle cx="50" cy="${y}" r="6" fill="${WF.line}"/>` + wtxt(64, y, t, { s: 12.5 });
   });
-  b += title(728, 'Observation Date');
-  b += wbox(18, 742, 128, 770) + wtxt(28, 756, 'From', { c: '#9ca3af', s: 12 }) + wtxt(140, 756, '→', { a: 'middle' }) + wbox(152, 742, 262, 770) + wtxt(162, 756, 'To', { c: '#9ca3af', s: 12 });
-  b += wbox(18, 788, 262, 816) + wtxt(30, 802, 'Filters  (Max records: 75)', { s: 12.5 }) + wtxt(250, 802, '▾', { a: 'end' });
+  b += title(658, 'Observation Date');
+  b += wbox(18, 672, 128, 700) + wtxt(28, 686, 'From', { c: '#9ca3af', s: 12 }) + wtxt(140, 686, '→', { a: 'middle' }) + wbox(152, 672, 262, 700) + wtxt(162, 686, 'To', { c: '#9ca3af', s: 12 });
+  b += wbox(18, 718, 262, 746) + wtxt(30, 732, 'Filters  (Max records: 75)', { s: 12.5 }) + wtxt(250, 732, '▾', { a: 'end' });
   b += '</g>';
 
   // Map card
@@ -949,7 +908,7 @@ function wfDashboard() {
   b += wbtn(974, 800, 1270, 834, 'Read about it in the Encyclopedia');
 
   // Callouts (see key in the document)
-  [[996, 27, 1], [268, 109, 2], [268, 209, 3], [268, 372, 4], [268, 420, 5], [268, 636, 6], [266, 682, 7], [268, 305, 15],
+  [[996, 27, 1], [268, 109, 2], [268, 209, 3], [268, 302, 4], [268, 350, 5], [268, 566, 6], [266, 612, 7],
     [532, 100, 8], [916, 172, 9], [612, 230, 10], [926, 540, 11], [1274, 300, 12], [1274, 773, 13], [1274, 817, 14]]
     .forEach(([x, y, n]) => { b += callout(x, y, n); });
   return svg(W, H, b);
