@@ -192,8 +192,9 @@ Finalization Nov 26 · Presentation Dec 2 (Group 3 is in Presentation 1).
       whether v1.3 should be submitted again or kept for the final submission (Nov 26).
 - [ ] Optional: Map ↔ Encyclopedia links ("Learn more" in the Species Profile, "See on the map"
       on a card). Team decides; written by the team, Claude reviews.
-- [ ] **Docs out of date after the 14 Oct UX fixes:** System Design 6.1–6.4 (element tables,
-      wireframes for the phone layout and the new links) and UC-07 / UC-12 (new links).
+- [x] Docs updated for the 14 Oct UX fixes: System Design v1.1 (22 pages: Figure 6/7 new
+      buttons, new 6.5 Phone Layout + Figure 8, 6.6 Messages, new 6.7 Accessibility, traceability);
+      Requirements v1.3 (25 pages: NFR-06, UC-01 A5, UC-07 A6–A7, UC-10 A4, UC-12 A7–A9).
 - [ ] **Usability test** (3–5 classmates, 4 tasks) -> `docs/usability.md`, for UI/UX and Week 11.
 - [ ] **Testing (20 pts, not started):** Paudel writes `docs/testing.md` (plan + test cases);
       first test run Oct 26–31, full run Nov 16–22. Bugs as GitHub issues.

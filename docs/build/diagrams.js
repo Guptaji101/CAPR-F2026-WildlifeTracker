@@ -901,16 +901,17 @@ function wfDashboard() {
     const y = 420 + i * 30;
     b += `<line x1="974" y1="${y + 15}" x2="1270" y2="${y + 15}" stroke="${WF.box}"/>` + wtxt(974, y, t, { s: 12.5, c: WF.dark }) + wbar(1100, y, 120);
   });
-  [['Date Observed', 650], ['Locality', 700], ['Coordinates', 750]].forEach(([t, y]) => {
+  [['Date Observed', 640], ['Locality', 682], ['Coordinates', 724]].forEach(([t, y]) => {
     b += `<circle cx="986" cy="${y}" r="9" fill="${WF.box}"/>` + wtxt(1004, y - 9, t, { s: 11.5, c: WF.dark }) + wbar(1004, y + 9, 140);
   });
-  b += wbtn(974, 790, 1270, 826, 'Explore on GBIF Network ↗', true);
+  b += wbtn(974, 756, 1270, 790, 'Explore on GBIF Network ↗', true);
+  b += wbtn(974, 800, 1270, 834, 'Read about it in the Encyclopedia');
 
   // Callouts (see key in the document)
   [[996, 27, 1], [268, 109, 2], [268, 209, 3], [268, 302, 4], [268, 350, 5], [268, 566, 6], [266, 612, 7],
-    [532, 100, 8], [916, 172, 9], [612, 230, 10], [926, 540, 11], [1274, 300, 12], [1274, 808, 13]]
+    [532, 100, 8], [916, 172, 9], [612, 230, 10], [926, 540, 11], [1274, 300, 12], [1274, 773, 13], [1274, 817, 14]]
     .forEach(([x, y, n]) => { b += callout(x, y, n); });
-  return svg(FW, H, b);
+  return svg(W, H, b);
 }
 
 function wfEncyclopedia() {
@@ -953,7 +954,7 @@ function wfEncyclopedia() {
   }
 
   // Detail dialog: opens over the page when a card is clicked (drawn beside it here)
-  const dx0 = 1350, dy0 = 100, dx1 = 1790, dy1 = 660;
+  const dx0 = 1350, dy0 = 100, dx1 = 1790, dy1 = 690;
   b += wtxt((dx0 + dx1) / 2, 72, 'Species detail dialog (opens when a card is clicked)', { a: 'middle', s: 13, w: 'bold', c: WF.dark });
   b += `<path d="M1240,390 C1290,390 1300,390 ${dx0 - 4},390" fill="none" stroke="${WF.dark}" stroke-width="1.5" stroke-dasharray="6 4" marker-end="url(#arrow)"/>`;
   b += rectXY(dx0 + 6, dy0 + 6, dx1 + 6, dy1 + 6, { fill: 'rgba(0,0,0,0.12)', stroke: 'none', rx: 8 });
@@ -966,13 +967,77 @@ function wfEncyclopedia() {
   b += wtxt(dx0 + 22, dy0 + 420, 'CLASSIFICATION', { s: 11, w: 'bold', c: WF.dark });
   b += wtxt(dx0 + 22, dy0 + 442, 'Animalia › Chordata › Mammalia › Artiodactyla › Cervidae › …', { s: 12 });
   b += wbtn(dx0 + 22, dy0 + 478, dx0 + 232, dy0 + 514, 'Read more on Wikipedia', true) + wbtn(dx0 + 244, dy0 + 478, dx0 + 420, dy0 + 514, 'Explore on GBIF ↗');
+  b += wbtn(dx0 + 22, dy0 + 526, dx0 + 232, dy0 + 562, 'See mammals on the map');
 
   // Callouts (see key in the document)
   [[1088, 27, 1], [264, 84, 2], [268, 260, 3], [268, 500, 4], [1268, 92, 5], [944, 212, 6], [530, 238, 7],
     [dx0 - 14, dy0 + 260, 8], [dx0 + 312, dy0 + 303, 9], [dx0 - 14, dy0 + 442, 10],
-    [dx0 + 210, dy0 + 530, 11], [dx0 + 432, dy0 + 496, 12]]
+    [dx0 - 14, dy0 + 496, 11], [dx0 + 432, dy0 + 496, 12], [dx0 - 14, dy0 + 544, 13]]
     .forEach(([x, y, n]) => { b += callout(x, y, n); });
   return svg(FW, H, b);
+}
+
+// Phone layout (375 px): the map / the animals come first, the settings fold away
+function wfPhone() {
+  const W = 1000, H = 900;
+  let b = rectXY(0, 0, W, H, { fill: '#fff', stroke: 'none', rx: 0 });
+  const phone = (x0, title, inner) => {
+    const y0 = 60, w = 360, h = 800;
+    b += wtxt(x0 + w / 2, 30, title, { a: 'middle', s: 15, w: 'bold' });
+    b += rectXY(x0 - 10, y0 - 10, x0 + w + 10, y0 + h + 10, { fill: '#1f2933', stroke: 'none', rx: 34 });
+    b += rectXY(x0, y0, x0 + w, y0 + h, { fill: WF.fill, stroke: 'none', rx: 24 });
+    // header: logo + three icon links
+    b += rectXY(x0, y0, x0 + w, y0 + 52, { fill: '#fff', stroke: WF.line, sw: 1, rx: 0 });
+    b += wimg(x0 + 14, y0 + 14, x0 + 38, y0 + 38) + wtxt(x0 + 46, y0 + 26, 'WildTrack', { s: 16, w: 'bold' });
+    [0, 1, 2].forEach(i => { b += `<circle cx="${x0 + 250 + i * 40}" cy="${y0 + 26}" r="12" fill="${WF.box}"/>`; });
+    inner(x0, y0 + 52, w);
+  };
+  const bar = (x0, y, w, label, value) => {
+    b += wbox(x0 + 12, y, x0 + w - 12, y + 44, { fill: '#fff', rx: 8 });
+    b += wtxt(x0 + 28, y + 22, label, { s: 13, w: 'bold' }) + wtxt(x0 + w - 48, y + 22, value, { a: 'end', s: 12, c: WF.dark }) + wtxt(x0 + w - 28, y + 22, '▾', { a: 'middle', s: 12 });
+  };
+
+  // Map page
+  phone(60, 'Map page', (x0, y, w) => {
+    bar(x0, y + 12, w, 'Search & filters', 'Busan · 10 km');
+    const my = y + 70;
+    b += wbox(x0 + 12, my, x0 + w - 12, my + 330, { fill: '#EEF0F2' });
+    b += `<circle cx="${x0 + w / 2}" cy="${my + 165}" r="110" fill="rgba(107,114,128,0.08)" stroke="${WF.dark}" stroke-width="1.4" stroke-dasharray="6 4"/>`;
+    [[-40, -40], [30, -60], [0, 20], [60, 10], [-70, 40], [20, 70]].forEach(([dx, dy]) => {
+      const px = x0 + w / 2 + dx, py = my + 165 + dy;
+      b += `<path d="M${px},${py} c-8,-11 -8,-20 0,-20 c8,0 8,9 0,20z" fill="${WF.dark}"/>`;
+    });
+    b += wbox(x0 + 22, my + 10, x0 + 220, my + 36, { rx: 5 }) + wtxt(x0 + 121, my + 23, 'Street  Satellite  Topographic', { a: 'middle', s: 11 });
+    b += wbox(x0 + 22, my + 262, x0 + 190, my + 320, { rx: 5 });
+    [0, 1, 2].forEach(r => [0, 1].forEach(c => { b += `<circle cx="${x0 + 34 + c * 80}" cy="${my + 276 + r * 16}" r="5" fill="${WF.line}"/>` + wbar(x0 + 44 + c * 80, my + 276 + r * 16, 40, 5); }));
+    const ty = my + 346;
+    b += wbox(x0 + 12, ty, x0 + w - 12, ty + 312, { fill: '#fff' }) + wtxt(x0 + 26, ty + 22, 'Recent Sightings', { s: 14, w: 'bold' });
+    for (let r = 0; r < 5; r++) {
+      const ry = ty + 56 + r * 48;
+      b += wimg(x0 + 26, ry - 16, x0 + 62, ry + 16) + wbar(x0 + 74, ry - 6, 130, 8) + wbar(x0 + 74, ry + 8, 90, 6);
+      b += wbox(x0 + 250, ry - 9, x0 + 320, ry + 9, { rx: 9, fill: WF.box });
+    }
+    [[x0 + w - 2, y + 34, 1], [x0 + w - 2, my + 165, 2], [x0 + 202, my + 290, 3], [x0 + w - 2, ty + 22, 4]]
+      .forEach(([cx, cy, n]) => { b += callout(cx, cy, n); });
+  });
+
+  // Encyclopedia page
+  phone(560, 'Encyclopedia page', (x0, y, w) => {
+    bar(x0, y + 12, w, 'Animal group', 'Mammals');
+    const iy = y + 70;
+    b += wbox(x0 + 12, iy, x0 + w - 12, iy + 150, { fill: '#fff' });
+    b += `<circle cx="${x0 + 46}" cy="${iy + 42}" r="20" fill="${WF.box}"/>` + wtxt(x0 + 76, iy + 36, 'Mammals', { s: 17, w: 'bold' }) + wtxt(x0 + 76, iy + 56, 'Mammalia', { s: 11, i: true, c: WF.dark });
+    b += wbar(x0 + 28, iy + 90, 300, 7) + wbar(x0 + 28, iy + 106, 240, 7) + wtxt(x0 + 28, iy + 130, '196,397 records in South Korea', { s: 11, c: WF.dark });
+    [0, 1].forEach(k => {
+      const cy0 = iy + 166 + k * 236;
+      b += wbox(x0 + 12, cy0, x0 + w - 12, cy0 + 220, { fill: '#fff' }) + wimg(x0 + 12, cy0, x0 + w - 12, cy0 + 120);
+      b += wbar(x0 + 28, cy0 + 140, 160, 9) + wbar(x0 + 28, cy0 + 158, 110, 6);
+      b += wbar(x0 + 28, cy0 + 178, 300, 6) + wbar(x0 + 28, cy0 + 192, 300, 6) + wbar(x0 + 28, cy0 + 206, 200, 6);
+    });
+    [[x0 + w - 2, y + 34, 5], [x0 + w - 2, iy + 40, 6], [x0 + w - 2, iy + 226, 7]]
+      .forEach(([cx, cy, n]) => { b += callout(cx, cy, n); });
+  });
+  return svg(W, H, b);
 }
 
 /* ------------------------------------------------------------------ */
@@ -996,6 +1061,6 @@ const figs = {
   usecase: useCaseDiagram, architecture: () => architecture(), flow_search: flowSearch, flow_species: flowSpecies,
   // System Design
   architecture_design: architectureDesign, conceptual: conceptualSchema, erd, dfd_context: dfdContext, dfd_level1: dfdLevel1,
-  wf_dashboard: wfDashboard, wf_encyclopedia: wfEncyclopedia,
+  wf_dashboard: wfDashboard, wf_encyclopedia: wfEncyclopedia, wf_phone: wfPhone,
 };
 for (const [k, f] of Object.entries(figs)) if (!only || only === k) render(k, f());
