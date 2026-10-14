@@ -23,11 +23,32 @@ _Last updated: 14 Oct 2026_
   (including FR-13 / UC-13 Animal Name Search).
 - **Submitted:** Proposal, Requirements Specification, System Design (Oct 12). Professor approved
   the Encyclopedia.
-- **Next deadlines:** Working Prototype **Nov 3** (Week 10), testing report (Week 12),
-  final submission **Nov 26**, presentation **Dec 2** (Group 3, Presentation 1).
+- **Next deadlines:** Week 7 progress review (show the working app in class), Working Prototype
+  **Nov 3** (Week 10), testing report (Week 12), final submission **Nov 26**, presentation
+  **Dec 2** (Group 3, Presentation 1). Full schedule in "Course schedule" below.
 - **Biggest gaps vs. the rubric:** Testing (20 pts, not started), team version control and task
   management (only one GitHub account commits; no issue board yet), deployment (site only runs
   on localhost, so phones and classmates can't open it yet).
+
+## Course schedule (from the syllabus)
+| Week | Phase | What is due / happens |
+|---|---|---|
+| 6 (deadline Oct 17) | UI/UX Design & Prototype | System Design submission. **Already submitted Oct 12**; nothing new due. |
+| 7 | Development Phase I | First progress review: show the working app in class. |
+| 8 | Development Phase II | API/database integration; progress demonstration. |
+| 9 | Development Phase III | Frontend/backend integration; progress review. |
+| 10 (deadline **Nov 3**) | Development Phase IV | **Working Prototype** milestone. |
+| 11 | Testing & QA | Test plan, test cases, functional and usability testing, bug fixing. |
+| 12 | System Improvement & Integration | Testing report. |
+| 13 (deadline **Nov 26**) | Finalization | Documentation, user guide, presentation rehearsal; **final submission**. |
+| 14 (**Dec 2**) | Presentation I | Group 3 presents: demo, Q&A, individual contribution evaluation. |
+
+**Late policy:** −10% per day; after 5 days the score is 0. The final presentation and the final
+submission **cannot be late**.
+
+**Rubric (100):** Proposal 10 · Requirements & System Design 15 · Development & Progress 20
+(includes version control, task management, regular demos) · Testing & Final Product 20 ·
+Final Presentation 25 · Individual Participation 10.
 
 ## Working rules agreed with Claude
 - **Commits:** the user commits and pushes; Claude only edits files and suggests a commit summary
@@ -242,7 +263,8 @@ CAPR-F2026-WildlifeTracker/
 ```
 
 ## Remaining to-dos
-**Deadlines (all 11:59 PM):** System Design Oct 17 · Working Prototype Nov 3 · Project
+**Deadlines (all 11:59 PM; full schedule in "Course schedule"):** System Design Oct 17 (submitted
+Oct 12) · Week 7 progress review (in class) · Working Prototype Nov 3 · Project
 Finalization Nov 26 · Presentation Dec 2 (Group 3 is in Presentation 1).
 
 - [ ] Add a contribution row for the v1.2/v1.3 revisions if the team wants one (who did what).
@@ -265,13 +287,26 @@ Finalization Nov 26 · Presentation Dec 2 (Group 3 is in Presentation 1).
 - [x] Landing page removed (professor feedback). Map page is the home page again (index.php).
 - [x] **Performance:** timeout 30 s -> 15 s and a "GBIF is slow" message after 5 s (14 Oct).
       Teammates must change `timeout` to 15 in their own `config/config.php`.
-- [ ] **Deployment** (Render or Railway, free tier) so the site opens on phones and for the
-      usability test; check whether MySQL is available (the site also runs without it).
+- [ ] **Deployment on Render (free)**, asked for by the professor (a link to view the site).
+      Prepared 14 Oct: `Dockerfile` (PHP 8.3 + Apache, web root `public/`, listens on `$PORT`),
+      `.dockerignore`, and `includes/config.php` (`app_config()`): uses `config/config.php` if it
+      exists, else `config.example.php`; env vars `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`,
+      `DB_PASSWORD` set the database; with no config.php and no `DB_HOST` there is no database
+      and the species cache is skipped (site works, Encyclopedia loads slower). Tested with
+      PHP's built-in server and no config.php (all endpoints, Map, Encyclopedia); the Docker
+      image itself was not built locally (Docker not installed), so the first Render build is
+      its first real test. **Still to do (user):** commit + push, create a Render account with
+      GitHub, New → Web Service → this repo → Docker, Free, region Singapore; then send the
+      `onrender.com` link to the professor. Free plan sleeps after ~15 min idle (first visit
+      ~1 min). Render has no free MySQL (only Postgres), so no cache online for now.
 - [ ] Teammates should commit from their **own GitHub accounts**; set up a GitHub Issues /
       Projects task board.
 - [ ] Update `README.md` with the Map and Encyclopedia pages, the animal groups and the
       Find an Animal search (South Korea only).
-- [ ] Commit and push the 14 Oct Korea-focus + Find an Animal work (two commits, see the chat).
+- [x] 14 Oct Korea-focus + Find an Animal work committed and pushed (`34e5284` app, `84dddeb`
+      docs; an earlier all-in-one commit `04dc54e` was reverted by `745beb6`). Both commits were
+      made with AI help, but their `Co-Authored-By` line is missing; this is recorded in the
+      commit that updates these notes.
 - [ ] Optional: Requirements 7.1 table (objectives → FRs) has no row for FR-12 Encyclopedia
       (FR-13 was added); add one if the team wants it complete.
 - [ ] Testing: add test cases for UC-13 (tiger, magpie list, scientific name, nonsense name).

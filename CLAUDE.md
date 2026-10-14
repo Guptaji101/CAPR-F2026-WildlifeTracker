@@ -33,6 +33,8 @@ Run it at `http://localhost/CAPR-F2026-WildlifeTracker/public/` (XAMPP, Apache o
 - `public/api/geocode.php`, `sightings.php`, `species.php`, `encyclopedia.php`: JSON endpoints.
 - `includes/gbif.php`: GBIF client (retry ×3, sample-data fallback for NFR-04, `gbif_get()`).
 - `includes/wikipedia.php`: species summary from Wikipedia (cached in `species_cache`).
+- `includes/config.php`: `app_config()` reads `config/config.php`, or on the server (Render)
+  `config.example.php` + `DB_*` environment variables. `Dockerfile`: how Render runs the site.
 
 ## Quick checks after changes
 ```bash
