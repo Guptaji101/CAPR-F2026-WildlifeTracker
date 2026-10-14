@@ -2,7 +2,7 @@
 
 Scripts that generate the team's documents (Word + PDF) and their figures:
 - **Week3_Requirements_Analysis_v1.3**: text in `build.js`
-- **System_Design_v1.0**: text in `design.js`
+- **System_Design_v1.1**: text in `design.js`
 
 Figures for both are in `diagrams.js`. Edit those files, then rebuild. Don't edit the generated
 Word files by hand, or the changes will be lost on the next build.
@@ -32,7 +32,7 @@ Then fill in the contents page and export the PDF with Word (PowerShell). Close 
 Word first. Example for the System Design (use the same pattern for the Requirements Analysis):
 
 ```powershell
-.\finalize.ps1 -Docx "$PWD\out\System_Design_v1.0.docx" -Pdf "$PWD\out\System_Design_v1.0.pdf"
+.\finalize.ps1 -Docx "$PWD\out\System_Design_v1.1.docx" -Pdf "$PWD\out\System_Design_v1.1.pdf"
 ```
 
 Finally, make the copy for Google Drive. Drive's PDF preview ignores Word's contents links; this
@@ -40,7 +40,7 @@ copy uses "go to page" link actions instead, which were confirmed to work in Dri
 (needs `pip install pypdf`):
 
 ```bash
-python fix_links.py out/System_Design_v1.0.pdf out/System_Design_v1.0_drive.pdf
+python fix_links.py out/System_Design_v1.1.pdf out/System_Design_v1.1_drive.pdf
 ```
 
 Upload the `_drive.pdf` to Drive, and copy the outputs to `Downloads`.

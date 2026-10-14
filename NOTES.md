@@ -1,6 +1,6 @@
 # Handoff Notes — WildTrack (CAPR-F2026, Group 3)
 
-_Last updated: 12 Oct 2026_
+_Last updated: 14 Oct 2026_
 
 ## How to resume in a new Claude Code chat
 1. Start Claude Code in this folder (`C:\xampp\htdocs\CAPR-F2026-WildlifeTracker`).
@@ -65,6 +65,16 @@ _Last updated: 12 Oct 2026_
   Encyclopedia, UC-12 Browse Animal Encyclopedia, Wikipedia as secondary actor and dependency,
   use case diagram (UC-12; GBIF drawn twice), Figure 2 = current architecture, scope and
   traceability. System Design now refers to v1.3 and no longer calls FR-12 "proposed".
+  Compared the submitted files with the generated ones: no content edits found (only a stray
+  "+" before section 8, removed). System Design renamed **v1.1** (`System_Design_v1.1.*`); the
+  submitted file is kept as `Downloads\System_Design_v1.1_submitted.docx`.
+- **14 Oct, UX review + fixes (Week 6 UI/UX):** phones open on the map ("Search & filters" and
+  "Animal group" buttons fold the sidebars away); clicking a pin/View scrolls to the Species Profile
+  below 1200 px; "GBIF is slow right now" after 5 s; GBIF timeout 30 s -> 15 s (config.php too);
+  real search button + labels + visible keyboard focus; alt text; hidden h1; 40 px chips and a
+  compact legend on phones; country shown grey when there is no place name; "Hypoponera sp."
+  instead of author names; links Map <-> Encyclopedia (`encyclopedia.php#birds/<key>`,
+  `index.php?group=birds`).
 
 ## What the project is
 
@@ -147,7 +157,7 @@ CAPR-F2026-WildlifeTracker/
 ├── docs/build/               scripts that generate the documents + figures
 │   ├── common.js             shared helpers (text, tables, figures, page styles)
 │   ├── build.js              Requirements Analysis v1.3 text
-│   ├── design.js             System Design v1.0 text
+│   ├── design.js             System Design v1.1 text
 │   ├── diagrams.js           all figures (use case, architecture, flowcharts, ERD, DFDs)
 │   ├── finalize.ps1          Word: update contents page, export PDF
 │   └── fix_links.py          Google Drive copy of a PDF (working contents links)
@@ -182,6 +192,9 @@ Finalization Nov 26 · Presentation Dec 2 (Group 3 is in Presentation 1).
       whether v1.3 should be submitted again or kept for the final submission (Nov 26).
 - [ ] Optional: Map ↔ Encyclopedia links ("Learn more" in the Species Profile, "See on the map"
       on a card). Team decides; written by the team, Claude reviews.
+- [ ] **Docs out of date after the 14 Oct UX fixes:** System Design 6.1–6.4 (element tables,
+      wireframes for the phone layout and the new links) and UC-07 / UC-12 (new links).
+- [ ] **Usability test** (3–5 classmates, 4 tasks) -> `docs/usability.md`, for UI/UX and Week 11.
 - [ ] **Testing (20 pts, not started):** Paudel writes `docs/testing.md` (plan + test cases);
       first test run Oct 26–31, full run Nov 16–22. Bugs as GitHub issues.
 - [ ] Each teammate resets their DB again (schema has new `summary`, `wiki_url` columns).
@@ -198,4 +211,4 @@ Finalization Nov 26 · Presentation Dec 2 (Group 3 is in Presentation 1).
 - [x] Document build scripts are now in `docs/build` (see its README to rebuild).
 - [ ] Before deployment, check Esri tile terms and test on Chrome, Firefox and Edge (NFR-02)
       and at small screen widths (NFR-06).
-- [ ] Minor: when GBIF gives no locality, the Location column shows the country.
+- [x] Location column: country now shown in grey when GBIF gives no locality (14 Oct).

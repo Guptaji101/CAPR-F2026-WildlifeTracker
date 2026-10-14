@@ -9,7 +9,7 @@ const body = [];
 const add = (...xs) => xs.flat().forEach(x => body.push(x));
 
 add(titleBlock('System Design Document', 'Wildlife Sighting Mapping and Species Distribution Tracker',
-  'CAPR-F2026 | Group 3 | System Design | Document Version: v1.0'));
+  'CAPR-F2026 | Group 3 | System Design | Document Version: v1.1'));
 
 /* ------------------------------------------------------------------ */
 /* 1. Project information                                              */
@@ -325,9 +325,9 @@ add(H1('8. Individual Contribution (System Design)', { newPage: true }),
 );
 
 writeDoc({
-  file: 'System_Design_v1.0.docx',
-  title: 'System Design Document - Wildlife Sighting Mapping and Species Distribution Tracker (v1.0)',
+  file: 'System_Design_v1.1.docx',
+  title: 'System Design Document - Wildlife Sighting Mapping and Species Distribution Tracker (v1.1)',
   description: 'System design: architecture, conceptual schema, ERD, data dictionary, data flow diagrams, UI design',
-  footer: 'CAPR-F2026 | Group 3 | System Design v1.0',
+  footer: 'CAPR-F2026 | Group 3 | System Design v1.1',
   body,
 });

@@ -26,15 +26,24 @@ $page = 'map';
 
 <?php include __DIR__ . '/partials/header.php'; ?>
 
-    <div class="layout">
+    <div class="layout" id="layout">
+        <h1 class="sr-only">WildTrack map: wildlife sightings recorded near any place</h1>
+
+        <!-- Phones only: the filters are folded away so the map is the first thing visible -->
+        <button class="filters-toggle" id="filters-toggle" type="button" aria-expanded="false" aria-controls="sidebar">
+            <i class="fa-solid fa-sliders"></i> Search &amp; filters
+            <span class="toggle-summary" id="filters-summary"></span>
+            <i class="fa-solid fa-chevron-down toggle-caret"></i>
+        </button>
 
         <!-- Left sidebar: search settings and filters -->
-        <aside class="sidebar">
+        <aside class="sidebar" id="sidebar">
 
             <section class="side-section">
                 <h3 class="side-title"><i class="fa-solid fa-location-dot"></i> Search Location</h3>
                 <div class="search-box">
-                    <i class="fa-solid fa-magnifying-glass" id="search-btn" title="Search"></i>
+                    <button type="button" class="search-btn" id="search-btn" aria-label="Search"><i class="fa-solid fa-magnifying-glass"></i></button>
+                    <label for="location-input" class="sr-only">Place name</label>
                     <input type="text" id="location-input" placeholder="Enter a place name (e.g. Busan, Seoul)">
                 </div>
                 <button class="btn-primary" id="locate-btn" type="button">
@@ -169,6 +178,9 @@ $page = 'map';
 
                 <a href="#" id="profile-gbif" class="btn-primary gbif-btn" target="_blank" rel="noopener noreferrer">
                     <i class="fa-solid fa-arrow-up-right-from-square"></i> Explore on GBIF Network
+                </a>
+                <a href="encyclopedia.php" id="profile-ency" class="btn-outline ency-link" hidden>
+                    <i class="fa-solid fa-book-open"></i> Read about it in the Encyclopedia
                 </a>
             </div>
         </aside>

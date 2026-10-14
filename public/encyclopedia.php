@@ -69,10 +69,18 @@ $tree = [
 
 <?php include __DIR__ . '/partials/header.php'; ?>
 
-    <div class="ency-layout">
+    <div class="ency-layout" id="ency-layout">
+
+        <!-- Phones only: the group tree is folded away so the animals are visible first -->
+        <button class="filters-toggle" id="tree-toggle" type="button" aria-expanded="false" aria-controls="ency-sidebar">
+            <i class="fa-solid fa-sitemap"></i> Animal group
+            <span class="toggle-summary" id="tree-current"></span>
+            <i class="fa-solid fa-chevron-down toggle-caret"></i>
+        </button>
+
 
         <!-- Left: classification tree -->
-        <aside class="sidebar">
+        <aside class="sidebar" id="ency-sidebar">
             <section class="side-section">
                 <h3 class="side-title"><i class="fa-solid fa-earth-asia"></i> Animals of South Korea</h3>
                 <p class="tree-note">Each group lists the species with the most GBIF records in South Korea.</p>

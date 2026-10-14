@@ -8,7 +8,8 @@
 
 const $ = id => document.getElementById(id);
 const COUNTRY = 'KR';                // the Encyclopedia only covers South Korea
-const state = { group: null };
+// list = the species of the open group; openAfterLoad = a species to open once the list is shown
+const state = { group: null, list: [], openAfterLoad: null };
 const speciesCache = new Map();   // speciesKey -> promise of species.php data (one request each)
 
 const escapeHtml = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -66,6 +67,7 @@ async function loadGroup() {
     const btn = currentGroupButton();
     document.querySelectorAll('.tree-item').forEach(b => b.classList.toggle('active', b === btn));
     history.replaceState(null, '', `#${state.group}`);
+    $('tree-current').textContent = btn.dataset.name;
     showIntro(btn);
 
     const grid = $('species-grid');
@@ -89,6 +91,11 @@ async function loadGroup() {
         return;
     }
     grid.innerHTML = data.species.map(s => cardHtml(s, null)).join('');
+    state.list = data.species;
+    if (state.openAfterLoad) {
+        openSpecies(state.openAfterLoad);
+        state.openAfterLoad = null;
+    }
     await eachLimited(data.species, 6, async s => {
         const sp = await getSpecies(s.speciesKey);
         const card = grid.querySelector(`[data-key="${s.speciesKey}"]`);
@@ -111,6 +118,22 @@ function summaryText(sp) {
     if (!sp) return 'Details could not be loaded from GBIF.';
     const where = [sp.family && `the ${sp.family} family`, sp.order && `order ${sp.order}`].filter(Boolean).join(', ');
     return `${where ? `A member of ${where}. ` : ''}There is no English Wikipedia article about this species yet.`;
+}
+
+// Link to the Map page with only this group selected. The Map has one Invertebrates group,
+// so every invertebrate group of the Encyclopedia links to it.
+function mapLink() {
+    const btn = currentGroupButton();
+    const vertebrate = btn.dataset.division === 'Vertebrates';
+    const mapGroup = vertebrate ? state.group : 'invertebrates';
+    const label = vertebrate ? btn.dataset.name.toLowerCase() : 'invertebrates';
+    return `<a class="btn-outline" href="index.php?group=${mapGroup}"><i class="fa-regular fa-map"></i> See ${escapeHtml(label)} on the map</a>`;
+}
+
+// Phones: the group tree is folded away behind the "Animal group" button
+function setTreeOpen(open) {
+    $('ency-layout').classList.toggle('tree-open', open);
+    $('tree-toggle').setAttribute('aria-expanded', open);
 }
 
 // Photo box: the group icon sits underneath, so it shows if there is no photo or it fails to load
@@ -156,12 +179,16 @@ async function openSpecies(key, records) {
             <div class="detail-links">
                 ${sp?.wikiUrl ? `<a class="btn-primary" href="${escapeHtml(sp.wikiUrl)}" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-wikipedia-w"></i> Read more on Wikipedia</a>` : ''}
                 <a class="btn-outline" href="https://www.gbif.org/species/${key}" target="_blank" rel="noopener noreferrer"><i class="fa-solid fa-arrow-up-right-from-square"></i> Explore on GBIF</a>
+                ${mapLink()}
             </div>
         </div>`;
     $('species-dialog').showModal();
 
     // Conservation status from GBIF; the record count is the one from the South Korea list
-    const korea = `<span class="badge muted"><i class="fa-solid fa-location-dot"></i> ${fmt(records)} records in South Korea</span>`;
+    // (unknown if the species was opened from the Map page and is not in the top 24)
+    records ??= state.list.find(s => s.speciesKey === key)?.records;
+    const korea = records == null ? ''
+        : `<span class="badge muted"><i class="fa-solid fa-location-dot"></i> ${fmt(records)} records in South Korea</span>`;
     try {
         const f = await getJson(`api/encyclopedia.php?action=facts&speciesKey=${key}`);
         const [label, color] = IUCN[f.iucn?.code] || IUCN.NE;
@@ -178,12 +205,19 @@ async function openSpecies(key, records) {
 document.querySelectorAll('.tree-item').forEach(btn => btn.addEventListener('click', () => {
     state.group = btn.dataset.key;
     loadGroup();
+    if (window.matchMedia('(max-width: 820px)').matches) {
+        setTreeOpen(false);
+        $('group-intro').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
 }));
+$('tree-toggle').addEventListener('click', () => setTreeOpen(!$('ency-layout').classList.contains('tree-open')));
 
 // Close the dialog by clicking outside it
 $('species-dialog').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.close(); });
 
-// The address remembers the group, e.g. encyclopedia.php#birds
-const hashGroup = location.hash.slice(1);
+// The address remembers the group, e.g. encyclopedia.php#birds. The Map page links to one
+// species with encyclopedia.php#birds/2481197: that species opens once the list is loaded.
+const [hashGroup, hashSpecies] = location.hash.slice(1).split('/');
 state.group = document.querySelector(`.tree-item[data-key="${hashGroup}"]`) ? hashGroup : 'mammals';
+if (Number(hashSpecies) > 0) state.openAfterLoad = Number(hashSpecies);
 loadGroup();

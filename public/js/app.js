@@ -134,6 +134,8 @@ async function safeJsonFetch(url) {
     }
 }
 
+let slowTimer = null;
+
 function setLoading(isLoading, statusText = '') {
     const loader = $('map-loader');
     if (loader) {
@@ -142,6 +144,48 @@ function setLoading(isLoading, statusText = '') {
     }
     const locateBtn = $('locate-btn');
     if (locateBtn) locateBtn.disabled = isLoading;
+
+    // GBIF sometimes needs 10 s or more; after 5 s, tell the user it is still working
+    clearTimeout(slowTimer);
+    if (isLoading && loader) {
+        slowTimer = setTimeout(() => {
+            loader.querySelector('.loader-text').innerText = 'GBIF is slow right now — still loading…';
+        }, 5000);
+    }
+}
+
+// Name to show for a sighting: the English name, else the species, else the genus + "sp."
+// ("Hypoponera Santschi, 1938" is a genus with its author, so it becomes "Hypoponera sp.")
+function plainName(r) {
+    if (r.commonName) return r.commonName;
+    if (r.species) return r.species;
+    const genus = (r.scientificName || '').split(' ')[0];
+    return genus ? `${genus} sp.` : 'Unknown animal';
+}
+
+// Encyclopedia group of a sighting. The Encyclopedia splits Invertebrates into smaller groups;
+// null if the animal is in none of them (for example a centipede).
+const ENCY_INVERTEBRATES = {
+    insecta: 'insects', arachnida: 'arachnids', malacostraca: 'crustaceans', mollusca: 'molluscs',
+    annelida: 'worms', cnidaria: 'cnidarians', echinodermata: 'echinoderms',
+};
+function encyclopediaGroup(r) {
+    const group = groupOf(r);
+    if (group !== 'invertebrates') return group;
+    return ENCY_INVERTEBRATES[(r.taxonGroup || '').toLowerCase()] || ENCY_INVERTEBRATES[(r.phylum || '').toLowerCase()] || null;
+}
+
+// Phones: the sidebar is folded away behind the "Search & filters" button
+const isPhoneLayout = () => window.matchMedia('(max-width: 820px)').matches;
+function setFiltersOpen(open) {
+    $('layout').classList.toggle('filters-open', open);
+    $('filters-toggle').setAttribute('aria-expanded', open);
+}
+function updateFiltersSummary() {
+    // The name the user typed or tapped ("Seoul"), not the geocoder's official name ("서울특별시")
+    const typed = $('location-input').value.trim();
+    const place = (typed || state.currentLocationName || '').split(',')[0].slice(0, 22);
+    setText('filters-summary', `${place} · ${state.radiusKm} km`);
 }
 
 // iNaturalist photos come as "original" size; ask for a smaller version
@@ -187,6 +231,7 @@ async function handleSearch() {
         map.flyTo([state.currentLat, state.currentLng], 12, { duration: 1.2 });
         updateRadiusCircle();
         showToast(`Located "${query}" successfully!`);
+        if (isPhoneLayout()) setFiltersOpen(false);
 
         await loadSightings();
     } catch (err) {
@@ -225,6 +270,7 @@ function useCurrentLocation() {
             map.flyTo([state.currentLat, state.currentLng], 13, { duration: 1.2 });
             updateRadiusCircle();
             showToast('GPS coordinates acquired! Fetching local fauna...');
+            if (isPhoneLayout()) setFiltersOpen(false);
 
             await loadSightings();
         },
@@ -294,6 +340,7 @@ async function loadSightings() {
     }
 
     setLoading(true, 'Querying GBIF biodiversity records...');
+    updateFiltersSummary();
 
     let url = `api/sightings.php?lat=${state.currentLat}&lng=${state.currentLng}&radius=${state.radiusKm}&limit=${state.limit}`;
     // With every group ticked no taxon filter is sent, so all animals are returned
@@ -340,7 +387,7 @@ function renderMarkers() {
         if (!r.lat || !r.lng) { state.markers.push(null); return; }
 
         const g = GROUPS[groupOf(r)];
-        const name = r.commonName || r.scientificName || 'Unknown Animal';
+        const name = plainName(r);
         const marker = L.marker([r.lat, r.lng], {
             icon: L.divIcon({
                 className: 'pin-wrap',
@@ -352,7 +399,7 @@ function renderMarkers() {
 
         marker.bindTooltip(`<b>${escapeHtml(name)}</b><br><i>${escapeHtml(r.scientificName || '')}</i><br>${g.label} &bull; ${escapeHtml(formatDate(r.eventDate))}`,
             { className: 'pin-tip', direction: 'top', offset: [12, -28] });
-        marker.on('click', () => selectSighting(index, { fly: false }));
+        marker.on('click', () => selectSighting(index, { fly: false, reveal: true }));
         state.markers.push(marker);
     });
 }
@@ -379,17 +426,20 @@ function renderTable(emptyMessage) {
         const g = GROUPS[groupKey];
         const thumb = sizedImage(r.image, 'square');
         const photo = thumb
-            ? `<img class="thumb" src="${escapeHtml(thumb)}" alt="" loading="lazy" onerror="this.outerHTML='${escapeHtml(thumbFallback(groupKey))}'">`
+            ? `<img class="thumb" src="${escapeHtml(thumb)}" alt="${escapeHtml(plainName(r))}" loading="lazy" onerror="this.outerHTML='${escapeHtml(thumbFallback(groupKey))}'">`
             : thumbFallback(groupKey);
         return `
             <tr data-index="${index}" class="${index === state.selected ? 'selected' : ''}">
                 <td>${index + 1}</td>
                 <td>${photo}</td>
-                <td><div class="sp-name">${escapeHtml(r.commonName || r.species || r.scientificName || 'Unknown Animal')}</div>
+                <td><div class="sp-name">${escapeHtml(plainName(r))}</div>
                     <div class="sp-sci">${escapeHtml(r.species || r.scientificName || '')}</div></td>
                 <td><span class="group-badge" style="background:${g.bg};color:${g.text}">${g.label}</span></td>
                 <td>${escapeHtml(formatDate(r.eventDate))}</td>
-                <td class="loc-cell" title="${escapeHtml(r.locality || r.country || '')}">${escapeHtml(r.locality || r.country || 'Not specified')}</td>
+                <td class="loc-cell">${r.locality
+                    ? `<span title="${escapeHtml([r.locality, r.country].filter(Boolean).join(', '))}">${escapeHtml(r.locality)}</span>`
+                    // No place name recorded: show the country in grey so it isn't mistaken for an exact place
+                    : `<span class="loc-none" title="No exact place name was recorded">${escapeHtml(r.country || 'Not specified')}</span>`}</td>
                 <td>${escapeHtml(formatCoords(r))}</td>
                 <td><button class="btn-view" data-index="${index}">View</button></td>
             </tr>`;
@@ -434,7 +484,7 @@ function changePage(delta) {
 // =============================================================================
 // Species Profile
 // =============================================================================
-function selectSighting(index, { fly = true } = {}) {
+function selectSighting(index, { fly = true, reveal = false } = {}) {
     const record = state.sightings[index];
     if (!record) return;
 
@@ -458,6 +508,11 @@ function selectSighting(index, { fly = true } = {}) {
     renderTable();
 
     showProfile(record);
+
+    // Below 1200 px the Species Profile is under the table: scroll to it after a click
+    if (reveal && window.matchMedia('(max-width: 1200px)').matches) {
+        $('profile').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
 }
 
 function clearProfile() {
@@ -476,7 +531,13 @@ async function showProfile(record) {
     badge.style.background = g.color;
     badge.innerHTML = `<i class="fa-solid ${g.icon}"></i> ${g.label}`;
 
-    setText('profile-name', record.commonName || record.scientificName || 'Unknown Species');
+    setText('profile-name', plainName(record));
+
+    // Link to this species' entry in the Encyclopedia (only for animals identified to species level)
+    const encyGroup = encyclopediaGroup(record);
+    const encyLink = $('profile-ency');
+    encyLink.hidden = !(record.speciesKey && encyGroup);
+    if (!encyLink.hidden) encyLink.href = `encyclopedia.php#${encyGroup}/${record.speciesKey}`;
     setText('profile-sci', record.scientificName || 'Unclassified');
     setText('meta-date', formatDate(record.eventDate));
     setText('meta-locality', [record.locality, record.country].filter(Boolean).join(', ') || 'Not specified');
@@ -547,7 +608,7 @@ function setPhoto(url, fallbackText) {
 function buildGroupControls() {
     $('group-list').innerHTML = Object.entries(GROUPS).map(([key, g]) => `
         <label class="group-option">
-            <input type="checkbox" value="${key}" checked>
+            <input type="checkbox" value="${key}" ${state.groups.has(key) ? 'checked' : ''}>
             ${groupIconHtml(key)} ${g.label}
         </label>`).join('');
 
@@ -560,12 +621,18 @@ function buildGroupControls() {
 // Event Listeners & Initializer
 // =============================================================================
 document.addEventListener('DOMContentLoaded', () => {
+    const onlyGroup = new URLSearchParams(location.search).get('group');
+    if (GROUPS[onlyGroup]) {
+        state.groups.clear();
+        state.groups.add(onlyGroup);
+    }
     buildGroupControls();
 
     $('location-input').addEventListener('keydown', (e) => {
         if (e.key === 'Enter') handleSearch();
     });
     $('search-btn').addEventListener('click', handleSearch);
+    $('filters-toggle').addEventListener('click', () => setFiltersOpen(!$('layout').classList.contains('filters-open')));
     $('locate-btn').addEventListener('click', useCurrentLocation);
 
     document.querySelectorAll('.chip[data-place]').forEach(chip =>
@@ -602,7 +669,7 @@ document.addEventListener('DOMContentLoaded', () => {
     $('page-next').addEventListener('click', () => changePage(1));
     $('sightings-body').addEventListener('click', (e) => {
         const btn = e.target.closest('.btn-view');
-        if (btn) selectSighting(parseInt(btn.dataset.index));
+        if (btn) selectSighting(parseInt(btn.dataset.index), { reveal: true });
     });
 
     $('profile-close').addEventListener('click', () => {

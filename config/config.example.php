@@ -10,7 +10,7 @@ return [
     ],
     'gbif' => [
         'base_url' => 'https://api.gbif.org/v1',
-        'timeout'  => 30,
+        'timeout'  => 15,   // seconds per attempt; gbif.php tries up to 3 times
         'limit'    => 300,
     ],
     'app' => [

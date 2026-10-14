@@ -134,7 +134,9 @@ button { font-family: inherit; cursor: pointer; }
     border-radius: var(--radius-sm);
     margin-bottom: 12px;
 }
-.search-box i { font-size: 12px; color: var(--muted); cursor: pointer; }
+.search-btn { display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 4px; background: none; cursor: pointer; }
+.search-box .search-btn i { font-size: 12px; color: var(--muted); }
+.search-btn:hover i { color: var(--green-700); }
 .search-box input { flex: 1; border: 0; outline: none; font: inherit; font-size: 12.5px; color: var(--ink); min-width: 0; }
 .search-box:focus-within { border-color: var(--green-600); box-shadow: 0 0 0 3px rgba(31, 122, 79, 0.12); }
 
@@ -476,6 +478,32 @@ table.sightings { width: 100%; border-collapse: collapse; }
 .meta-row b { font-weight: 500; font-size: 13px; color: var(--ink); }
 
 .gbif-btn { height: 40px; }
+.ency-link { justify-content: center; height: 40px; margin-top: 8px; }
+.profile { scroll-margin-top: calc(var(--topbar-h) + 10px); }   /* stays clear of the sticky header when scrolled to */
+.loc-none { color: var(--faint); font-style: italic; }
+
+/* Secondary button (outlined), used on both pages */
+.btn-outline {
+    display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 18px;
+    border: 1px solid var(--green-700); border-radius: var(--radius-sm);
+    color: var(--green-700); font-size: 13px; font-weight: 600; text-decoration: none;
+}
+.btn-outline:hover { background: var(--green-50); }
+
+/* Visible outline for keyboard users on every link, button and form field */
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible, [tabindex]:focus-visible {
+    outline: 2px solid var(--green-600);
+    outline-offset: 2px;
+}
+
+/* Text for screen readers only (hidden on screen) */
+.sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
+/* Phones: button that shows or hides the search settings (see the 820 px rules below) */
+.filters-toggle { display: none; }
 
 /* ----------------------------------------------------------------------------
    Dialog and toasts
@@ -528,10 +556,30 @@ dialog .btn-primary { margin-top: 6px; }
     .sidebar { position: static; height: auto; border-right: 0; }
     .profile { grid-column: 1; }
     .map-card { height: 380px; }
+
+    /* The search settings are folded away, so the map is the first thing on the screen */
+    .filters-toggle {
+        display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; margin-top: 10px;
+        padding: 0 14px; border: 1px solid var(--line); border-radius: var(--radius);
+        background: var(--white); box-shadow: var(--shadow); font: inherit; font-size: 14px; font-weight: 700;
+        color: var(--green-900); cursor: pointer;
+    }
+    .filters-toggle .toggle-summary { margin-left: auto; font-weight: 500; color: var(--muted); font-size: 12.5px; }
+    .filters-toggle .toggle-caret { transition: transform .2s; }
+    .filters-open .filters-toggle .toggle-caret { transform: rotate(180deg); }
+    .layout:not(.filters-open) > .sidebar { display: none; }
+    .layout > .sidebar { border: 1px solid var(--line); border-radius: var(--radius); }
 }
 
-/* Phones: page links show icons only */
+/* Phones: page links show icons only; chips big enough for a finger */
 @media (max-width: 520px) {
+    .chip, .radius-chips .chip { min-height: 40px; }
+    /* Compact legend in the bottom-left corner, so it doesn't cover the base-map tabs */
+    .map-legend { top: auto; right: auto; bottom: 10px; left: 10px; min-width: 0; padding: 6px 8px; }
+    .map-legend h4 { display: none; }
+    #legend-list { display: grid; grid-template-columns: 1fr 1fr; column-gap: 8px; }
+    .legend-item { font-size: 10.5px; gap: 5px; padding: 1px 0; }
+    .basemap-tabs button { padding: 7px 10px; font-size: 12px; }
     .topbar { padding: 0 12px; gap: 8px; }
     .brand-name { font-size: 21px; }
     .top-nav a, .top-nav button { font-size: 0; padding: 9px 11px; gap: 0; }
