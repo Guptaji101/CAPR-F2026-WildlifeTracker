@@ -3,10 +3,11 @@
  * gbif.php — GBIF API wrapper with retry + fallback
  */
 
+require_once __DIR__ . '/config.php';
+
 function gbif_config(): array
 {
-    $config = require __DIR__ . '/../config/config.php';
-    return $config['gbif'];
+    return app_config()['gbif'];
 }
 
 function gbif_search_nearby(
