@@ -57,9 +57,20 @@ $page = 'map';
                     <button class="chip" data-place="Jeju">Jeju Island</button>
                     <button class="chip" data-place="Ulsan">Ulsan</button>
                     <button class="chip" data-place="Hallasan">Hallasan</button>
-                    <button class="chip" data-place="Tokyo">Tokyo</button>
-                    <button class="chip" data-place="Vancouver">Vancouver</button>
+                    <button class="chip" data-place="Seoraksan">Seoraksan</button>
+                    <button class="chip" data-place="Suncheon Bay">Suncheon Bay</button>
                 </div>
+            </section>
+
+            <section class="side-section">
+                <h3 class="side-title"><i class="fa-solid fa-paw"></i> Find an Animal</h3>
+                <div class="search-box">
+                    <button type="button" class="search-btn" id="animal-btn" aria-label="Find animal"><i class="fa-solid fa-magnifying-glass"></i></button>
+                    <label for="animal-input" class="sr-only">Animal name</label>
+                    <input type="text" id="animal-input" placeholder="Animal name (e.g. water deer, Pica pica)">
+                </div>
+                <!-- "Did you mean …?" list when the name matches several animals -->
+                <div class="animal-suggest" id="animal-suggest" hidden></div>
             </section>
 
             <section class="side-section">

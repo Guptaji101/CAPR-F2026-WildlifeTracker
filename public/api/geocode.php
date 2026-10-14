@@ -2,6 +2,8 @@
 /**
  * geocode.php — turns a place name (e.g. "Ulsan") into coordinates
  * using OpenStreetMap's free Nominatim service.
+ * Only places in South Korea are returned: WildTrack is about Korea's fauna, and it stops
+ * names such as "Gwangju" or "Jung-gu" from landing in another country.
  */
 header('Content-Type: application/json; charset=utf-8');
 
@@ -16,6 +18,8 @@ $url = 'https://nominatim.openstreetmap.org/search?' . http_build_query([
     'q'      => $q,
     'format' => 'json',
     'limit'  => 1,
+    'countrycodes' => 'kr',
+    'accept-language' => 'en',   // "Seoraksan National Park, Inje-gun" instead of Korean script
 ]);
 
 $ch = curl_init($url);
@@ -38,7 +42,7 @@ if ($raw === false || $code !== 200) {
 $data = json_decode($raw, true);
 if (empty($data)) {
     http_response_code(404);
-    echo json_encode(['error' => 'Location not found — try a different spelling']);
+    echo json_encode(['error' => 'Place not found in South Korea — try a different spelling']);
     exit;
 }
 
