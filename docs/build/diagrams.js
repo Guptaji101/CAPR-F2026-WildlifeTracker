@@ -967,7 +967,7 @@ function wfEncyclopedia() {
   b += wtxt(dx0 + 22, dy0 + 420, 'CLASSIFICATION', { s: 11, w: 'bold', c: WF.dark });
   b += wtxt(dx0 + 22, dy0 + 442, 'Animalia › Chordata › Mammalia › Artiodactyla › Cervidae › …', { s: 12 });
   b += wbtn(dx0 + 22, dy0 + 478, dx0 + 232, dy0 + 514, 'Read more on Wikipedia', true) + wbtn(dx0 + 244, dy0 + 478, dx0 + 420, dy0 + 514, 'Explore on GBIF ↗');
-  b += wbtn(dx0 + 22, dy0 + 526, dx0 + 232, dy0 + 562, 'See mammals on the map');
+  b += wbtn(dx0 + 22, dy0 + 526, dx0 + 322, dy0 + 562, 'See Chinese Water Deer on the map');
 
   // Callouts (see key in the document)
   [[1088, 27, 1], [264, 84, 2], [268, 260, 3], [268, 500, 4], [1268, 92, 5], [944, 212, 6], [530, 238, 7],

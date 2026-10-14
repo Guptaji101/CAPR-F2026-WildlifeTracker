@@ -482,6 +482,19 @@ table.sightings { width: 100%; border-collapse: collapse; }
 .profile { scroll-margin-top: calc(var(--topbar-h) + 10px); }   /* stays clear of the sticky header when scrolled to */
 .loc-none { color: var(--faint); font-style: italic; }
 
+/* "Showing only Coal Tit" bar above the map (species filter from the Encyclopedia) */
+.species-filter {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 14px;
+    background: var(--green-50); border: 1px solid var(--green-100); border-radius: var(--radius);
+    font-size: 13.5px; color: var(--green-900);
+}
+.species-filter[hidden] { display: none; }
+.species-filter button {
+    margin-left: auto; display: flex; align-items: center; gap: 6px; padding: 6px 12px; cursor: pointer;
+    border: 1px solid var(--green-700); border-radius: var(--radius-sm); background: var(--white);
+    font: inherit; font-size: 12.5px; font-weight: 600; color: var(--green-700);
+}
+
 /* Secondary button (outlined), used on both pages */
 .btn-outline {
     display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 18px;

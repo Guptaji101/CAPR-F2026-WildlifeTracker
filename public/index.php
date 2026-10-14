@@ -101,6 +101,12 @@ $page = 'map';
 
         <!-- Centre: map and sightings table -->
         <main class="main">
+            <!-- Shown when the map is filtered on one species (link from the Encyclopedia) -->
+            <div class="species-filter" id="species-filter" hidden>
+                <i class="fa-solid fa-filter"></i> Showing only <b id="species-filter-name"></b>
+                <button type="button" id="species-filter-clear"><i class="fa-solid fa-xmark"></i> Show all animals</button>
+            </div>
+
             <section class="card map-card" id="map-section">
                 <div id="map"></div>
 

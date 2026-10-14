@@ -120,14 +120,10 @@ function summaryText(sp) {
     return `${where ? `A member of ${where}. ` : ''}There is no English Wikipedia article about this species yet.`;
 }
 
-// Link to the Map page with only this group selected. The Map has one Invertebrates group,
-// so every invertebrate group of the Encyclopedia links to it.
-function mapLink() {
-    const btn = currentGroupButton();
-    const vertebrate = btn.dataset.division === 'Vertebrates';
-    const mapGroup = vertebrate ? state.group : 'invertebrates';
-    const label = vertebrate ? btn.dataset.name.toLowerCase() : 'invertebrates';
-    return `<a class="btn-outline" href="index.php?group=${mapGroup}"><i class="fa-regular fa-map"></i> See ${escapeHtml(label)} on the map</a>`;
+// Link to the Map page showing only this species. The Map remembers the last searched place,
+// so the user sees this species' sightings around that place (for example Gwacheon).
+function mapLink(key, name) {
+    return `<a class="btn-outline" href="index.php?species=${key}&name=${encodeURIComponent(name)}"><i class="fa-regular fa-map"></i> See ${escapeHtml(name)} on the map</a>`;
 }
 
 // Phones: the group tree is folded away behind the "Animal group" button
@@ -179,7 +175,7 @@ async function openSpecies(key, records) {
             <div class="detail-links">
                 ${sp?.wikiUrl ? `<a class="btn-primary" href="${escapeHtml(sp.wikiUrl)}" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-wikipedia-w"></i> Read more on Wikipedia</a>` : ''}
                 <a class="btn-outline" href="https://www.gbif.org/species/${key}" target="_blank" rel="noopener noreferrer"><i class="fa-solid fa-arrow-up-right-from-square"></i> Explore on GBIF</a>
-                ${mapLink()}
+                ${mapLink(key, name)}
             </div>
         </div>`;
     $('species-dialog').showModal();

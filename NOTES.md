@@ -75,6 +75,11 @@ _Last updated: 14 Oct 2026_
   compact legend on phones; country shown grey when there is no place name; "Hypoponera sp."
   instead of author names; links Map <-> Encyclopedia (`encyclopedia.php#birds/<key>`,
   `index.php?group=birds`).
+- **14 Oct (later):** Round trip Map -> Encyclopedia -> Map lost the searched place. Now the Map
+  page remembers the last search for the browser tab (sessionStorage), and "See … on the map"
+  filters on the **species** (`index.php?species=<key>&name=…`) with a "Showing only …" bar and
+  a "Show all animals" button. The `?group=` link was removed. Docs updated (SD 6.1, 6.2, 6.4 #13,
+  Figure 7; Requirements UC-03 A6, UC-12 A8).
 
 ## What the project is
 

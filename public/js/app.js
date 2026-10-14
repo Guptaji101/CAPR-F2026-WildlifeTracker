@@ -38,6 +38,40 @@ const GROUPS = {
 };
 Object.keys(GROUPS).forEach(g => state.groups.add(g));
 
+// The last search (place and radius) is remembered for this browser tab, so coming back to the
+// Map page from the Encyclopedia or the header shows the same place instead of starting at Busan.
+const SAVED_SEARCH = 'wildtrack.lastSearch';
+function saveSearch() {
+    try {
+        sessionStorage.setItem(SAVED_SEARCH, JSON.stringify({
+            lat: state.currentLat, lng: state.currentLng, name: state.currentLocationName,
+            radiusKm: state.radiusKm, input: $('location-input').value,
+        }));
+    } catch { /* storage blocked (for example a private window): the page then starts at Busan */ }
+}
+const savedSearch = (() => {
+    try { return JSON.parse(sessionStorage.getItem(SAVED_SEARCH)); } catch { return null; }
+})();
+if (savedSearch && Number.isFinite(savedSearch.lat) && Number.isFinite(savedSearch.lng)) {
+    state.currentLat = savedSearch.lat;
+    state.currentLng = savedSearch.lng;
+    state.currentLocationName = savedSearch.name || '';
+    state.radiusKm = savedSearch.radiusKm || 10;
+}
+
+// Optional filter on one species, from the Encyclopedia: index.php?species=2486736&name=Coal%20Tit
+// (a GBIF species key is also a taxon key, so sightings.php can filter on it like on a group)
+state.speciesFilter = null;
+function showSpeciesFilter() {
+    $('species-filter').hidden = !state.speciesFilter;
+    if (state.speciesFilter) setText('species-filter-name', state.speciesFilter.name);
+}
+function clearSpeciesFilter() {
+    state.speciesFilter = null;
+    showSpeciesFilter();
+    history.replaceState(null, '', location.pathname);   // remove ?species=… from the address
+}
+
 const REPTILE_CLASSES = ['reptilia', 'squamata', 'testudines', 'crocodylia'];
 const FISH_CLASSES = ['actinopterygii', 'elasmobranchii', 'chondrichthyes', 'sarcopterygii', 'holocephali', 'petromyzonti', 'myxini'];
 
@@ -342,9 +376,13 @@ async function loadSightings() {
     setLoading(true, 'Querying GBIF biodiversity records...');
     updateFiltersSummary();
 
+    saveSearch();
     let url = `api/sightings.php?lat=${state.currentLat}&lng=${state.currentLng}&radius=${state.radiusKm}&limit=${state.limit}`;
-    // With every group ticked no taxon filter is sent, so all animals are returned
-    if (state.groups.size < Object.keys(GROUPS).length) {
+    // One species (from the Encyclopedia), or the ticked groups. With every group ticked no taxon
+    // filter is sent, so all animals are returned.
+    if (state.speciesFilter) {
+        url += `&taxa=${state.speciesFilter.key}`;
+    } else if (state.groups.size < Object.keys(GROUPS).length) {
         const keys = [...state.groups].flatMap(g => GROUPS[g].keys);
         url += `&taxa=${keys.join(',')}`;
     }
@@ -355,7 +393,10 @@ async function loadSightings() {
         const data = await safeJsonFetch(url);
         state.sightings = data.results || [];
         state.page = 0;
-        renderAll();
+        const place = ($('location-input').value || state.currentLocationName || 'this place').split(',')[0];
+        renderAll(state.speciesFilter
+            ? `No ${state.speciesFilter.name} sightings within ${state.radiusKm} km of ${place}. Try a larger radius, or show all animals.`
+            : undefined);
 
         if (data.fallback) {
             // NFR-04: GBIF was unreachable, so the server sent its built-in sample records
@@ -608,7 +649,7 @@ function setPhoto(url, fallbackText) {
 function buildGroupControls() {
     $('group-list').innerHTML = Object.entries(GROUPS).map(([key, g]) => `
         <label class="group-option">
-            <input type="checkbox" value="${key}" ${state.groups.has(key) ? 'checked' : ''}>
+            <input type="checkbox" value="${key}" checked>
             ${groupIconHtml(key)} ${g.label}
         </label>`).join('');
 
@@ -621,11 +662,19 @@ function buildGroupControls() {
 // Event Listeners & Initializer
 // =============================================================================
 document.addEventListener('DOMContentLoaded', () => {
-    const onlyGroup = new URLSearchParams(location.search).get('group');
-    if (GROUPS[onlyGroup]) {
-        state.groups.clear();
-        state.groups.add(onlyGroup);
+    // Show the remembered search in the sidebar (search box, Quick Location and radius chips)
+    if (savedSearch) {
+        $('location-input').value = savedSearch.input || '';
+        document.querySelectorAll('.chip[data-place]').forEach(c => c.classList.toggle('active', c.dataset.place === savedSearch.input));
+        document.querySelectorAll('.chip[data-radius]').forEach(c => c.classList.toggle('active', Number(c.dataset.radius) === state.radiusKm));
     }
+    const params = new URLSearchParams(location.search);
+    if (Number(params.get('species')) > 0) {
+        state.speciesFilter = { key: Number(params.get('species')), name: params.get('name') || 'this species' };
+    }
+    showSpeciesFilter();
+    $('species-filter-clear').addEventListener('click', () => { clearSpeciesFilter(); loadSightings(); });
+
     buildGroupControls();
 
     $('location-input').addEventListener('keydown', (e) => {
@@ -646,6 +695,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }));
 
     $('group-list').addEventListener('change', (e) => {
+        if (state.speciesFilter) clearSpeciesFilter();
         if (e.target.checked) state.groups.add(e.target.value);
         else state.groups.delete(e.target.value);
         loadSightings();
