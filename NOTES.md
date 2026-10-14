@@ -6,9 +6,34 @@ _Last updated: 14 Oct 2026_
 1. Start Claude Code in this folder (`C:\xampp\htdocs\CAPR-F2026-WildlifeTracker`).
    `CLAUDE.md` is read automatically and points here.
 2. Paste one clear starter prompt, for example:
-   - `Read NOTES.md. Next task: System Design for Oct 17 — draft the ERD and data-flow diagram.`
-   - `Read NOTES.md. Decide with me whether to keep the Fish group, then update the app and the document.`
-3. At the end of the session, ask: `Update NOTES.md with what we did and push it.`
+   - `Read NOTES.md. Next task: plan the usability test (docs/usability.md).`
+   - `Read NOTES.md. Next task: deploy WildTrack (Render or Railway) so it opens on phones.`
+   - `Read NOTES.md. Next task: help Paudel start the test plan (docs/testing.md).`
+3. At the end of the session, ask: `Update NOTES.md with what we did.` Then commit and push it
+   yourself (Claude never commits; it suggests the commit summary and description).
+
+## Where things stand (14 Oct 2026)
+- **Website:** Map page (`index.php`) + Animal Encyclopedia (`encyclopedia.php`, South Korea
+  only), shared header, phone layout, UX review fixes, Map <-> Encyclopedia links with a
+  remembered search and a species filter. Everything is committed and pushed.
+- **Documents (in `Downloads`):** `Week3_Requirements_Analysis_v1.3 (final version).docx`
+  (25 pages) and `System_Design_v1.1 (final version).docx` (22 pages), plus `.pdf` and
+  `_drive.pdf` (the one to upload to Google Drive). Both match the website as of 14 Oct.
+- **Submitted:** Proposal, Requirements Specification, System Design (Oct 12). Professor approved
+  the Encyclopedia.
+- **Next deadlines:** Working Prototype **Nov 3** (Week 10), testing report (Week 12),
+  final submission **Nov 26**, presentation **Dec 2** (Group 3, Presentation 1).
+- **Biggest gaps vs. the rubric:** Testing (20 pts, not started), team version control and task
+  management (only one GitHub account commits; no issue board yet), deployment (site only runs
+  on localhost, so phones and classmates can't open it yet).
+
+## Working rules agreed with Claude
+- **Commits:** the user commits and pushes; Claude only edits files and suggests a commit summary
+  and description. AI-assisted work keeps the `Co-Authored-By: Claude …` line (course AI policy).
+- **No revision history** in any document. **Fish stays.** Keep "(final version)" docx copies
+  in Downloads up to date after document changes.
+- Documents are generated from `docs/build` (`node build.js`, `node design.js`, then
+  `finalize.ps1` and `fix_links.py`); never edit the Word files by hand.
 
 (Earlier chats also stay in the app's sidebar and can be reopened.)
 
@@ -195,8 +220,7 @@ Finalization Nov 26 · Presentation Dec 2 (Group 3 is in Presentation 1).
 - [x] System Design submitted; professor approved the Encyclopedia (12 Oct).
 - [x] Requirements Analysis v1.3 includes the Encyclopedia (FR-12, UC-12). Ask the professor
       whether v1.3 should be submitted again or kept for the final submission (Nov 26).
-- [ ] Optional: Map ↔ Encyclopedia links ("Learn more" in the Species Profile, "See on the map"
-      on a card). Team decides; written by the team, Claude reviews.
+- [x] Map <-> Encyclopedia links (14 Oct).
 - [x] Docs updated for the 14 Oct UX fixes: System Design v1.1 (22 pages: Figure 6/7 new
       buttons, new 6.5 Phone Layout + Figure 8, 6.6 Messages, new 6.7 Accessibility, traceability);
       Requirements v1.3 (25 pages: NFR-06, UC-01 A5, UC-07 A6–A7, UC-10 A4, UC-12 A7–A9).
@@ -208,9 +232,10 @@ Finalization Nov 26 · Presentation Dec 2 (Group 3 is in Presentation 1).
       `DROP DATABASE wildlife_tracker`, then import `sql/schema.sql`. Still untested: the
       "GBIF down, serve old row" rule (needs GBIF to fail).
 - [x] Landing page removed (professor feedback). Map page is the home page again (index.php).
-- [ ] **Performance:** GBIF took about 15 s for Jeju in testing, against NFR-01's ~5 s target.
-      The 30 s timeout in `config.php` means a hanging GBIF takes up to ~90 s before the
-      fallback appears. Consider a shorter timeout.
+- [x] **Performance:** timeout 30 s -> 15 s and a "GBIF is slow" message after 5 s (14 Oct).
+      Teammates must change `timeout` to 15 in their own `config/config.php`.
+- [ ] **Deployment** (Render or Railway, free tier) so the site opens on phones and for the
+      usability test; check whether MySQL is available (the site also runs without it).
 - [ ] Teammates should commit from their **own GitHub accounts**; set up a GitHub Issues /
       Projects task board.
 - [ ] Update `README.md` with the Map and Encyclopedia pages and the animal groups.
