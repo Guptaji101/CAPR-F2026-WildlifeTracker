@@ -1,6 +1,6 @@
 # Handoff Notes — WildTrack (CAPR-F2026, Group 3)
 
-_Last updated: 14 Oct 2026_
+_Last updated: 19 Oct 2026_
 
 ## How to resume in a new Claude Code chat
 1. Start Claude Code in this folder (`C:\xampp\htdocs\CAPR-F2026-WildlifeTracker`).
@@ -15,10 +15,13 @@ _Last updated: 14 Oct 2026_
 ## Where things stand (14 Oct 2026)
 - **Website:** Map page (`index.php`) + Animal Encyclopedia (`encyclopedia.php`, South Korea
   only), shared header, phone layout, UX review fixes, Map <-> Encyclopedia links with a
-  remembered search and a species filter. Korea-only place search, Korean Quick Locations and
-  the "Find an Animal" search (14 Oct, later): **not committed yet** (see the session log).
+  remembered search and a species filter, Korea-only place search, Korean Quick Locations and
+  the "Find an Animal" search. All committed and pushed.
+- **Live website (Render, free):** **https://wildtrack-lq88.onrender.com** (lowercase L, not 1).
+  Updates by itself after every push to `main`. Sleeps after ~15 min idle: open it a minute
+  before a demo. Code: https://github.com/Guptaji101/CAPR-F2026-WildlifeTracker (public).
 - **Documents (in `Downloads`):** `Week3_Requirements_Analysis_v1.3 (final version).docx`
-  (26 pages) and `System_Design_v1.1 (final version).docx` (25 pages), plus `.pdf` and
+  (27 pages) and `System_Design_v1.1 (final version).docx` (25 pages), plus `.pdf` and
   `_drive.pdf` (the one to upload to Google Drive). Both match the website as of 14 Oct
   (including FR-13 / UC-13 Animal Name Search).
 - **Submitted:** Proposal, Requirements Specification, System Design (Oct 12). Professor approved
@@ -53,10 +56,14 @@ Final Presentation 25 · Individual Participation 10.
 ## Working rules agreed with Claude
 - **Commits:** the user commits and pushes; Claude only edits files and suggests a commit summary
   and description. AI-assisted work keeps the `Co-Authored-By: Claude …` line (course AI policy).
-- **No revision history** in any document. **Fish stays.** Keep "(final version)" docx copies
-  in Downloads up to date after document changes.
-- Documents are generated from `docs/build` (`node build.js`, `node design.js`, then
-  `finalize.ps1` and `fix_links.py`); never edit the Word files by hand.
+- **Documents are frozen (19 Oct):** the Requirements Analysis and System Design are submitted and
+  must not be changed or rebuilt. Every change goes into **`CHANGELOG.md`** (repo root), whose
+  "For the final submission" table lists what the merged final document (Nov 26) must include.
+- **No revision history** in any document. **Fish stays.**
+- For the final merge only: documents are generated from `docs/build` (`node build.js`,
+  `node design.js`, then `finalize.ps1` and `fix_links.py`); never edit the Word files by hand.
+  The "(final version)" files in Downloads are working drafts (last rebuilt 19 Oct), not the
+  submitted copies.
 
 (Earlier chats also stay in the app's sidebar and can be reopened.)
 
@@ -152,6 +159,69 @@ Final Presentation 25 · Individual Participation 10.
     (architecture), Figure 4 (context DFD), Figure 5 (Level 1 DFD: new process 6.0 Find Animal),
     5.4–5.6, Figure 6 (wireframe #15 Find an Animal) and key, 6.5, 6.6 messages, 6.7, traceability.
     Both kept as v1.3 / v1.1 (no version bump); no revision history.
+- **19 Oct (user feedback: messages, suggestions, speed, wrong/overlapping results):**
+  - **Messages** (toasts) now at the **top center** under the header, 5 s, max 3, no duplicates,
+    read by screen readers (`aria-live`). CSS `.toast-container`, `showToast()` in app.js.
+  - **Animal suggestions while typing** (Google-like drop-down under Find an Animal):
+    `public/data/korea-animals.json` = 2000 most-recorded animals in South Korea (key, English name,
+    scientific name, class, records), made by `tools/build-animal-list.php` (run it again now and
+    then). Loaded once on first focus, filtered in the browser (`matchAnimals()`: a word of the
+    English/scientific name starts with the typed text, best-known first, 6 max). Arrow keys, Enter,
+    Esc, click. Exact list names skip the server. Place-name suggestions were **not** added:
+    Nominatim's usage policy forbids autocomplete.
+  - **Speed:** measured first. Render: sightings ~2 s, species ~2 s, animal 2–4 s; locally GBIF
+    downloads are slow (75 records = 560 KB from Denmark, 3–10 s; one test hit 3 timeouts = 48 s).
+    Fixes: file cache `includes/cache.php` (sightings 1 h, places 30 d, animals 7 d, species 30 d
+    when no MySQL, Encyclopedia list 1 d, IUCN 7 d) → repeats in ~0.005 s; browser keeps the last 20
+    sightings searches; GBIF retries capped at 25 s total (was up to 48 s; **changed later the
+    same day** to "stop only if stalled, max 40 s", see below);
+    `.github/workflows/keep-awake.yml` opens the Render site + Busan search + Mammals list every
+    10 min so it doesn't sleep (first visit was ~50 s).
+  - **Wrong/overlapping results fixed:** searches, place and animal lookups have an id; late answers
+    of older ones are ignored (`state.searchId`, `placeId`, `animalId`). `fillCommonNames()` wrote
+    English names into rows of a *newer* search (the "wrong information" bug) → checks the row.
+    Encyclopedia: errors of a left group no longer replace the new group, a left group stops
+    loading cards, and the detail dialog ignores a card opened earlier (`state.openedKey`).
+  - Tested (local, 1280 px + 375 px): suggestions (deer, mag, crane), arrow keys + Enter, 4 quick
+    radius clicks → last one shown (all points ≤ 5 km), Vancouver message at top center, quick
+    Encyclopedia group switches → only Fish cards, dialog race.
+  - Docs: Requirements v1.3 (27 pages; Figure 1 a bit smaller): FR-13 (suggestions), NFR-01
+    (cache, 25 s), UC-10 step 4 + A4/A5, UC-13 step 2 + A7, scope (Render online), architecture
+    text, traceability, dependencies. System Design v1.1 (25 pages): components (file cache,
+    animal list), new **4.8 File Cache**, rule 6 of 4.7, D3 File Cache (not drawn in Figure 5),
+    6.2 #15, 6.6 (message position, new rows), 6.7, traceability.
+  - **Later the same day:** user said the documents are submitted and frozen → no more document
+    rebuilds; new `CHANGELOG.md` tracks every change (full history back to 10 Sep) and what the
+    final merged document needs. **Live location after Locate Me:** blue pulsing "You are here"
+    dot + accuracy circle, follows the user (`watchPosition`), does not re-search on movement
+    (`showLiveLocation()`, `followLiveLocation()` in app.js, `.live-dot` in style.css). Tested with
+    a simulated GPS (dot moved 300 m, search stayed). Not in the documents yet (CHANGELOG "To do").
+  - **User video ("profile ms.mp4"):** Chinese minnow shown as Invertebrates → GBIF gives most
+    bony fish no class; Fish filter found 1 fish near Ulsan instead of 300. Fixed with 46 fish
+    orders (gbif.php), cache version 2. **Search sightings button** (user request): filters wait
+    for the button; sticky summary + amber "Apply filters & search" when changes are pending.
+    Tested: 3 filter changes → 0 requests, 1 click → 1 request; phone layout. See CHANGELOG.
+  - **User video ("function button overlap.mp4"):** the floating Search bar covered Filters → Max
+    records. Sidebar is now `.sidebar-scroll` (settings, scrolls) + `.search-action` footer below it
+    (phones: sticky at the screen bottom, page scrolls). Also: GBIF sends ~1 MB per 150 records
+    uncompressed; the 15 s/25 s cut-off showed sample data on slow connections → attempts now stop
+    only if not connected in 10 s or stalled (<2 KB/s for 8 s), max 40 s total. 150 recs 8.8 s,
+    300 recs 24.7 s locally.
+  - **Place suggestions** (user request): `api/places.php` → Photon (photon.komoot.io; Nominatim
+    forbids autocomplete), Korea bbox, only place/natural/national park/nature reserve/park kinds,
+    max 6, duplicate parks merged, cached 30 d (cache version 3). Picking goes straight there
+    (`goToPlace()`); Enter without picking = old Nominatim search. Tested: "Jiri" → Jirisan NP
+    picked with arrows + Enter; Enter right away → Gyeongju, list stays closed; fast typing → only
+    the last list; phone layout. Photon fair-use: keep the 250 ms pause and the cache.
+  - **Encyclopedia search** (user request): "Search all animals of South Korea" at the top and
+    "Search mammals…/insects…" inside every group (12 groups). Both use `korea-animals.json`,
+    rebuilt with taxon keys `t` (phylum, class or 204 for fish, order) so each animal's group is
+    known (1967 of 2000 map to a group; millipedes, barnacles… only in the top search). Picking
+    switches group + opens the card (`openAnimal()`); top-search Enter on other names uses
+    animal.php. Also fixed: Encyclopedia sidebar lost its scrolling after the Map sidebar change
+    (now `.sidebar-scroll` too). Suggestions have spoken names (aria-label) on both pages.
+    Tested: "dragonf" → Insects + Butterfly Dragonfly card; "bee" in Insects; "magpie" in Insects
+    → message; "tiger" → card; phone layout; no console errors.
 
 ## What the project is
 
@@ -207,7 +277,11 @@ by animal group / date / radius, and open a species profile with photo and taxon
   Mollusca, Annelida, Cnidaria and Echinodermata.
 - **Fish is kept for now**, even though there were earlier requests to remove aquatic animals,
   because it is in the mockup. See the to-dos.
-- **Dates start empty** and apply as soon as they change; there is no "Query Sightings" button.
+- **Dates start empty.** ~~Filters apply as soon as they change; no "Query Sightings" button.~~
+  **Changed 19 Oct (user feedback):** filter changes wait for the **"Search sightings"** button at
+  the bottom of the sidebar, with a summary of the search ("Changes not applied yet" when pending).
+- **Fish (19 Oct):** GBIF gives most ray-finned fish no class; they are found and labelled by their
+  order (46 fish orders, `FISH_ORDER_KEYS` in `includes/gbif.php`). Re-check if GBIF fixes this.
 - **No accounts:** "EN" and "Guest" in the top bar are display-only.
 - **Task allocation, timeline and tools** go in the individual progress PDFs, not in v1.1.
 - **Database (7 Oct):** MySQL is used only for `species_cache` (taxonomy + photo per species,
@@ -246,23 +320,33 @@ CAPR-F2026-WildlifeTracker/
 │   ├── config.example.php    template (copy to config.php)
 │   └── config.php            local settings and credentials (git-ignored)
 ├── includes/
-│   ├── gbif.php              GBIF client: query builder, retry ×3, sample-data fallback
+│   ├── gbif.php              GBIF client: query builder, retry ×3 (25 s max), sample-data fallback
+│   ├── cache.php             file cache for answers from GBIF, Nominatim, Wikipedia (temp folder)
+│   ├── config.php            app_config(): settings from config.php or config.example.php + env
 │   └── db.php                PDO connection (not used yet)
 ├── public/                   web root
 │   ├── index.php             Map page (home)
 │   ├── encyclopedia.php      Animal Encyclopedia page
 │   ├── partials/header.php   shared top bar (Map | Encyclopedia | About) + About dialog
 │   ├── css/style.css         all styles
-│   ├── js/app.js             app logic: search, filters, map, table, profile
+│   ├── js/app.js             app logic: search, filters, map, table, profile, suggestions
+│   ├── data/korea-animals.json  2000 Korean animals for the suggestions (made by tools/)
 │   └── api/
 │       ├── geocode.php       place name → lat/lng (Nominatim)
 │       ├── sightings.php     occurrences near a point (GBIF), with filters
 │       ├── animal.php        animal name → GBIF species key (match, Wikipedia/Wikidata, suggestions)
 │       └── species.php       taxonomy + photo for a speciesKey (MySQL cache, else GBIF)
-└── sql/schema.sql            species_cache only (used by species.php)
+├── sql/schema.sql            species_cache only (used by species.php)
+├── tools/build-animal-list.php  makes public/data/korea-animals.json (run by hand)
+├── Dockerfile, .dockerignore  how Render builds the online site
+└── .github/workflows/keep-awake.yml  opens the Render site every 10 min (no sleeping)
 ```
 
 ## Remaining to-dos
+- [ ] After pushing the 19 Oct work: check GitHub → Actions → "Keep the website awake" runs
+      (green ✓ every ~10 min) and that the live site shows the suggestions and top-center messages.
+      Ask the users who gave feedback to try again (usability evidence for Week 11).
+- [ ] Re-run `tools/build-animal-list.php` before the final submission so the suggestion list is fresh.
 **Deadlines (all 11:59 PM; full schedule in "Course schedule"):** System Design Oct 17 (submitted
 Oct 12) · Week 7 progress review (in class) · Working Prototype Nov 3 · Project
 Finalization Nov 26 · Presentation Dec 2 (Group 3 is in Presentation 1).
@@ -287,7 +371,12 @@ Finalization Nov 26 · Presentation Dec 2 (Group 3 is in Presentation 1).
 - [x] Landing page removed (professor feedback). Map page is the home page again (index.php).
 - [x] **Performance:** timeout 30 s -> 15 s and a "GBIF is slow" message after 5 s (14 Oct).
       Teammates must change `timeout` to 15 in their own `config/config.php`.
-- [ ] **Deployment on Render (free)**, asked for by the professor (a link to view the site).
+- [x] **Deployment on Render (free)**, asked for by the professor (a link to view the site).
+      **Live since 14 Oct: https://wildtrack-lq88.onrender.com** (service "Wildtrack", Singapore,
+      auto-deploy on commit). Tested online: Map, Find an Animal (tiger, water deer, magpie),
+      Korea-only search, Encyclopedia with photos, phone width; config/ and includes/ are not
+      reachable from the web. Commits `db13cdd` and `998e5a0` (summary "commit") were made with
+      AI help but have no Co-Authored-By line; recorded here.
       Prepared 14 Oct: `Dockerfile` (PHP 8.3 + Apache, web root `public/`, listens on `$PORT`),
       `.dockerignore`, and `includes/config.php` (`app_config()`): uses `config/config.php` if it
       exists, else `config.example.php`; env vars `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`,
@@ -295,10 +384,9 @@ Finalization Nov 26 · Presentation Dec 2 (Group 3 is in Presentation 1).
       and the species cache is skipped (site works, Encyclopedia loads slower). Tested with
       PHP's built-in server and no config.php (all endpoints, Map, Encyclopedia); the Docker
       image itself was not built locally (Docker not installed), so the first Render build is
-      its first real test. **Still to do (user):** commit + push, create a Render account with
-      GitHub, New → Web Service → this repo → Docker, Free, region Singapore; then send the
-      `onrender.com` link to the professor. Free plan sleeps after ~15 min idle (first visit
-      ~1 min). Render has no free MySQL (only Postgres), so no cache online for now.
+      its first real test (it passed). Set up: Render account with GitHub (access to this repo
+      only), New → Web Service → Docker, Free, region Singapore. Free plan sleeps after ~15 min
+      idle (first visit ~1 min). Render has no free MySQL (only Postgres), so no cache online.
 - [ ] Teammates should commit from their **own GitHub accounts**; set up a GitHub Issues /
       Projects task board.
 - [ ] Update `README.md` with the Map and Encyclopedia pages, the animal groups and the
