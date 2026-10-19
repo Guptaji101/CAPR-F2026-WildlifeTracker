@@ -24,6 +24,9 @@ const state = {
     radiusCircle: null,
     radiusLabel: null,
     speciesCache: new Map(),
+    searchId: 0,          // number of the newest sightings search (older answers are ignored)
+    placeId: 0,           // the same for place searches
+    animalId: 0,          // and for animal searches
 };
 
 // Animal groups: filter keys (GBIF taxon keys), map colour and icon.
@@ -140,18 +143,24 @@ function showToast(message, type = 'info') {
     const container = $('toast-container');
     if (!container) return;
 
+    // The same message twice (for example two quick clicks) is shown once; at most 3 at a time
+    if ([...container.children].some(t => t.dataset.message === message)) return;
+    while (container.children.length >= 3) container.firstElementChild.remove();
+
     const toast = document.createElement('div');
     toast.className = `toast ${type === 'error' ? 'error' : ''}`;
+    toast.dataset.message = message;
     toast.innerHTML = `
         <i class="fa-solid ${type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-check'}"></i>
         <span>${escapeHtml(message)}</span>
     `;
     container.appendChild(toast);
+    // Visible for 5 seconds at the top center, then fades out
     setTimeout(() => {
         toast.style.opacity = '0';
         toast.style.transition = 'opacity 0.3s ease';
         setTimeout(() => toast.remove(), 300);
-    }, 4000);
+    }, 5000);
 }
 
 async function safeJsonFetch(url) {
@@ -254,9 +263,11 @@ async function handleSearch() {
     }
 
     setLoading(true, `Geocoding location "${query}"...`);
+    const placeId = ++state.placeId;   // a newer place search makes this one out of date
 
     try {
         const geo = await safeJsonFetch(`api/geocode.php?q=${encodeURIComponent(query)}`);
+        if (placeId !== state.placeId) return;   // the user already searched another place
         if (geo.error) throw new Error(geo.error);
 
         state.currentLat = geo.lat;
@@ -271,6 +282,7 @@ async function handleSearch() {
 
         await loadSightings();
     } catch (err) {
+        if (placeId !== state.placeId) return;
         console.error(err);
         showToast(`Search error: ${err.message}`, 'error');
         setLoading(false);
@@ -305,6 +317,8 @@ function useCurrentLocation() {
 
             map.flyTo([state.currentLat, state.currentLng], 13, { duration: 1.2 });
             updateRadiusCircle();
+            showLiveLocation(position);
+            followLiveLocation();
             showToast('GPS coordinates acquired! Fetching local fauna...');
             if (isPhoneLayout()) setFiltersOpen(false);
 
@@ -319,20 +333,57 @@ function useCurrentLocation() {
     );
 }
 
+// --- Live location ("You are here") -------------------------------------------------------
+// After "Locate Me", a blue dot shows where the user is right now, with a light circle for the
+// GPS accuracy. The browser reports every new position (watchPosition), so the dot moves with
+// the user. Moving does not start a new search: the sightings stay around the place searched,
+// and the user clicks "Locate Me" again to search around the new position.
+const live = { dot: null, accuracy: null, watchId: null };
+
+function showLiveLocation(position) {
+    const { latitude, longitude, accuracy } = position.coords;
+    const latLng = [latitude, longitude];
+    const tip = `You are here (accurate to about ${Math.round(accuracy)} m)`;
+    if (!live.dot) {
+        live.accuracy = L.circle(latLng, { radius: accuracy, color: '#2563eb', weight: 1, fillColor: '#2563eb', fillOpacity: 0.12, interactive: false }).addTo(map);
+        live.dot = L.marker(latLng, {
+            icon: L.divIcon({ className: '', html: '<span class="live-dot"></span>', iconSize: [18, 18], iconAnchor: [9, 9] }),
+            zIndexOffset: 1000,   // above the sighting pins
+            keyboard: false,
+        }).addTo(map).bindTooltip(tip, { direction: 'top', offset: [0, -10] });
+    } else {
+        live.dot.setLatLng(latLng).setTooltipContent(tip);
+        live.accuracy.setLatLng(latLng).setRadius(accuracy);
+    }
+}
+
+function followLiveLocation() {
+    if (live.watchId !== null) return;   // already following
+    live.watchId = navigator.geolocation.watchPosition(showLiveLocation,
+        (err) => console.warn('Live location stopped:', err.message),
+        { enableHighAccuracy: true, maximumAge: 5000 });
+}
+
 // =============================================================================
 // Find an Animal: typed name -> GBIF species key (api/animal.php) -> species filter
 // =============================================================================
 async function findAnimal() {
     const query = $('animal-input').value.trim();
-    $('animal-suggest').hidden = true;
+    hideSuggestions();
     if (!query) {
         showToast('Type an animal name, for example "water deer" or "Pica pica"', 'error');
         return;
     }
 
+    // An exact name from the list of Korean animals needs no server request
+    const known = (animalList || []).find(a => [a.n, a.s].some(n => n && n.toLowerCase() === query.toLowerCase()));
+    if (known) return showAnimal(listAnimal(known));
+
     setLoading(true, `Looking up "${query}"...`);
+    const animalId = ++state.animalId;   // a newer animal search makes this one out of date
     try {
         const data = await safeJsonFetch(`api/animal.php?q=${encodeURIComponent(query)}`);
+        if (animalId !== state.animalId) return;   // the user already chose another animal
         if (data.found) {
             showAnimal(data.found);
         } else {
@@ -341,6 +392,7 @@ async function findAnimal() {
             showSuggestions(data.suggestions || []);
         }
     } catch (err) {
+        if (animalId !== state.animalId) return;
         console.error(err);
         showToast(err.message, 'error');
         setLoading(false);
@@ -349,24 +401,107 @@ async function findAnimal() {
 
 // Filter the map on one species (the same filter the Encyclopedia's "See … on the map" uses)
 function showAnimal(animal) {
+    state.animalId++;   // an animal lookup still running is now out of date
     state.speciesFilter = { key: animal.key, name: animal.name };
     showSpeciesFilter();
     $('animal-input').value = animal.name;
-    $('animal-suggest').hidden = true;
+    hideSuggestions();
     // The address keeps the filter, so reloading the page or sharing the link shows the same animal
     history.replaceState(null, '', `?species=${animal.key}&name=${encodeURIComponent(animal.name)}`);
     if (isPhoneLayout()) setFiltersOpen(false);
     loadSightings();
 }
 
+// "Did you mean…" list from the server, when a typed name fits several animals
 function showSuggestions(list) {
+    renderSuggestions('Did you mean…', list.map(a => ({
+        key: a.key, name: a.name, sci: a.scientificName, records: a.koreaRecords,
+    })));
+}
+
+// --- Suggestions while typing -------------------------------------------------------------
+// data/korea-animals.json lists the 2000 animals with the most GBIF records in South Korea
+// (made by tools/build-animal-list.php). It is loaded once, the first time the box is used,
+// and searched in the browser, so suggestions appear instantly without asking the server.
+let animalList = null;
+let animalListLoading = null;
+function loadAnimalList() {
+    // One download, shared by every caller (also when the user types before it has arrived)
+    animalListLoading ??= fetch('data/korea-animals.json')
+        .then(res => res.json())
+        .then(list => { animalList = list; })
+        .catch(() => { animalList = []; });   // no list: the box still works with Enter
+    return animalListLoading;
+}
+// An entry of the list in the shape showAnimal() expects
+const listAnimal = a => ({ key: a.k, name: a.n || a.s });
+
+// The 6 best-known animals (most records in South Korea; the list is already in that order)
+// whose English or scientific name has a word starting with the typed text: "deer" finds
+// "Chinese Water Deer", "mag" finds "Oriental Magpie", but "pica" does not find "apicalis".
+function matchAnimals(text) {
+    const q = text.trim().toLowerCase();
+    if (q.length < 2 || !animalList) return [];
+    const wordStart = new RegExp(`(^|[\\s\\-'/(])${q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`);
+    return animalList
+        .filter(a => [a.n, a.s].some(n => n && wordStart.test(n.toLowerCase())))
+        .slice(0, 6)
+        .map(a => ({ ...listAnimal(a), sci: a.n ? a.s : '', records: a.r, cls: a.c }));
+}
+
+// Typed text in bold inside a name, as in a search engine's suggestions
+function boldMatch(name, text) {
+    const i = name.toLowerCase().indexOf(text.trim().toLowerCase());
+    if (i < 0 || !text.trim()) return escapeHtml(name);
+    const end = i + text.trim().length;
+    return `${escapeHtml(name.slice(0, i))}<b>${escapeHtml(name.slice(i, end))}</b>${escapeHtml(name.slice(end))}`;
+}
+
+// Draws a list of animals under the box. Every entry is a button: click (or arrow keys + Enter)
+// to show that animal. Used both for suggestions while typing and for "Did you mean…".
+function renderSuggestions(title, items, typed = '') {
     const box = $('animal-suggest');
-    box.innerHTML = 'Did you mean…' + list.map(a => `
-        <button type="button" data-key="${a.key}" data-name="${escapeHtml(a.name)}">
-            <span>${escapeHtml(a.name)} <i>${escapeHtml(a.scientificName)}</i></span>
-            <small>${a.koreaRecords ? a.koreaRecords.toLocaleString() + ' in Korea' : 'not in Korea'}</small>
-        </button>`).join('');
+    if (!items.length) return hideSuggestions();
+    box.innerHTML = (title ? `<div class="suggest-title">${title}</div>` : '') + items.map((a, i) => {
+        // Group icon from the class; some fish only have "Chordata" in GBIF, so they get a plain paw
+        const icon = a.cls && a.cls !== 'Chordata' ? groupIconHtml(groupOf({ taxonGroup: a.cls }), 16) : '<i class="fa-solid fa-paw"></i>';
+        const where = a.records ? `${a.records.toLocaleString()} records in Korea` : 'not recorded in Korea';
+        return `<button type="button" role="option" id="suggest-${i}" data-key="${a.key}" data-name="${escapeHtml(a.name)}">
+            ${icon}
+            <span class="suggest-text">
+                <span class="suggest-main">${boldMatch(a.name, typed)}</span>
+                <span class="suggest-sub">${a.sci ? `<i>${boldMatch(a.sci, typed)}</i> · ` : ''}${where}</span>
+            </span>
+        </button>`;
+    }).join('');
     box.hidden = false;
+    $('animal-input').setAttribute('aria-expanded', 'true');
+}
+
+function hideSuggestions() {
+    $('animal-suggest').hidden = true;
+    $('animal-input').setAttribute('aria-expanded', 'false');
+    $('animal-input').removeAttribute('aria-activedescendant');
+}
+
+// Arrow keys move through the suggestions, Enter picks the highlighted one (or searches the
+// typed name), Esc closes the list
+function onAnimalKey(e) {
+    const options = [...$('animal-suggest').querySelectorAll('button')];
+    const open = !$('animal-suggest').hidden && options.length;
+    const current = options.findIndex(b => b.classList.contains('active'));
+    if (open && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+        e.preventDefault();
+        const next = (current + (e.key === 'ArrowDown' ? 1 : -1) + options.length) % options.length;
+        options.forEach((b, i) => b.classList.toggle('active', i === next));
+        $('animal-input').setAttribute('aria-activedescendant', options[next].id);
+    } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (open && current >= 0) options[current].click();
+        else findAnimal();
+    } else if (e.key === 'Escape') {
+        hideSuggestions();
+    }
 }
 
 // =============================================================================
@@ -425,9 +560,7 @@ async function loadSightings() {
         return;
     }
 
-    setLoading(true, 'Querying GBIF biodiversity records...');
     updateFiltersSummary();
-
     saveSearch();
     let url = `api/sightings.php?lat=${state.currentLat}&lng=${state.currentLng}&radius=${state.radiusKm}&limit=${state.limit}`;
     // One species (from the Encyclopedia), or the ticked groups. With every group ticked no taxon
@@ -441,9 +574,19 @@ async function loadSightings() {
     if (state.fromDate) url += `&from=${encodeURIComponent(state.fromDate)}`;
     if (state.toDate)   url += `&to=${encodeURIComponent(state.toDate)}`;
 
+    // Each search gets a number. If the user starts another search (another chip, radius or
+    // group) before this one answers, this answer is ignored when it arrives, so an older
+    // result can never replace a newer one on the map or in the table.
+    const searchId = ++state.searchId;
+    const cached = sightingsCache.get(url);
+    if (!cached) setLoading(true, 'Querying GBIF biodiversity records...');
+
     try {
-        const data = await safeJsonFetch(url);
-        state.sightings = data.results || [];
+        // A search already made in this tab is shown at once from memory
+        const data = cached || await safeJsonFetch(url);
+        if (searchId !== state.searchId) return;   // a newer search has started
+        if (!data.fallback) rememberSightings(url, data);
+        state.sightings = (data.results || []).map(r => ({ ...r }));   // a fresh copy each time
         state.page = 0;
         const place = ($('location-input').value || state.currentLocationName || 'this place').split(',')[0];
         const noAnimal = `No ${state.speciesFilter?.name} sightings within ${state.radiusKm} km of ${place}. Try a larger radius, or show all animals.`;
@@ -457,13 +600,22 @@ async function loadSightings() {
         }
         if (state.sightings.length) selectSighting(0, { fly: false });
     } catch (err) {
+        if (searchId !== state.searchId) return;
         console.error(err);
         showToast(`Failed to load sightings: ${err.message}`, 'error');
         state.sightings = [];
         renderAll(`Could not load wildlife records. ${err.message}`);
     } finally {
-        setLoading(false);
+        if (searchId === state.searchId) setLoading(false);
     }
+}
+
+// Searches made in this browser tab, by address (the newest 20), for instant repeats
+const sightingsCache = new Map();
+function rememberSightings(url, data) {
+    sightingsCache.delete(url);
+    sightingsCache.set(url, data);
+    if (sightingsCache.size > 20) sightingsCache.delete(sightingsCache.keys().next().value);
 }
 
 function renderAll(emptyMessage) {
@@ -551,6 +703,9 @@ function fillCommonNames(start, end) {
         const data = await getSpecies(r.speciesKey);
         if (!data || !data.vernacularName) return;
         r.commonName = data.vernacularName;
+        // A new search may have replaced the table while this name was loading: then this row
+        // now shows another animal and must not get this name
+        if (state.sightings[start + i] !== r) return;
         const cell = document.querySelector(`#sightings-body tr[data-index="${start + i}"] .sp-name`);
         if (cell) cell.innerText = r.commonName;
     });
@@ -735,10 +890,18 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Enter') handleSearch();
     });
     $('search-btn').addEventListener('click', handleSearch);
-    $('animal-input').addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') findAnimal();
+    // Find an Animal: suggestions while typing, arrow keys, Enter, Esc
+    $('animal-input').addEventListener('focus', loadAnimalList);
+    $('animal-input').addEventListener('input', async (e) => {
+        await loadAnimalList();   // instant after the first time
+        const typed = e.target.value;
+        if (typed !== $('animal-input').value) return;   // the user has typed more meanwhile
+        renderSuggestions('', matchAnimals(typed), typed);
     });
+    $('animal-input').addEventListener('keydown', onAnimalKey);
+    $('animal-input').addEventListener('blur', () => setTimeout(hideSuggestions, 150));   // lets a click on a suggestion finish first
     $('animal-btn').addEventListener('click', findAnimal);
+    $('animal-suggest').addEventListener('mousedown', (e) => e.preventDefault());   // keep the focus in the box
     $('animal-suggest').addEventListener('click', (e) => {
         const btn = e.target.closest('button');
         if (btn) showAnimal({ key: Number(btn.dataset.key), name: btn.dataset.name });

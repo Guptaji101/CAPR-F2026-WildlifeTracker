@@ -64,13 +64,17 @@ $page = 'map';
 
             <section class="side-section">
                 <h3 class="side-title"><i class="fa-solid fa-paw"></i> Find an Animal</h3>
-                <div class="search-box">
-                    <button type="button" class="search-btn" id="animal-btn" aria-label="Find animal"><i class="fa-solid fa-magnifying-glass"></i></button>
-                    <label for="animal-input" class="sr-only">Animal name</label>
-                    <input type="text" id="animal-input" placeholder="Animal name (e.g. water deer, Pica pica)">
+                <div class="suggest-wrap">
+                    <div class="search-box">
+                        <button type="button" class="search-btn" id="animal-btn" aria-label="Find animal"><i class="fa-solid fa-magnifying-glass"></i></button>
+                        <label for="animal-input" class="sr-only">Animal name</label>
+                        <input type="text" id="animal-input" placeholder="Animal name (e.g. water deer, Pica pica)"
+                               autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="animal-suggest">
+                    </div>
+                    <!-- Suggestions while typing, or a "Did you mean …?" list when a name fits several animals.
+                         It drops down over the sections below, like a search engine's suggestions. -->
+                    <div class="animal-suggest" id="animal-suggest" role="listbox" aria-label="Animal suggestions" hidden></div>
                 </div>
-                <!-- "Did you mean …?" list when the name matches several animals -->
-                <div class="animal-suggest" id="animal-suggest" hidden></div>
             </section>
 
             <section class="side-section">
@@ -204,7 +208,8 @@ $page = 'map';
     </div>
 
 
-    <div class="toast-container" id="toast-container"></div>
+    <!-- Messages: shown at the top center for 5 seconds; screen readers read them aloud -->
+    <div class="toast-container" id="toast-container" role="status" aria-live="polite"></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script src="js/app.js?v=<?= filemtime(__DIR__ . '/js/app.js') ?>"></script>

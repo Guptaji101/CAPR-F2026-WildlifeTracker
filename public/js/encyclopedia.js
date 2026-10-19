@@ -9,7 +9,7 @@
 const $ = id => document.getElementById(id);
 const COUNTRY = 'KR';                // the Encyclopedia only covers South Korea
 // list = the species of the open group; openAfterLoad = a species to open once the list is shown
-const state = { group: null, list: [], openAfterLoad: null };
+const state = { group: null, list: [], openAfterLoad: null, openedKey: null };   // openedKey: species in the dialog
 const speciesCache = new Map();   // speciesKey -> promise of species.php data (one request each)
 
 const escapeHtml = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -78,6 +78,7 @@ async function loadGroup() {
     try {
         data = await getJson(`api/encyclopedia.php?action=top&taxa=${btn.dataset.taxa}&country=${COUNTRY}`);
     } catch (e) {
+        if (requested !== state.group) return;   // an error of a group the user has already left
         grid.innerHTML = `<div class="grid-message"><i class="fa-solid fa-triangle-exclamation"></i>
             Could not load the list from GBIF (${escapeHtml(e.message)}).
             <button class="btn-primary" onclick="loadGroup()">Try again</button></div>`;
@@ -97,6 +98,9 @@ async function loadGroup() {
         state.openAfterLoad = null;
     }
     await eachLimited(data.species, 6, async s => {
+        // The user opened another group: stop loading this one, so the new group's cards load
+        // first and the server is not kept busy with cards nobody sees
+        if (requested !== state.group) return;
         const sp = await getSpecies(s.speciesKey);
         const card = grid.querySelector(`[data-key="${s.speciesKey}"]`);
         if (card && requested === state.group) card.outerHTML = cardHtml(s, sp);
@@ -160,7 +164,10 @@ function cardHtml(s, sp) {
 }
 
 async function openSpecies(key, records) {
+    // If the user opens another card before this one has loaded, this one is out of date
+    const opened = state.openedKey = key;
     const sp = await getSpecies(key);
+    if (opened !== state.openedKey) return;
     const name = displayName(sp);
     const ranks = ['kingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species'];
     $('species-detail').innerHTML = `
@@ -187,11 +194,12 @@ async function openSpecies(key, records) {
         : `<span class="badge muted"><i class="fa-solid fa-location-dot"></i> ${fmt(records)} records in South Korea</span>`;
     try {
         const f = await getJson(`api/encyclopedia.php?action=facts&speciesKey=${key}`);
+        if (opened !== state.openedKey) return;   // the dialog now shows another species
         const [label, color] = IUCN[f.iucn?.code] || IUCN.NE;
         $('detail-badges').innerHTML =
             `<span class="badge" style="background:${color}" title="IUCN Red List of Threatened Species">${label}</span> ${korea}`;
     } catch {
-        $('detail-badges').innerHTML = korea;
+        if (opened === state.openedKey) $('detail-badges').innerHTML = korea;
     }
 }
 
