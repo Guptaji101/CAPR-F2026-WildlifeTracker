@@ -34,13 +34,17 @@ function gbif_search_nearby(
 
     $url = $cfg['base_url'] . '/occurrence/search?' . $query;
 
-    // Try up to 3 times with backoff
+    // Try up to 3 times with backoff, but never longer than 25 seconds in total. Before, three
+    // 15-second timeouts plus the pauses could keep the user waiting 48 seconds.
     $lastError = null;
+    $deadline = microtime(true) + 25;
     for ($attempt = 1; $attempt <= 3; $attempt++) {
+        $left = (int)floor($deadline - microtime(true));
+        if ($left < 3) break;   // not enough time left for a useful attempt: show the sample data
         $ch = curl_init($url);
         curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_TIMEOUT        => $cfg['timeout'],
+    CURLOPT_TIMEOUT        => min($cfg['timeout'], $left),
     CURLOPT_ENCODING       => '',
     CURLOPT_USERAGENT      => 'CAPR-F2026-WildlifeTracker/1.0 (student project)',
     CURLOPT_HTTPHEADER     => ['Accept: application/json'],

@@ -6,11 +6,20 @@
  * names such as "Gwangju" or "Jung-gu" from landing in another country.
  */
 header('Content-Type: application/json; charset=utf-8');
+require_once __DIR__ . '/../../includes/cache.php';
 
 $q = isset($_GET['q']) ? trim($_GET['q']) : '';
 if ($q === '') {
     http_response_code(400);
     echo json_encode(['error' => 'Missing search query']);
+    exit;
+}
+
+// Places don't move: a place found in the last 30 days is answered from the cache.
+// (Nominatim's usage policy also asks apps to cache results instead of asking again.)
+$cacheKey = 'geo:' . mb_strtolower($q);
+if ($cached = cache_get($cacheKey, 30 * 86400)) {
+    echo json_encode($cached);
     exit;
 }
 
@@ -46,9 +55,11 @@ if (empty($data)) {
     exit;
 }
 
-echo json_encode([
+$place = [
     'lat'         => floatval($data[0]['lat']),
     'lng'         => floatval($data[0]['lon']),
     'displayName' => $data[0]['display_name'],
-]);
+];
+cache_put($cacheKey, $place);
+echo json_encode($place);
 ?>

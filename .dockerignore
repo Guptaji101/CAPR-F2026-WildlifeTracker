@@ -1,6 +1,8 @@
 # Files the hosting server does not need (keeps the build small and secrets out of it)
 .git
+.github
 .claude
+tools
 config/config.php
 docs
 sql

@@ -3,6 +3,7 @@ header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 
 require_once __DIR__ . '/../../includes/gbif.php';
+require_once __DIR__ . '/../../includes/cache.php';
 
 $lat = isset($_GET['lat']) ? (float)$_GET['lat'] : null;
 $lng = isset($_GET['lng']) ? (float)$_GET['lng'] : null;
@@ -31,6 +32,15 @@ foreach (['From' => $from, 'To' => $to] as $label => $date) {
 if ($from && $to && $from > $to) {
     http_response_code(400);
     echo json_encode(['error' => 'The From date must be on or before the To date']);
+    exit;
+}
+
+// The same search in the last hour (same place, radius, groups, dates and limit) is answered
+// from the cache: GBIF needs 2–5 seconds, the cache a few milliseconds. New records reach GBIF
+// slowly, so an hour-old answer is still up to date.
+$cacheKey = 'sightings:' . json_encode([$lat, $lng, $radius, $taxa, $from, $to, $limit]);
+if ($cached = cache_get($cacheKey, 3600)) {
+    echo json_encode($cached);
     exit;
 }
 
@@ -66,5 +76,7 @@ $response = ['count' => count($results), 'results' => $results];
 if (!empty($data['fallback'])) {
     $response['fallback'] = true;
     $response['reason']   = $data['error'];
+} else {
+    cache_put($cacheKey, $response);   // sample data is never cached: the next search tries GBIF again
 }
 echo json_encode($response);

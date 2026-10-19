@@ -19,10 +19,12 @@ if (!$speciesKey) {
 require_once __DIR__ . '/../../includes/db.php';
 require_once __DIR__ . '/../../includes/gbif.php';
 require_once __DIR__ . '/../../includes/wikipedia.php';
+require_once __DIR__ . '/../../includes/cache.php';
 
 const CACHE_DAYS = 30;
 
-// The cached row, with "fresh" = 1 if it is younger than CACHE_DAYS; null if none or no database
+// The cached row, with "fresh" = 1 if it is younger than CACHE_DAYS; null if none.
+// Without a database (as on Render) the same row is kept in the file cache (includes/cache.php).
 function cache_read(int $key): ?array {
     try {
         $st = db()->prepare('SELECT *, cached_at > NOW() - INTERVAL ' . CACHE_DAYS . ' DAY AS fresh
@@ -30,7 +32,8 @@ function cache_read(int $key): ?array {
         $st->execute([$key]);
         return $st->fetch() ?: null;
     } catch (Throwable $e) {
-        return null;
+        $row = cache_get("species:$key", CACHE_DAYS * 86400);
+        return $row ? $row + ['fresh' => 1] : null;
     }
 }
 
@@ -44,7 +47,7 @@ function cache_save(array $row): void {
                  cached_at = CURRENT_TIMESTAMP';
         db()->prepare($sql)->execute(array_values($row));
     } catch (Throwable $e) {
-        // Not saved; the next request simply asks GBIF again
+        cache_put("species:{$row['species_key']}", $row);   // no database: keep it in the file cache
     }
 }
 

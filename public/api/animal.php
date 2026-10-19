@@ -15,6 +15,7 @@ header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/../../includes/gbif.php';
 require_once __DIR__ . '/../../includes/wikipedia.php';
+require_once __DIR__ . '/../../includes/cache.php';
 
 const GBIF_API = 'https://api.gbif.org/v1';
 const BACKBONE = 'd7dddbf4-2cf0-4f39-9b2a-bb099caae36c';   // GBIF's main species list
@@ -26,6 +27,20 @@ if ($q === '' || mb_strlen($q) > 80) {
     exit;
 }
 
+// A name looked up in the last 7 days is answered from the cache (no GBIF or Wikipedia request)
+$cacheKey = 'animal:' . mb_strtolower($q);
+if ($cached = cache_get($cacheKey, 7 * 86400)) {
+    echo json_encode($cached);
+    exit;
+}
+// Send an answer and keep it for the next user who types the same name
+function send(array $answer): void {
+    global $cacheKey;
+    cache_put($cacheKey, $answer);
+    echo json_encode($answer);
+    exit;
+}
+
 // Species record from GBIF if it is an animal species (or below, e.g. a subspecies); else null
 function animal_species(int $key): ?array {
     $sp = gbif_get(GBIF_API . "/species/$key");
@@ -34,8 +49,7 @@ function animal_species(int $key): ?array {
 }
 
 function send_found(int $key, string $name, ?string $scientificName): void {
-    echo json_encode(['found' => ['key' => $key, 'name' => $name, 'scientificName' => $scientificName]]);
-    exit;
+    send(['found' => ['key' => $key, 'name' => $name, 'scientificName' => $scientificName]]);
 }
 
 // --- 1. Scientific name -------------------------------------------------------
@@ -82,8 +96,7 @@ if ($candidates) {
     // Animals recorded in South Korea first, then GBIF's own order
     $candidates = array_values($candidates);
     usort($candidates, fn($a, $b) => $b['koreaRecords'] <=> $a['koreaRecords']);
-    echo json_encode(['suggestions' => array_slice($candidates, 0, 5)]);
-    exit;
+    send(['suggestions' => array_slice($candidates, 0, 5)]);
 }
 
 http_response_code(404);
