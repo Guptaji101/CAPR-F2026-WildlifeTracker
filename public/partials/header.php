@@ -26,6 +26,6 @@ $page = $page ?? 'map';
            Global Biodiversity Information Facility (GBIF). The Encyclopedia describes the most
            recorded animals in each group, with summaries from Wikipedia. No account is needed.</p>
         <p class="about-small">CAPR-F2026 Capstone &bull; Group 3: Gupta Aman Kumar, Singh Shubham Kumar, Paudel Amrit.<br>
-           Occurrence data: GBIF.org &bull; Summaries: Wikipedia (CC BY-SA) &bull; Maps: &copy; OpenStreetMap contributors, Esri.</p>
+           Occurrence data: GBIF.org &bull; Summaries: Wikipedia (CC BY-SA) &bull; Maps: &copy; OpenStreetMap contributors, Esri &bull; Place search: Nominatim, Photon (komoot).</p>
         <form method="dialog"><button class="btn-primary">Close</button></form>
     </dialog>

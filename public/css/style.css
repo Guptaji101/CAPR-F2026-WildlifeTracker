@@ -101,15 +101,18 @@ button { font-family: inherit; cursor: pointer; }
 /* ----------------------------------------------------------------------------
    Sidebar
    ---------------------------------------------------------------------------- */
+/* The sidebar has two parts: the settings, which scroll, and the Search button underneath as a
+   footer. The button is outside the scrolling part, so it can never cover a setting. */
 .sidebar {
     position: sticky;
     top: var(--topbar-h);
     height: calc(100vh - var(--topbar-h));
-    overflow-y: auto;
-    padding: 12px 10px 24px 10px;
+    display: flex;
+    flex-direction: column;
     background: var(--white);
     border-right: 1px solid var(--line);
 }
+.sidebar-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 12px 10px 16px 10px; }
 
 .side-section { padding: 16px 8px; border-bottom: 1px solid var(--line); }
 .side-title, .side-subtitle {
@@ -506,6 +509,21 @@ table.sightings { width: 100%; border-collapse: collapse; }
     font: inherit; font-size: 12.5px; font-weight: 600; color: var(--green-700);
 }
 
+/* "Search sightings" button with a summary of the search; stays at the bottom of the sidebar */
+.search-action {
+    flex-shrink: 0; padding: 12px 18px 14px;
+    background: var(--white); border-top: 1px solid var(--line); box-shadow: 0 -6px 12px rgba(15, 23, 42, 0.06);
+}
+.search-summary { margin-bottom: 8px; font-size: 12px; line-height: 1.45; color: var(--text); }
+.search-summary span { display: flex; align-items: center; gap: 5px; font-weight: 600; font-size: 11.5px; }
+.search-summary .shown { color: var(--green-700); }
+.search-summary .changed { color: #b45309; }
+.apply-btn { height: 42px; font-size: 13.5px; }
+.apply-btn.pending { background: #d97706; animation: apply-nudge 1.6s ease-in-out 2; }
+.apply-btn.pending:hover { background: #b45309; }
+@keyframes apply-nudge { 50% { box-shadow: 0 0 0 5px rgba(217, 119, 6, 0.25); } }
+@media (prefers-reduced-motion: reduce) { .apply-btn.pending { animation: none; } }
+
 /* Suggestions under the Find an Animal box: a drop-down that covers the sections below it,
    like a search engine's suggestion list (also used for the "Did you mean …?" list) */
 .suggest-wrap { position: relative; }
@@ -623,6 +641,10 @@ dialog .btn-primary { margin-top: 6px; }
     .filters-open .filters-toggle .toggle-caret { transform: rotate(180deg); }
     .layout:not(.filters-open) > .sidebar { display: none; }
     .layout > .sidebar { border: 1px solid var(--line); border-radius: var(--radius); }
+    /* The whole page scrolls on phones: the Search bar stays at the bottom of the screen while the
+       settings are open, and scrolling further down always shows the setting above it */
+    .sidebar-scroll { overflow: visible; }
+    .search-action { position: sticky; bottom: 0; z-index: 20; border-radius: 0 0 var(--radius) var(--radius); }
 }
 
 /* Phones: page links show icons only; chips big enough for a finger */

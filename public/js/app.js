@@ -27,6 +27,7 @@ const state = {
     searchId: 0,          // number of the newest sightings search (older answers are ignored)
     placeId: 0,           // the same for place searches
     animalId: 0,          // and for animal searches
+    placeSuggestId: 0,    // and for place suggestion lists
 };
 
 // Animal groups: filter keys (GBIF taxon keys), map colour and icon.
@@ -232,6 +233,34 @@ function updateFiltersSummary() {
     setText('filters-summary', `${place} · ${state.radiusKm} km`);
 }
 
+// --- Search button and summary --------------------------------------------------------------
+// Filter changes wait for the "Search sightings" button, so the user decides when to search
+// and always sees what will be searched, for example "Busan · 25 km · Birds, Mammals · max 75".
+state.filtersChanged = false;
+
+function markFiltersChanged() {
+    state.filtersChanged = true;
+    updateSearchSummary();
+}
+
+function updateSearchSummary() {
+    const typed = $('location-input').value.trim();
+    const place = (typed || state.currentLocationName || 'Busan').split(',')[0];
+    const allGroups = state.groups.size === Object.keys(GROUPS).length;
+    const what = state.speciesFilter ? `only ${state.speciesFilter.name}`
+        : allGroups ? 'all animals'
+        : state.groups.size ? [...state.groups].map(g => GROUPS[g].label).join(', ')
+        : 'no group ticked';
+    const dates = state.fromDate || state.toDate ? ` · ${state.fromDate || '…'} to ${state.toDate || 'today'}` : '';
+    const summary = `${escapeHtml(place)} · ${state.radiusKm} km · ${escapeHtml(what)}${escapeHtml(dates)} · max ${state.limit}`;
+
+    $('search-summary').innerHTML = state.filtersChanged
+        ? `<span class="changed"><i class="fa-solid fa-circle-exclamation"></i> Changes not applied yet</span>${summary}`
+        : `<span class="shown"><i class="fa-solid fa-check"></i> Showing</span>${summary}`;
+    $('apply-btn').classList.toggle('pending', state.filtersChanged);
+    setText('apply-label', state.filtersChanged ? 'Apply filters & search' : 'Search sightings');
+}
+
 // iNaturalist photos come as "original" size; ask for a smaller version
 function sizedImage(url, size) {
     if (!url) return null;
@@ -255,6 +284,7 @@ function groupIconHtml(groupKey, size = 18) {
 // Search & Geolocation
 // =============================================================================
 async function handleSearch() {
+    cancelPlaceSuggestions();
     const input = $('location-input');
     const query = input ? input.value.trim() : '';
     if (!query) {
@@ -269,24 +299,86 @@ async function handleSearch() {
         const geo = await safeJsonFetch(`api/geocode.php?q=${encodeURIComponent(query)}`);
         if (placeId !== state.placeId) return;   // the user already searched another place
         if (geo.error) throw new Error(geo.error);
-
-        state.currentLat = geo.lat;
-        state.currentLng = geo.lng;
-        state.currentLocationName = geo.displayName || query;
-
-        map.flyTo([state.currentLat, state.currentLng], 12, { duration: 1.2 });
-        updateRadiusCircle();
-        // Say which place was found: inside Korea, "Tokyo" finds a shop called "Tokyo Milk Cheese Factory"
-        showToast(`Found: ${state.currentLocationName.replace(/, South Korea$/, '')}`);
-        if (isPhoneLayout()) setFiltersOpen(false);
-
-        await loadSightings();
+        await goToPlace(geo.lat, geo.lng, geo.displayName || query);
     } catch (err) {
         if (placeId !== state.placeId) return;
         console.error(err);
         showToast(`Search error: ${err.message}`, 'error');
         setLoading(false);
     }
+}
+
+// Move the map to a place and search around it. Used by the place search (after geocode.php)
+// and by a place suggestion, which already has its coordinates.
+function goToPlace(lat, lng, name) {
+    state.currentLat = lat;
+    state.currentLng = lng;
+    state.currentLocationName = name;
+
+    map.flyTo([lat, lng], 12, { duration: 1.2 });
+    updateRadiusCircle();
+    // Say which place was found: inside Korea, "Tokyo" finds a shop called "Tokyo Milk Cheese Factory"
+    showToast(`Found: ${name.replace(/, South Korea$/, '')}`);
+    if (isPhoneLayout()) setFiltersOpen(false);
+    return loadSightings();
+}
+
+// --- Place suggestions while typing --------------------------------------------------------
+// After a short pause in typing (250 ms), api/places.php asks Photon for places in South Korea
+// whose name starts like the text: cities, districts, villages, national parks, mountains,
+// wetlands… Picking one goes straight there (it already has coordinates). Enter without picking
+// still searches the typed name with geocode.php, as before.
+const PLACE_ICONS = { town: 'fa-city', park: 'fa-tree', mountain: 'fa-mountain', water: 'fa-water', island: 'fa-umbrella-beach', nature: 'fa-leaf' };
+let placeTimer = null;
+
+function onPlaceInput() {
+    clearTimeout(placeTimer);
+    const typed = $('location-input').value;
+    if (typed.trim().length < 2) return hideList('location-input', 'location-suggest');
+    placeTimer = setTimeout(() => loadPlaceSuggestions(typed), 250);
+}
+
+async function loadPlaceSuggestions(typed) {
+    const id = ++state.placeSuggestId;   // only the newest list is shown
+    const box = $('location-suggest');
+    if (box.hidden) {   // first answer can take a second: say that it is coming
+        box.innerHTML = '<div class="suggest-title"><i class="fa-solid fa-spinner fa-spin"></i> Looking for places…</div>';
+        box.hidden = false;
+    }
+    let places = [];
+    try { places = (await safeJsonFetch(`api/places.php?q=${encodeURIComponent(typed.trim())}`)).places || []; } catch { /* no suggestions */ }
+    if (id !== state.placeSuggestId || typed !== $('location-input').value) return;   // the user typed on
+    if (!places.length) return hideList('location-input', 'location-suggest');
+
+    box.innerHTML = places.map((p, i) => `
+        <button type="button" role="option" id="place-${i}" data-lat="${p.lat}" data-lng="${p.lng}"
+                data-name="${escapeHtml(p.name)}" data-area="${escapeHtml(p.area)}"
+                aria-label="${escapeHtml([p.name, p.area].filter(Boolean).join(', '))}">
+            <i class="fa-solid ${PLACE_ICONS[p.kind] || 'fa-location-dot'}"></i>
+            <span class="suggest-text">
+                <span class="suggest-main">${boldMatch(p.name, typed)}</span>
+                <span class="suggest-sub">${escapeHtml(p.area || 'South Korea')}</span>
+            </span>
+        </button>`).join('');
+    box.hidden = false;
+    $('location-input').setAttribute('aria-expanded', 'true');
+}
+
+// Close the place list and forget suggestions still on their way (after Enter or a pick, a list
+// arriving late must not pop up again)
+function cancelPlaceSuggestions() {
+    clearTimeout(placeTimer);
+    state.placeSuggestId++;
+    hideList('location-input', 'location-suggest');
+}
+
+function pickPlace(btn) {
+    cancelPlaceSuggestions();
+    state.placeId++;   // a place search still running is now out of date
+    const { lat, lng, name, area } = btn.dataset;
+    $('location-input').value = name;
+    document.querySelectorAll('.chip[data-place]').forEach(c => c.classList.toggle('active', c.dataset.place === name));
+    goToPlace(Number(lat), Number(lng), area ? `${name}, ${area}` : name);
 }
 
 function quickSelect(place, elem) {
@@ -466,7 +558,8 @@ function renderSuggestions(title, items, typed = '') {
         // Group icon from the class; some fish only have "Chordata" in GBIF, so they get a plain paw
         const icon = a.cls && a.cls !== 'Chordata' ? groupIconHtml(groupOf({ taxonGroup: a.cls }), 16) : '<i class="fa-solid fa-paw"></i>';
         const where = a.records ? `${a.records.toLocaleString()} records in Korea` : 'not recorded in Korea';
-        return `<button type="button" role="option" id="suggest-${i}" data-key="${a.key}" data-name="${escapeHtml(a.name)}">
+        return `<button type="button" role="option" id="suggest-${i}" data-key="${a.key}" data-name="${escapeHtml(a.name)}"
+                aria-label="${escapeHtml([a.name, a.sci].filter(Boolean).join(', '))}">
             ${icon}
             <span class="suggest-text">
                 <span class="suggest-main">${boldMatch(a.name, typed)}</span>
@@ -478,31 +571,34 @@ function renderSuggestions(title, items, typed = '') {
     $('animal-input').setAttribute('aria-expanded', 'true');
 }
 
-function hideSuggestions() {
-    $('animal-suggest').hidden = true;
-    $('animal-input').setAttribute('aria-expanded', 'false');
-    $('animal-input').removeAttribute('aria-activedescendant');
+// Close a suggestion list (the place box and the animal box each have one)
+function hideList(inputId, boxId) {
+    $(boxId).hidden = true;
+    $(inputId).setAttribute('aria-expanded', 'false');
+    $(inputId).removeAttribute('aria-activedescendant');
 }
+function hideSuggestions() { hideList('animal-input', 'animal-suggest'); }
 
-// Arrow keys move through the suggestions, Enter picks the highlighted one (or searches the
-// typed name), Esc closes the list
-function onAnimalKey(e) {
-    const options = [...$('animal-suggest').querySelectorAll('button')];
-    const open = !$('animal-suggest').hidden && options.length;
+// Arrow keys move through a suggestion list, Enter picks the highlighted entry (or searches the
+// typed text with onEnter), Esc closes the list. Shared by the place box and the animal box.
+function onSuggestKey(e, inputId, boxId, onEnter) {
+    const options = [...$(boxId).querySelectorAll('button')];
+    const open = !$(boxId).hidden && options.length;
     const current = options.findIndex(b => b.classList.contains('active'));
     if (open && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
         e.preventDefault();
         const next = (current + (e.key === 'ArrowDown' ? 1 : -1) + options.length) % options.length;
         options.forEach((b, i) => b.classList.toggle('active', i === next));
-        $('animal-input').setAttribute('aria-activedescendant', options[next].id);
+        $(inputId).setAttribute('aria-activedescendant', options[next].id);
     } else if (e.key === 'Enter') {
         e.preventDefault();
         if (open && current >= 0) options[current].click();
-        else findAnimal();
+        else { hideList(inputId, boxId); onEnter(); }
     } else if (e.key === 'Escape') {
-        hideSuggestions();
+        hideList(inputId, boxId);
     }
 }
+const onAnimalKey = (e) => onSuggestKey(e, 'animal-input', 'animal-suggest', findAnimal);
 
 // =============================================================================
 // Map Overlays: radius circle, label and base layers
@@ -561,6 +657,8 @@ async function loadSightings() {
     }
 
     updateFiltersSummary();
+    state.filtersChanged = false;   // every search uses all current filters
+    updateSearchSummary();
     saveSearch();
     let url = `api/sightings.php?lat=${state.currentLat}&lng=${state.currentLng}&radius=${state.radiusKm}&limit=${state.limit}`;
     // One species (from the Encyclopedia), or the ticked groups. With every group ticked no taxon
@@ -816,7 +914,10 @@ async function showProfile(record) {
 
     if (speciesData.vernacularName) setText('profile-name', speciesData.vernacularName);
     if (speciesData.scientificName) setText('profile-sci', speciesData.scientificName);
-    renderTaxonomy(speciesData);
+    // Species saved before 19 Oct may have no class (GBIF gives none for most fish); the sighting
+    // knows it ("Actinopterygii"), unless it only knows the phylum
+    const cls = speciesData.class || (record.taxonGroup !== record.phylum ? record.taxonGroup : null);
+    renderTaxonomy({ ...speciesData, class: cls });
     if (!record.image) setPhoto(speciesData.imageUrl, 'No image provided by GBIF');
     gbifBtn.href = speciesData.gbifUrl || `https://www.gbif.org/species/${record.speciesKey}`;
 }
@@ -886,8 +987,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     buildGroupControls();
 
-    $('location-input').addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') handleSearch();
+    // Search Location: place suggestions while typing, arrow keys, Enter, Esc
+    $('location-input').addEventListener('input', onPlaceInput);
+    $('location-input').addEventListener('keydown', (e) => onSuggestKey(e, 'location-input', 'location-suggest', handleSearch));
+    $('location-input').addEventListener('blur', () => setTimeout(cancelPlaceSuggestions, 150));
+    $('location-suggest').addEventListener('mousedown', (e) => e.preventDefault());   // keep the focus in the box
+    $('location-suggest').addEventListener('click', (e) => {
+        const btn = e.target.closest('button');
+        if (btn) pickPlace(btn);
     });
     $('search-btn').addEventListener('click', handleSearch);
     // Find an Animal: suggestions while typing, arrow keys, Enter, Esc
@@ -912,25 +1019,32 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.chip[data-place]').forEach(chip =>
         chip.addEventListener('click', () => quickSelect(chip.dataset.place, chip)));
 
+    // Filters: a change is only remembered (and shown in the summary); the search runs when the
+    // user clicks "Search sightings". The radius circle changes at once, so the user sees the area.
     document.querySelectorAll('.chip[data-radius]').forEach(chip => chip.addEventListener('click', () => {
         document.querySelectorAll('.chip[data-radius]').forEach(c => c.classList.toggle('active', c === chip));
         state.radiusKm = parseFloat(chip.dataset.radius) || 10;
         updateRadiusCircle();
-        loadSightings();
+        markFiltersChanged();
     }));
 
     $('group-list').addEventListener('change', (e) => {
         if (state.speciesFilter) clearSpeciesFilter();
         if (e.target.checked) state.groups.add(e.target.value);
         else state.groups.delete(e.target.value);
-        loadSightings();
+        markFiltersChanged();
     });
 
-    $('date-from').addEventListener('change', (e) => { state.fromDate = e.target.value; loadSightings(); });
-    $('date-to').addEventListener('change', (e) => { state.toDate = e.target.value; loadSightings(); });
+    $('date-from').addEventListener('change', (e) => { state.fromDate = e.target.value; markFiltersChanged(); });
+    $('date-to').addEventListener('change', (e) => { state.toDate = e.target.value; markFiltersChanged(); });
 
     $('limit-select').addEventListener('change', (e) => {
         state.limit = parseInt(e.target.value) || 75;
+        markFiltersChanged();
+    });
+
+    $('apply-btn').addEventListener('click', () => {
+        if (isPhoneLayout()) setFiltersOpen(false);   // phones: fold the settings away to show the results
         loadSightings();
     });
 

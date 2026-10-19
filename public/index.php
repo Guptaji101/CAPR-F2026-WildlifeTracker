@@ -38,13 +38,20 @@ $page = 'map';
 
         <!-- Left sidebar: search settings and filters -->
         <aside class="sidebar" id="sidebar">
+          <!-- The settings scroll inside this box; the Search button below it never covers them -->
+          <div class="sidebar-scroll">
 
             <section class="side-section">
                 <h3 class="side-title"><i class="fa-solid fa-location-dot"></i> Search Location</h3>
-                <div class="search-box">
-                    <button type="button" class="search-btn" id="search-btn" aria-label="Search"><i class="fa-solid fa-magnifying-glass"></i></button>
-                    <label for="location-input" class="sr-only">Place name</label>
-                    <input type="text" id="location-input" placeholder="Enter a place name (e.g. Busan, Seoul)">
+                <div class="suggest-wrap">
+                    <div class="search-box">
+                        <button type="button" class="search-btn" id="search-btn" aria-label="Search"><i class="fa-solid fa-magnifying-glass"></i></button>
+                        <label for="location-input" class="sr-only">Place name</label>
+                        <input type="text" id="location-input" placeholder="Enter a place name (e.g. Busan, Seoul)"
+                               autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="location-suggest">
+                    </div>
+                    <!-- Place suggestions while typing (api/places.php), like the animal suggestions below -->
+                    <div class="animal-suggest" id="location-suggest" role="listbox" aria-label="Place suggestions" hidden></div>
                 </div>
                 <button class="btn-primary" id="locate-btn" type="button">
                     <i class="fa-solid fa-location-dot"></i> Locate Me
@@ -112,6 +119,18 @@ $page = 'map';
                     <option value="300">300 records</option>
                 </select>
             </details>
+
+          </div>
+
+            <!-- Search button: filter changes (radius, groups, dates, max records) are applied only
+                 when it is clicked. It is the footer of the sidebar, under the scrolling settings
+                 (not on top of them), and the summary above it shows what will be searched. -->
+            <div class="search-action">
+                <p class="search-summary" id="search-summary" aria-live="polite"></p>
+                <button class="btn-primary apply-btn" id="apply-btn" type="button">
+                    <i class="fa-solid fa-magnifying-glass"></i> <span id="apply-label">Search sightings</span>
+                </button>
+            </div>
         </aside>
 
         <!-- Centre: map and sightings table -->
