@@ -62,7 +62,7 @@ $results = array_map(fn($r) => [
     'scientificName' => $r['scientificName'] ?? null,
     'commonName'     => $r['vernacularName'] ?? null,
     'species'        => $r['species'] ?? null,
-    'taxonGroup'     => $r['class'] ?? $r['phylum'] ?? null,
+    'taxonGroup'     => gbif_class($r) ?? $r['phylum'] ?? null,   // decides the group, color and icon
     'phylum'         => $r['phylum'] ?? null,
     'image'          => $r['media'][0]['identifier'] ?? null,
     'lat'            => $r['decimalLatitude'] ?? null,

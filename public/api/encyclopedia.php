@@ -31,7 +31,8 @@ if ($action === 'top') {
     // so the first entries are the most-recorded (best-known) species of the group
     $query = http_build_query(['limit' => 0, 'facet' => 'speciesKey', 'facetLimit' => 24]
         + ($country ? ['country' => $country] : []));
-    foreach ($taxa as $key) $query .= '&taxonKey=' . $key;   // repeated taxonKey = OR
+    // repeated taxonKey = OR; for Fish the fish orders are added (see FISH_ORDER_KEYS in gbif.php)
+    foreach (gbif_expand_taxa($taxa) as $key) $query .= '&taxonKey=' . $key;
 
     // The ranking of a group changes slowly: a list from the last day is answered from the cache
     $cacheKey = 'top:' . $query;

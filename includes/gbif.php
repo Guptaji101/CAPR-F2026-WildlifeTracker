@@ -10,6 +10,31 @@ function gbif_config(): array
     return app_config()['gbif'];
 }
 
+// --- Ray-finned fish -------------------------------------------------------------
+// GBIF no longer links most ray-finned fish (carp, loach, snakehead, medaka, …) to their class
+// Actinopterygii (key 204): their records have phylum Chordata, an order, but no class. So a
+// filter on key 204 missed almost every fish, and the app showed these fish as invertebrates.
+// These are the 46 fish orders that GBIF leaves without a class (found 19 Oct 2026 from GBIF's
+// own data: chordate orders with records and no class; the sea-squirt relatives Copelata are
+// left out because they are not fish).
+const FISH_ORDER_KEYS = [
+    587, 549, 590, 1153, 538, 588, 1313, 495, 708, 772, 1103, 537, 499, 1068, 547, 548, 1067, 550,
+    773, 496, 1306, 497, 498, 1162, 1305, 1308, 774, 1106, 1167, 888, 1163, 1165, 1069, 1307, 1310,
+    890, 1104, 889, 494, 1166, 1164, 1312, 1311, 589, 1107, 1105,
+];
+const FISH_CLASS_KEY = 204;   // Actinopterygii, the Fish key used by the Map page and the Encyclopedia
+
+// When the Fish key is requested, also request the fish orders, so no fish is missed
+function gbif_expand_taxa(array $taxonKeys): array {
+    return in_array(FISH_CLASS_KEY, $taxonKeys) ? array_values(array_unique([...$taxonKeys, ...FISH_ORDER_KEYS])) : $taxonKeys;
+}
+
+// The class of a GBIF record or species; "Actinopterygii" for the fish that GBIF gives no class
+function gbif_class(array $r): ?string {
+    if (!empty($r['class'])) return $r['class'];
+    return in_array((int)($r['orderKey'] ?? 0), FISH_ORDER_KEYS) ? 'Actinopterygii' : null;
+}
+
 function gbif_search_nearby(
     float $lat, float $lng, float $radiusKm = 10,
     array $taxonKeys = [], ?string $fromDate = null,
@@ -30,21 +55,27 @@ function gbif_search_nearby(
 
     $query = http_build_query($params);
     // GBIF ORs repeated taxonKey parameters, so several animal groups can be requested at once
-    foreach ($taxonKeys as $key) $query .= '&taxonKey=' . (int)$key;
+    foreach (gbif_expand_taxa($taxonKeys) as $key) $query .= '&taxonKey=' . (int)$key;
 
     $url = $cfg['base_url'] . '/occurrence/search?' . $query;
 
-    // Try up to 3 times with backoff, but never longer than 25 seconds in total. Before, three
-    // 15-second timeouts plus the pauses could keep the user waiting 48 seconds.
+    // Try up to 3 times with backoff, at most 40 seconds in total. GBIF does not compress its
+    // answers (150 records ≈ 1 MB), so on a slow connection a good answer can take 10–20 seconds
+    // to arrive: an attempt is therefore only stopped if GBIF cannot be reached within 10 seconds
+    // or the data stops flowing (under 2 KB/s for 8 seconds), never while it is still arriving.
+    // (A fixed 15-second cut-off threw away slow but working answers and showed sample data.)
     $lastError = null;
-    $deadline = microtime(true) + 25;
+    $deadline = microtime(true) + 40;
     for ($attempt = 1; $attempt <= 3; $attempt++) {
         $left = (int)floor($deadline - microtime(true));
         if ($left < 3) break;   // not enough time left for a useful attempt: show the sample data
         $ch = curl_init($url);
         curl_setopt_array($ch, [
-    CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_TIMEOUT        => min($cfg['timeout'], $left),
+    CURLOPT_RETURNTRANSFER   => true,
+    CURLOPT_CONNECTTIMEOUT   => min(10, $left),
+    CURLOPT_LOW_SPEED_LIMIT  => 2048,   // bytes per second…
+    CURLOPT_LOW_SPEED_TIME   => 8,      // …for 8 seconds = stalled
+    CURLOPT_TIMEOUT          => $left,
     CURLOPT_ENCODING       => '',
     CURLOPT_USERAGENT      => 'CAPR-F2026-WildlifeTracker/1.0 (student project)',
     CURLOPT_HTTPHEADER     => ['Accept: application/json'],

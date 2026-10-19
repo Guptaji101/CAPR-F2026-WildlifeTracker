@@ -10,7 +10,7 @@ return [
     ],
     'gbif' => [
         'base_url' => 'https://api.gbif.org/v1',
-        'timeout'  => 15,   // seconds per attempt; gbif.php tries up to 3 times
+        'timeout'  => 15,   // no longer used by the sightings search (see gbif_search_nearby() in gbif.php)
         'limit'    => 300,
     ],
     'app' => [
