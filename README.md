@@ -73,12 +73,8 @@ Dockerfile         how the online server is built (Render)
 ```
 
 ## Changes
-Every change, with dates and reasons, is listed in [CHANGELOG.md](CHANGELOG.md).
+Every change is in the [commit history](https://github.com/Guptaji101/CAPR-F2026-WildlifeTracker/commits/main), with a short explanation in each commit message.
 
 ## AI Assistance
-Following the course syllabus, parts of this project were developed with help from an AI
-assistant (Claude by Anthropic, used through Claude Code): code suggestions, debugging, testing
-and document drafts. The team reviewed, tested and committed every change and can explain it.
-Commits made with AI help normally end with a `Co-Authored-By: Claude …` line; GitHub Desktop
-removed that line from the commits of 14 and 19 October 2026 (`998e5a0`, `db13cdd`, `3868d17`,
-`82550ac`, `6bc17f4`, `7471580`, `5ac7db1`, `2ac3388`), which were also made with AI help.
+
+This project was developed with help from an AI assistant (Claude by Anthropic, used through Claude Code) for code suggestions, debugging and testing. The team reviewed, tested and committed every change, and can explain how each part works.
