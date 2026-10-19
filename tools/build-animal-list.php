@@ -12,6 +12,8 @@
  * 3. Saves a small JSON file. The browser loads it once and filters it while the user types,
  *    so suggestions appear instantly without asking the server.
  */
+require_once __DIR__ . '/../includes/gbif.php';   // gbif_class(): fish without a class get "Actinopterygii"
+
 const GBIF = 'https://api.gbif.org/v1';
 const COUNT = 2000;
 const OUT = __DIR__ . '/../public/data/korea-animals.json';
@@ -60,8 +62,13 @@ foreach (array_chunk($counts, 25) as $n => $chunk) {
             'k' => (int)$c['name'],                      // GBIF species key
             'n' => $name !== '' ? ucfirst($name) : null, // English name (missing for many insects)
             's' => $sp['species'],                       // scientific name
-            'c' => $sp['class'] ?? $sp['phylum'] ?? '',  // class (or phylum), for the group icon
+            'c' => gbif_class($sp) ?? $sp['phylum'] ?? '',  // class (or phylum), for the group icon
             'r' => $c['count'],                          // records in South Korea
+            // Taxon keys of phylum, class (204 for fish GBIF gives no class) and order: the
+            // Encyclopedia finds an animal's group by comparing them with each group's keys
+            't' => array_values(array_filter([$sp['phylumKey'] ?? null,
+                       $sp['classKey'] ?? (gbif_class($sp) === 'Actinopterygii' ? FISH_CLASS_KEY : null),
+                       $sp['orderKey'] ?? null])),
         ];
     }
     echo '.', ($n + 1) % 20 ? '' : " " . count($animals) . "\n";

@@ -81,6 +81,7 @@ $tree = [
 
         <!-- Left: classification tree -->
         <aside class="sidebar" id="ency-sidebar">
+          <div class="sidebar-scroll">   <!-- the tree scrolls inside the sidebar (same layout as the Map page) -->
             <section class="side-section">
                 <h3 class="side-title"><i class="fa-solid fa-earth-asia"></i> Animals of South Korea</h3>
                 <p class="tree-note">Each group lists the species with the most GBIF records in South Korea.</p>
@@ -102,10 +103,25 @@ $tree = [
                 </div>
             </section>
             <?php endforeach; ?>
+          </div>
         </aside>
 
-        <!-- Main: group introduction and species cards -->
+        <!-- Main: search, group introduction and species cards -->
         <main class="ency-main">
+            <!-- Search all animals: suggestions while typing from the 2000 animals recorded most in
+                 South Korea (data/korea-animals.json); picking one opens its group and its entry -->
+            <section class="card ency-search">
+                <label for="ency-search-input" class="ency-search-label"><i class="fa-solid fa-magnifying-glass"></i> Search all animals of South Korea</label>
+                <div class="suggest-wrap">
+                    <div class="search-box">
+                        <button type="button" class="search-btn" id="ency-search-btn" aria-label="Search all animals"><i class="fa-solid fa-magnifying-glass"></i></button>
+                        <input type="text" id="ency-search-input" placeholder="Type an animal name, e.g. magpie, water deer, Pica pica"
+                               autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="ency-suggest">
+                    </div>
+                    <div class="animal-suggest" id="ency-suggest" role="listbox" aria-label="Animal suggestions" hidden></div>
+                </div>
+            </section>
+
             <section class="card group-intro" id="group-intro">
                 <div class="crumbs" id="crumbs">Animals</div>
                 <div class="intro-head">
@@ -117,6 +133,17 @@ $tree = [
                 </div>
                 <p class="intro-desc" id="intro-desc"></p>
                 <p class="intro-facts" id="intro-facts"></p>
+
+                <!-- Search inside the open group only, e.g. "Search insects…" -->
+                <div class="suggest-wrap group-search">
+                    <div class="search-box">
+                        <button type="button" class="search-btn" id="group-search-btn" aria-label="Search this group"><i class="fa-solid fa-magnifying-glass"></i></button>
+                        <label for="group-search-input" class="sr-only" id="group-search-label">Search this group</label>
+                        <input type="text" id="group-search-input" placeholder="Search this group…"
+                               autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="group-suggest">
+                    </div>
+                    <div class="animal-suggest" id="group-suggest" role="listbox" aria-label="Suggestions in this group" hidden></div>
+                </div>
             </section>
 
             <section class="species-grid" id="species-grid" aria-live="polite"></section>

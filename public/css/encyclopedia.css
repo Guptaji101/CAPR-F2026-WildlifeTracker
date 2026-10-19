@@ -26,6 +26,17 @@
 
 /* ---- Group introduction ---- */
 .ency-main { padding-top: 18px; }
+
+/* Search all animals (top of the page) and search inside the open group */
+.ency-search { padding: 16px 20px 6px; margin-bottom: 18px; position: relative; z-index: 40; }
+.ency-search-label { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 14px; font-weight: 700; color: var(--green-900); }
+.ency-search .search-box, .group-search .search-box { height: 42px; }
+.ency-search .search-box input, .group-search .search-box input { font-size: 14px; }
+.group-search { margin-top: 16px; max-width: 520px; }
+.group-search .search-box { margin-bottom: 0; }
+.group-search .animal-suggest { top: calc(100% + 4px); }
+.group-intro { position: relative; z-index: 30; }   /* its suggestion list covers the cards below */
+.animal-suggest .suggest-message { padding: 8px 12px; font-size: 12.5px; color: var(--text); line-height: 1.5; }
 .group-intro { padding: 22px 26px; margin-bottom: 18px; }
 .crumbs { font-size: 12.5px; color: var(--muted); margin-bottom: 12px; }
 .intro-head { display: flex; align-items: center; gap: 16px; }

@@ -58,6 +58,9 @@ function showIntro(btn, total) {
     $('intro-name').textContent = d.name;
     $('intro-latin').textContent = d.latin;
     $('intro-desc').textContent = d.desc;
+    // The group search names the open group, e.g. "Search insects…"
+    $('group-search-input').placeholder = `Search ${d.name.toLowerCase()}…`;
+    $('group-search-label').textContent = `Search ${d.name.toLowerCase()}`;
     $('intro-facts').innerHTML = total === undefined
         ? '<i class="fa-solid fa-spinner fa-spin"></i> Asking GBIF for the most-recorded species…'
         : `<b>${fmt(total)}</b> records in South Korea on GBIF. Below are the most-recorded species in South Korea, most records first.`;
@@ -94,8 +97,8 @@ async function loadGroup() {
     grid.innerHTML = data.species.map(s => cardHtml(s, null)).join('');
     state.list = data.species;
     if (state.openAfterLoad) {
-        openSpecies(state.openAfterLoad);
-        state.openAfterLoad = null;
+        openSpecies(state.openAfterLoad, state.openRecords);   // records: known when opened from the search
+        state.openAfterLoad = state.openRecords = null;
     }
     await eachLimited(data.species, 6, async s => {
         // The user opened another group: stop loading this one, so the new group's cards load
@@ -204,10 +207,186 @@ async function openSpecies(key, records) {
 }
 
 // -----------------------------------------------------------------------------
+// Search: "Search all animals" at the top, and "Search mammals…" inside each group
+// -----------------------------------------------------------------------------
+// data/korea-animals.json lists the 2000 animals with the most GBIF records in South Korea
+// (made by tools/build-animal-list.php; the Map page uses it too). It is loaded once and
+// searched in the browser, so suggestions appear while typing without asking the server.
+let animalList = null, animalListLoading = null;
+function loadAnimalList() {
+    animalListLoading ??= fetch('data/korea-animals.json').then(r => r.json())
+        .then(list => { animalList = list; }).catch(() => { animalList = []; });
+    return animalListLoading;
+}
+
+// Each group of the tree with its GBIF taxon keys (data-taxa), e.g. ['insects', [216]]
+const GROUP_KEYS = [...document.querySelectorAll('.tree-item')].map(b => [b.dataset.key, b.dataset.taxa.split(',').map(Number)]);
+// The group of an animal of the list: the group whose keys contain its phylum, class or order key
+function groupOfAnimal(a) {
+    return GROUP_KEYS.find(([, keys]) => (a.t || []).some(k => keys.includes(k)))?.[0] || null;
+}
+const groupButton = key => document.querySelector(`.tree-item[data-key="${key}"]`);
+
+// The 8 best-known animals (most records first; the list is in that order) whose English or
+// scientific name has a word starting with the typed text; only one group if `group` is given
+function matchAnimals(text, group = null) {
+    const q = text.trim().toLowerCase();
+    if (q.length < 2 || !animalList) return [];
+    const wordStart = new RegExp(`(^|[\\s\\-'/(])${q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`);
+    return animalList
+        .filter(a => [a.n, a.s].some(n => n && wordStart.test(n.toLowerCase())))
+        .map(a => ({ ...a, g: groupOfAnimal(a) }))
+        // In a group: only that group. At the top: all animals, also the few without a group in the
+        // tree (millipedes, barnacles…): their card opens without changing the group.
+        .filter(a => !group || a.g === group)
+        .slice(0, 8);
+}
+
+function boldMatch(name, text) {
+    const i = name.toLowerCase().indexOf(text.trim().toLowerCase());
+    if (i < 0 || !text.trim()) return escapeHtml(name);
+    const end = i + text.trim().length;
+    return `${escapeHtml(name.slice(0, i))}<b>${escapeHtml(name.slice(i, end))}</b>${escapeHtml(name.slice(end))}`;
+}
+
+// Draws a suggestion list: each animal with its group icon, names, group and Korean records.
+// `message` (instead of animals) explains why there is nothing to show.
+function renderList(inputId, boxId, animals, typed, { title = '', message = '' } = {}) {
+    const box = $(boxId);
+    if (!animals.length && !message) return hideList(inputId, boxId);
+    box.innerHTML = (title ? `<div class="suggest-title">${title}</div>` : '')
+        + (message ? `<div class="suggest-message">${message}</div>` : '')
+        + animals.map((a, i) => {
+            const btn = groupButton(a.g);
+            const icon = btn ? `<span class="group-icon" style="background:${btn.dataset.color};width:22px;height:22px;font-size:11px">${btn.querySelector('.tree-icon').innerHTML}</span>` : '<i class="fa-solid fa-paw"></i>';
+            const name = a.n || a.s;
+            const where = [btn?.dataset.name, a.r ? `${fmt(a.r)} records in Korea` : ''].filter(Boolean).join(' · ');
+            return `<button type="button" role="option" id="${boxId}-${i}" data-key="${a.k}" data-group="${a.g || ''}" data-records="${a.r || ''}"
+                    aria-label="${escapeHtml([name, btn?.dataset.name].filter(Boolean).join(', '))}">
+                ${icon}
+                <span class="suggest-text">
+                    <span class="suggest-main">${boldMatch(name, typed)}</span>
+                    <span class="suggest-sub">${a.n ? `<i>${boldMatch(a.s, typed)}</i> · ` : ''}${escapeHtml(where)}</span>
+                </span>
+            </button>`;
+        }).join('');
+    box.hidden = false;
+    $(inputId).setAttribute('aria-expanded', 'true');
+}
+
+function hideList(inputId, boxId) {
+    $(boxId).hidden = true;
+    $(inputId).setAttribute('aria-expanded', 'false');
+    $(inputId).removeAttribute('aria-activedescendant');
+}
+
+// Open an animal: switch to its group first if needed, then open its detail dialog
+function openAnimal(key, group, records) {
+    hideList('ency-search-input', 'ency-suggest');
+    hideList('group-search-input', 'group-suggest');
+    records = records ? Number(records) : undefined;
+    if (group && group !== state.group) {
+        state.group = group;
+        state.openAfterLoad = key;      // opens once the group's list is shown (see loadGroup)
+        state.openRecords = records;
+        loadGroup();
+        if (window.matchMedia('(max-width: 820px)').matches) setTreeOpen(false);
+    } else {
+        openSpecies(key, records);
+    }
+}
+
+// Enter in "Search all animals": an exact name of the list opens at once; any other name is
+// looked up like on the Map page (api/animal.php: scientific name, Wikipedia, "Did you mean…")
+let searchId = 0;
+async function searchAll() {
+    const typed = $('ency-search-input').value.trim();
+    if (!typed) return;
+    await loadAnimalList();
+    const exact = animalList.find(a => [a.n, a.s].some(n => n && n.toLowerCase() === typed.toLowerCase()));
+    if (exact) return openAnimal(exact.k, groupOfAnimal(exact), exact.r);
+
+    const id = ++searchId;
+    renderList('ency-search-input', 'ency-suggest', [], typed, { message: '<i class="fa-solid fa-spinner fa-spin"></i> Looking up this name…' });
+    let data;
+    try { data = await getJson(`api/animal.php?q=${encodeURIComponent(typed)}`); }
+    catch (e) { data = { error: e.message }; }
+    if (id !== searchId) return;   // the user searched again meanwhile
+
+    const known = key => animalList.find(a => a.k === key);
+    if (data.found) {
+        const a = known(data.found.key);
+        return openAnimal(data.found.key, a ? groupOfAnimal(a) : null, a?.r);
+    }
+    if (data.suggestions?.length) {
+        const list = data.suggestions.map(s => ({ k: s.key, n: s.name, s: s.scientificName, r: s.koreaRecords, g: known(s.key) ? groupOfAnimal(known(s.key)) : null }));
+        return renderList('ency-search-input', 'ency-suggest', list, typed, { title: 'Did you mean…' });
+    }
+    renderList('ency-search-input', 'ency-suggest', [], typed, { message: escapeHtml(data.error || `No animal called "${typed}" was found.`) });
+}
+
+// Enter in "Search mammals…": an exact name or the first suggestion of this group opens
+async function searchGroup() {
+    const typed = $('group-search-input').value.trim();
+    if (!typed) return;
+    await loadAnimalList();
+    const matches = matchAnimals(typed, state.group);
+    const exact = matches.find(a => [a.n, a.s].some(n => n && n.toLowerCase() === typed.toLowerCase()));
+    const hit = exact || matches[0];
+    if (hit) return openAnimal(hit.k, hit.g, hit.r);
+    const groupName = groupButton(state.group).dataset.name.toLowerCase();
+    renderList('group-search-input', 'group-suggest', [], typed, {
+        message: `No ${escapeHtml(groupName)} called "${escapeHtml(typed)}" among the 2000 animals recorded most in South Korea. Try <b>Search all animals</b> at the top.`,
+    });
+}
+
+// Arrow keys move through a list, Enter picks the highlighted entry (or searches), Esc closes
+function onSuggestKey(e, inputId, boxId, onEnter) {
+    const options = [...$(boxId).querySelectorAll('button')];
+    const open = !$(boxId).hidden && options.length;
+    const current = options.findIndex(b => b.classList.contains('active'));
+    if (open && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+        e.preventDefault();
+        const next = (current + (e.key === 'ArrowDown' ? 1 : -1) + options.length) % options.length;
+        options.forEach((b, i) => b.classList.toggle('active', i === next));
+        $(inputId).setAttribute('aria-activedescendant', options[next].id);
+    } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (open && current >= 0) options[current].click();
+        else onEnter();
+    } else if (e.key === 'Escape') {
+        hideList(inputId, boxId);
+    }
+}
+
+// Wire up one search box: suggestions while typing (all groups, or only the open group)
+function setupSearch(inputId, btnId, boxId, onEnter, onlyOpenGroup) {
+    const input = $(inputId), box = $(boxId);
+    input.addEventListener('focus', loadAnimalList);
+    input.addEventListener('input', async () => {
+        if (inputId === 'ency-search-input') searchId++;   // a name lookup still running is out of date
+        await loadAnimalList();
+        const typed = input.value;
+        renderList(inputId, boxId, matchAnimals(typed, onlyOpenGroup ? state.group : null), typed);
+    });
+    input.addEventListener('keydown', e => onSuggestKey(e, inputId, boxId, onEnter));
+    input.addEventListener('blur', () => setTimeout(() => hideList(inputId, boxId), 150));
+    box.addEventListener('mousedown', e => e.preventDefault());   // keep the focus in the box
+    box.addEventListener('click', e => {
+        const btn = e.target.closest('button');
+        if (btn) openAnimal(Number(btn.dataset.key), btn.dataset.group || null, btn.dataset.records);
+    });
+    $(btnId).addEventListener('click', onEnter);
+}
+setupSearch('ency-search-input', 'ency-search-btn', 'ency-suggest', searchAll, false);
+setupSearch('group-search-input', 'group-search-btn', 'group-suggest', searchGroup, true);
+
+// -----------------------------------------------------------------------------
 // Start
 // -----------------------------------------------------------------------------
 document.querySelectorAll('.tree-item').forEach(btn => btn.addEventListener('click', () => {
     state.group = btn.dataset.key;
+    $('group-search-input').value = '';   // a search typed for the previous group does not apply
     loadGroup();
     if (window.matchMedia('(max-width: 820px)').matches) {
         setTreeOpen(false);
