@@ -43,6 +43,17 @@ results (Week 11–12), a user guide (Week 13), and the individual contributions
 
 ## 19 Oct 2026
 
+### Repository cleanup and new README
+- The team removed `NOTES.md`, `CLAUDE.md` and `docs/` (document build scripts) from GitHub
+  (commit `6de7f59`); they stay on the team's computers and are listed in `.gitignore`. A missing
+  line break had joined two lines (`*.bakNOTES.md`), so NOTES.md and `*.bak` files were not
+  ignored; fixed.
+- **README rewritten:** live link, features of both pages, tech stack, data sources and credits,
+  how to run it locally, project structure, link to this change log, and an **AI assistance**
+  note (the course allows AI help; it lists the commits whose `Co-Authored-By` line GitHub
+  Desktop removed).
+- Files: `README.md`, `.gitignore`.
+
 ### Encyclopedia search (user suggestion)
 - **"Search all animals of South Korea"** at the top of the Encyclopedia: suggestions while
   typing (up to 8) from the 2000 animals recorded most in South Korea, each with its group icon,

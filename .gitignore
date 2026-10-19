@@ -25,6 +25,9 @@ Desktop.ini
 /vendor/
 
 *.sqlite
-*.bakNOTES.md
+*.bak
+
+# Kept on the team's computers only (not on GitHub)
+NOTES.md
 CLAUDE.md
 docs/
