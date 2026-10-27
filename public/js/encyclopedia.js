@@ -370,7 +370,14 @@ function setupSearch(inputId, btnId, boxId, onEnter, onlyOpenGroup) {
         renderList(inputId, boxId, matchAnimals(typed, onlyOpenGroup ? state.group : null), typed);
     });
     input.addEventListener('keydown', e => onSuggestKey(e, inputId, boxId, onEnter));
-    input.addEventListener('blur', () => setTimeout(() => hideList(inputId, boxId), 150));
+    // Close the list only when the focus has left both the box and the list: with Tab the focus
+    // moves into the list, which must stay open so Enter can open the focused suggestion.
+    // Esc inside the list closes it and goes back to the box.
+    const inside = el => el === input || box.contains(el);
+    const check = () => setTimeout(() => { if (!inside(document.activeElement)) hideList(inputId, boxId); }, 150);
+    input.addEventListener('blur', check);
+    box.addEventListener('focusout', check);
+    box.addEventListener('keydown', e => { if (e.key === 'Escape') { hideList(inputId, boxId); input.focus(); } });
     box.addEventListener('mousedown', e => e.preventDefault());   // keep the focus in the box
     box.addEventListener('click', e => {
         const btn = e.target.closest('button');

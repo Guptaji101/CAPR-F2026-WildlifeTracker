@@ -540,6 +540,8 @@ table.sightings { width: 100%; border-collapse: collapse; }
     font: inherit; font-size: 12.5px; color: var(--ink); text-align: left; cursor: pointer;
 }
 .animal-suggest button:hover, .animal-suggest button.active { background: var(--green-50); }
+/* A suggestion reached with Tab: same green background, plus an outline inside the list */
+.animal-suggest button:focus-visible { background: var(--green-50); outline: 2px solid var(--green-600); outline-offset: -2px; }
 .animal-suggest button > .group-icon, .animal-suggest button > i { flex-shrink: 0; width: 16px; text-align: center; color: var(--muted); }
 .animal-suggest .suggest-text { display: flex; flex-direction: column; min-width: 0; }
 .animal-suggest .suggest-main { font-weight: 500; }

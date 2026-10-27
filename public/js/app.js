@@ -600,6 +600,20 @@ function onSuggestKey(e, inputId, boxId, onEnter) {
 }
 const onAnimalKey = (e) => onSuggestKey(e, 'animal-input', 'animal-suggest', findAnimal);
 
+// Close a suggestion list only when the focus has left both the box and its list. With Tab the
+// focus moves from the box into the list; the list must then stay open, so Enter can pick the
+// focused suggestion. Esc inside the list closes it and goes back to the box.
+function closeWhenFocusLeaves(inputId, boxId, close) {
+    const inside = el => el === $(inputId) || $(boxId).contains(el);
+    // the short pause lets a click on a suggestion finish before the list closes
+    const check = () => setTimeout(() => { if (!inside(document.activeElement)) close(); }, 150);
+    $(inputId).addEventListener('blur', check);
+    $(boxId).addEventListener('focusout', check);
+    $(boxId).addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') { close(); $(inputId).focus(); }
+    });
+}
+
 // =============================================================================
 // Map Overlays: radius circle, label and base layers
 // =============================================================================
@@ -990,7 +1004,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Search Location: place suggestions while typing, arrow keys, Enter, Esc
     $('location-input').addEventListener('input', onPlaceInput);
     $('location-input').addEventListener('keydown', (e) => onSuggestKey(e, 'location-input', 'location-suggest', handleSearch));
-    $('location-input').addEventListener('blur', () => setTimeout(cancelPlaceSuggestions, 150));
+    closeWhenFocusLeaves('location-input', 'location-suggest', cancelPlaceSuggestions);
     $('location-suggest').addEventListener('mousedown', (e) => e.preventDefault());   // keep the focus in the box
     $('location-suggest').addEventListener('click', (e) => {
         const btn = e.target.closest('button');
@@ -1006,7 +1020,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderSuggestions('', matchAnimals(typed), typed);
     });
     $('animal-input').addEventListener('keydown', onAnimalKey);
-    $('animal-input').addEventListener('blur', () => setTimeout(hideSuggestions, 150));   // lets a click on a suggestion finish first
+    closeWhenFocusLeaves('animal-input', 'animal-suggest', hideSuggestions);
     $('animal-btn').addEventListener('click', findAnimal);
     $('animal-suggest').addEventListener('mousedown', (e) => e.preventDefault());   // keep the focus in the box
     $('animal-suggest').addEventListener('click', (e) => {
