@@ -149,19 +149,35 @@ Unless a step says otherwise, start on the Map page, with the default search (Bu
 
 | ID | Requirement | Test | Expected result | Result | Tester | Date | Notes |
 |---|---|---|---|---|---|---|---|
-| TC-56 | NFR-01 Performance | On the live site (open it once first), time 5 searches (Busan, Seoul, Jeju, Ulsan, Seoraksan; 10 km, 75 records) with a stopwatch | Each loads within about 5 s; write the 5 times in Notes | | | | |
-| TC-57 | NFR-01 Repeat | Repeat one search of TC-56 | Loads at once (from the cache) | | | | |
+| TC-56 | NFR-01 Performance | On the live site (open it once first), time 5 searches (Busan, Seoul, Jeju, Ulsan, Seoraksan; 10 km, 75 records) with a stopwatch | Each loads within about 5 s; write the 5 times in Notes | Pass | Shubham | 2026-10-28 | Live site, first (uncached) search incl. place lookup: Busan 3.6 s, Seoul 3.8 s, Jeju Island 3.7 s, Ulsan 3.2 s, Seoraksan 3.7 s; 75 records each |
+| TC-57 | NFR-01 Repeat | Repeat one search of TC-56 | Loads at once (from the cache) | Pass | Shubham | 2026-10-28 | All 5 searches repeated: 0.12–0.14 s each (Busan 0.13 s) |
 | TC-58 | NFR-02 Chrome | Run TC-01, TC-18, TC-27, TC-37, TC-44, TC-51 in Chrome | All pass | Pass | Aman | 2026-10-27 | Chrome (Windows): TC-01, 18, 27, 37, 44, 51 pass |
 | TC-59 | NFR-02 Firefox | The same six tests in Firefox | All pass | Pass | Aman | 2026-10-27 | Firefox (Windows), same six tests |
 | TC-60 | NFR-02 Edge | The same six tests in Edge | All pass | Pass | Aman | 2026-10-27 | Edge (Windows): TC-01, 18, 27, 37, 44, 51 pass |
 | TC-61 | NFR-03 Security | Open `…/config/config.php` and `…/includes/config.php` on the live site; search the GitHub repository for "password" | Not found / not shown (404); no password or key on GitHub | Pass | Aman | 2026-10-27 | …/config/config.php shows Not Found (404) |
-| TC-62 | NFR-04 Retry | See TC-36 | Sample data shown, not an empty page | | | | |
+| TC-62 | NFR-04 Retry | See TC-36 | Sample data shown, not an empty page | Pass | Shubham | 2026-10-28 | Local copy (PHP 8.3), GBIF base_url = https://example.invalid: sightings.php returned 5 sample records with "fallback": true after 3.9 s; config restored |
 | TC-63 | NFR-05 No account | Use every feature without signing in | No login is ever asked for | Pass | Aman | 2026-10-27 | No sign-in asked anywhere (Map, Encyclopedia, all searches) |
 | TC-64 | NFR-06 Phone | On a phone: search a place, open a pin, open the Encyclopedia, search an animal | Map first; "Search & filters" opens the settings; buttons easy to tap; nothing cut off | Pass | Aman | 2026-10-27 | Phone |
 | TC-65 | NFR-06 Tablet | Same as TC-64 at about 800 px wide | Everything usable | Pass | Aman | 2026-10-27 | Narrow browser window |
 | TC-66 | NFR-06 Keyboard | Use only Tab, Enter, arrow keys and Esc: search a place, pick a suggestion, open a card | Everything reachable; a green outline shows the focus | Pass (re-test) | Aman | 2026-10-27 | First run: Fail (Tab to a suggestion: no highlight, Enter did nothing), bug #13. Fixed in fb5f735; re-test: Pass |
 | TC-67 | NFR-07 Free hosting | Check the Render dashboard plan | Free plan, $0 | | | | |
 | TC-68 | NFR-08 Structure | Look at the folders (public/api, includes, config) | Configuration, data access, external APIs and pages are in separate files | | | | |
+
+### 5.1 API endpoint checks (issue #3)
+
+Each endpoint opened on the live site (https://wildtrack-lq88.onrender.com/api/…); the time is the response time measured in the browser.
+
+| ID | Endpoint | Expected result | Result | Tester | Date | Notes |
+|---|---|---|---|---|---|---|
+| API-01 | `geocode.php?q=Ulsan` | lat, lng and displayName | Pass | Shubham | 2026-10-28 | 200; "Ulsan, South Korea", 35.539, 129.312; 0.7 s |
+| API-02 | `geocode.php?q=Vancouver` | "not found in South Korea" error | Pass | Shubham | 2026-10-28 | 404; "Place not found in South Korea — try a different spelling"; 0.4 s |
+| API-03 | `places.php?q=Jiri` | Up to 6 places in Korea | Pass | Shubham | 2026-10-28 | 200; 6 places, all in Korea (e.g. Jirisan National Park, Hamyang); 0.9 s |
+| API-04 | `sightings.php?lat=35.1796&lng=129.0756&radius=10&limit=75` | 75 results | Pass | Shubham | 2026-10-28 | 200; count 75, no fallback |
+| API-05 | `sightings.php?…&from=2025-06-01&to=2025-01-01` | Date-order error | Pass | Shubham | 2026-10-28 | 400; "The From date must be on or before the To date" |
+| API-06 | `species.php?speciesKey=2440931` | Taxonomy and summary of the Chinese water deer | Pass | Shubham | 2026-10-28 | 200; Hydropotes inermis, Mammalia › Artiodactyla › Cervidae; summary, photo, Wikipedia and GBIF links; 2.5 s (first request) |
+| API-07 | `animal.php?q=tiger` | Found, key 5219416 | Pass | Shubham | 2026-10-28 | 200; found: Tiger, Panthera tigris, key 5219416; 3.1 s (first request) |
+| API-08 | `encyclopedia.php?action=top&taxa=359&country=KR` | A total and 24 species | Pass | Shubham | 2026-10-28 | 200; total 196,441 records, 24 species |
+| API-09 | TC-61 re-check (security) | No config file or password exposed | Pass | Shubham | 2026-10-28 | config/config.php, includes/config.php, config/config.example.php and includes/gbif.php all 404 on the live site; repository search for "password": only the empty value in config.example.php and code that reads it |
 
 ---
 
