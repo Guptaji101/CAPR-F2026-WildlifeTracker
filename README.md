@@ -69,7 +69,7 @@ config/            config.example.php (copy to config.php)
 sql/schema.sql     the optional species cache table
 tools/             build-animal-list.php (makes public/data/korea-animals.json)
 Dockerfile         how the online server is built (Render)
-.github/workflows/ keep-awake job that keeps the free server from sleeping
+.github/workflows/ backup keep-awake job (an UptimeRobot check every 5 min keeps the server awake)
 ```
 
 ## Changes
