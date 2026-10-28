@@ -160,8 +160,8 @@ Unless a step says otherwise, start on the Map page, with the default search (Bu
 | TC-64 | NFR-06 Phone | On a phone: search a place, open a pin, open the Encyclopedia, search an animal | Map first; "Search & filters" opens the settings; buttons easy to tap; nothing cut off | Pass | Aman | 2026-10-27 | Phone |
 | TC-65 | NFR-06 Tablet | Same as TC-64 at about 800 px wide | Everything usable | Pass | Aman | 2026-10-27 | Narrow browser window |
 | TC-66 | NFR-06 Keyboard | Use only Tab, Enter, arrow keys and Esc: search a place, pick a suggestion, open a card | Everything reachable; a green outline shows the focus | Pass (re-test) | Aman | 2026-10-27 | First run: Fail (Tab to a suggestion: no highlight, Enter did nothing), bug #13. Fixed in fb5f735; re-test: Pass |
-| TC-67 | NFR-07 Free hosting | Check the Render dashboard plan | Free plan, $0 | | | | |
-| TC-68 | NFR-08 Structure | Look at the folders (public/api, includes, config) | Configuration, data access, external APIs and pages are in separate files | | | | |
+| TC-67 | NFR-07 Free hosting | Check the Render dashboard plan | Free plan, $0 | Pass | Aman | 2026-10-28 | Render: Hobby plan (free), no card on file; service on the Free instance type |
+| TC-68 | NFR-08 Structure | Look at the folders (public/api, includes, config) | Configuration, data access, external APIs and pages are in separate files | Pass | Aman | 2026-10-28 | config/ and includes/config.php (settings), includes/db.php (database), includes/gbif.php + wikipedia.php + public/api/ (external APIs), public/*.php, js/, css/, partials/ (pages) |
 
 ### 5.1 API endpoint checks (issue #3)
 
