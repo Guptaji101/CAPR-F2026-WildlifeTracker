@@ -6,8 +6,9 @@
  * Three steps, stopping at the first that works:
  *   1. GBIF species/match: exact for scientific names ("Pica pica").
  *   2. Wikipedia -> Wikidata: everyday English names ("tiger" -> Tiger -> GBIF 5219416).
- *   3. GBIF common-name search: a short "Did you mean …?" list, animals recorded most in
- *      South Korea first.
+ *   3. A short "Did you mean …?" list: first from the animals recorded in South Korea
+ *      (data/korea-animals.json, "magpie" -> Oriental Magpie), else from GBIF's common names,
+ *      animals recorded most in South Korea first.
  *
  * Answers {"found": {key, name, scientificName}}, or {"suggestions": [...]}, or 404 {"error"}.
  */
@@ -28,7 +29,7 @@ if ($q === '' || mb_strlen($q) > 80) {
 }
 
 // A name looked up in the last 7 days is answered from the cache (no GBIF or Wikipedia request)
-$cacheKey = 'animal:' . mb_strtolower($q);
+$cacheKey = 'animal2:' . mb_strtolower($q);   // animal2: answers from before the Korean list (3a) are not reused
 if ($cached = cache_get($cacheKey, 7 * 86400)) {
     echo json_encode($cached);
     exit;
@@ -67,7 +68,22 @@ if ($wiki && ($sp = animal_species($wiki['key']))) {
     send_found((int)$sp['speciesKey'], $wiki['title'], $sp['species'] ?? null);
 }
 
-// --- 3. "Did you mean …?" from GBIF's common names ------------------------------
+// --- 3a. "Did you mean …?" from the animals recorded in South Korea ------------------
+// public/data/korea-animals.json (the list behind the suggestions while typing) holds the 2000
+// animals with the most records in South Korea, most records first. A name with a word starting
+// with the typed text ("magpie" -> Oriental Magpie, Eurasian Magpie) is a better answer than
+// GBIF's common-name search below, which puts magpie moths and fish with no Korean records first.
+$list = json_decode(@file_get_contents(__DIR__ . '/../data/korea-animals.json') ?: '[]', true) ?: [];
+$wordStart = '/(^|[\s\-\'\/(])' . preg_quote(mb_strtolower($q), '/') . '/u';
+$local = [];
+foreach ($list as $a) {
+    if (!preg_match($wordStart, mb_strtolower(($a['n'] ?? '') . ' / ' . ($a['s'] ?? '')))) continue;
+    $local[] = ['key' => $a['k'], 'name' => $a['n'] ?: $a['s'], 'scientificName' => $a['s'], 'koreaRecords' => $a['r']];
+    if (count($local) === 5) break;
+}
+if ($local) send(['suggestions' => $local]);
+
+// --- 3b. "Did you mean …?" from GBIF's common names ------------------------------
 // GBIF lists "magpie" moths and fish before the Eurasian magpie, so 50 candidates are fetched
 // and the ones recorded in South Korea are shown first.
 $search = gbif_get(GBIF_API . '/species/search?' . http_build_query([
