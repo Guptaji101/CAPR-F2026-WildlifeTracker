@@ -9,7 +9,8 @@
 const $ = id => document.getElementById(id);
 const COUNTRY = 'KR';                // the Encyclopedia only covers South Korea
 // list = the species of the open group; openAfterLoad = a species to open once the list is shown
-const state = { group: null, list: [], openAfterLoad: null, openedKey: null };   // openedKey: species in the dialog
+// openedKey: species in the dialog; kind: a searched kind of animal ("Deer") shown inside its group
+const state = { group: null, kind: null, list: [], openAfterLoad: null, openedKey: null };
 const speciesCache = new Map();   // speciesKey -> promise of species.php data (one request each)
 
 const escapeHtml = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -50,14 +51,20 @@ function currentGroupButton() {
     return document.querySelector(`.tree-item[data-key="${state.group}"]`);
 }
 
+// The view on screen: a group ("birds"), or a searched kind inside it ("birds:1450" = owls)
+const viewKey = () => state.group + (state.kind ? `:${state.kind.keys}` : '');
+
 function showIntro(btn, total) {
     const d = btn.dataset;
-    $('crumbs').textContent = `Animals › ${d.division} › ${d.name}`;
+    const kind = state.kind;   // a searched kind of animal ("Deer"), shown inside its group
+    $('crumbs').textContent = `Animals › ${d.division} › ${d.name}${kind ? ` › ${kind.name}` : ''}`;
     $('intro-icon').innerHTML = btn.querySelector('.tree-icon').innerHTML;
     $('intro-icon').style.cssText = `color:${d.color};background:${d.color}1f`;
-    $('intro-name').textContent = d.name;
-    $('intro-latin').textContent = d.latin;
-    $('intro-desc').textContent = d.desc;
+    $('intro-name').textContent = kind ? `${kind.name} (all kinds)` : d.name;
+    $('intro-latin').textContent = kind ? (kind.scientificName || '') : d.latin;
+    $('intro-desc').textContent = kind
+        ? `Every kind of ${kind.name.toLowerCase()} recorded in South Korea (part of the ${d.name.toLowerCase()} group). Click a group on the left to see the whole group again.`
+        : d.desc;
     // The group search names the open group, e.g. "Search insects…"
     $('group-search-input').placeholder = `Search ${d.name.toLowerCase()}…`;
     $('group-search-label').textContent = `Search ${d.name.toLowerCase()}`;
@@ -76,18 +83,19 @@ async function loadGroup() {
     const grid = $('species-grid');
     grid.innerHTML = Array.from({ length: 8 }, () => '<div class="sp-card skeleton"></div>').join('');
 
-    const requested = state.group;
+    const requested = viewKey();
+    const taxa = state.kind ? state.kind.keys.join(',') : btn.dataset.taxa;
     let data;
     try {
-        data = await getJson(`api/encyclopedia.php?action=top&taxa=${btn.dataset.taxa}&country=${COUNTRY}`);
+        data = await getJson(`api/encyclopedia.php?action=top&taxa=${taxa}&country=${COUNTRY}`);
     } catch (e) {
-        if (requested !== state.group) return;   // an error of a group the user has already left
+        if (requested !== viewKey()) return;   // an error of a group the user has already left
         grid.innerHTML = `<div class="grid-message"><i class="fa-solid fa-triangle-exclamation"></i>
             Could not load the list from GBIF (${escapeHtml(e.message)}).
             <button class="btn-primary" onclick="loadGroup()">Try again</button></div>`;
         return;
     }
-    if (requested !== state.group) return;   // the user already chose another group
+    if (requested !== viewKey()) return;   // the user already chose another group
 
     showIntro(btn, data.total);
     if (!data.species.length) {
@@ -103,10 +111,10 @@ async function loadGroup() {
     await eachLimited(data.species, 6, async s => {
         // The user opened another group: stop loading this one, so the new group's cards load
         // first and the server is not kept busy with cards nobody sees
-        if (requested !== state.group) return;
+        if (requested !== viewKey()) return;
         const sp = await getSpecies(s.speciesKey);
         const card = grid.querySelector(`[data-key="${s.speciesKey}"]`);
-        if (card && requested === state.group) card.outerHTML = cardHtml(s, sp);
+        if (card && requested === viewKey()) card.outerHTML = cardHtml(s, sp);
     });
 }
 
@@ -145,7 +153,10 @@ function photoHtml(sp, cls) {
     const img = sp && sp.imageUrl
         ? `<img src="${escapeHtml(sp.imageUrl)}" alt="${escapeHtml(sp.vernacularName || sp.species || '')}" loading="lazy" onerror="this.remove()">`
         : '';
-    return `<div class="${cls}">${icon}${img}</div>`;
+    // The dialog's photo opens the photo viewer (js/photo-viewer.js), also without a photo of its own
+    const more = cls === 'detail-photo'
+        ? '<button class="photo-expand" type="button"><i class="fa-solid fa-expand"></i> More photos</button>' : '';
+    return `<div class="${cls}">${icon}${img}${more}</div>`;
 }
 
 function cardHtml(s, sp) {
@@ -154,11 +165,13 @@ function cardHtml(s, sp) {
             <div class="sp-body"><h3>Loading…</h3></div></article>`;
     }
     const name = displayName(sp);
-    return `<article class="sp-card" data-key="${s.speciesKey}" tabindex="0" role="button" onclick="openSpecies(${s.speciesKey}, ${s.records})"
-                onkeydown="if (event.key === 'Enter') openSpecies(${s.speciesKey}, ${s.records})">
+    // A click anywhere on the card opens it. For the keyboard and screen readers the name is a
+    // real button inside the heading (a card with role="button" hid its heading from screen
+    // readers: accessibility scan, 31 Oct); its click reaches the card, so it opens it too.
+    return `<article class="sp-card" data-key="${s.speciesKey}" onclick="openSpecies(${s.speciesKey}, ${s.records})">
         ${photoHtml(sp, 'sp-photo')}
         <div class="sp-body">
-            <h3>${escapeHtml(name)}</h3>
+            <h3><button type="button" class="sp-open">${escapeHtml(name)}</button></h3>
             <p class="sp-sci">${escapeHtml(sp?.species || '')}</p>
             <p class="sp-summary">${escapeHtml(summaryText(sp))}</p>
             <span class="sp-records"><i class="fa-solid fa-location-dot"></i> ${fmt(s.records)} records</span>
@@ -189,6 +202,8 @@ async function openSpecies(key, records) {
             </div>
         </div>`;
     $('species-dialog').showModal();
+    $('species-detail').querySelector('.detail-photo').addEventListener('click', () =>
+        openPhotoViewer({ url: sp?.imageUrl, title: name, speciesKey: key }));
 
     // Conservation status from GBIF; the record count is the one from the South Korea list
     // (unknown if the species was opened from the Map page and is not in the top 24)
@@ -251,11 +266,10 @@ function boldMatch(name, text) {
 
 // Draws a suggestion list: each animal with its group icon, names, group and Korean records.
 // `message` (instead of animals) explains why there is nothing to show.
-function renderList(inputId, boxId, animals, typed, { title = '', message = '' } = {}) {
+function renderList(inputId, boxId, animals, typed, { message = '' } = {}) {
     const box = $(boxId);
     if (!animals.length && !message) return hideList(inputId, boxId);
-    box.innerHTML = (title ? `<div class="suggest-title">${title}</div>` : '')
-        + (message ? `<div class="suggest-message">${message}</div>` : '')
+    box.innerHTML = (message ? `<div class="suggest-message">${message}</div>` : '')
         + animals.map((a, i) => {
             const btn = groupButton(a.g);
             const icon = btn ? `<span class="group-icon" style="background:${btn.dataset.color};width:22px;height:22px;font-size:11px">${btn.querySelector('.tree-icon').innerHTML}</span>` : '<i class="fa-solid fa-paw"></i>';
@@ -287,6 +301,7 @@ function openAnimal(key, group, records) {
     records = records ? Number(records) : undefined;
     if (group && group !== state.group) {
         state.group = group;
+        state.kind = null;
         state.openAfterLoad = key;      // opens once the group's list is shown (see loadGroup)
         state.openRecords = records;
         loadGroup();
@@ -297,7 +312,7 @@ function openAnimal(key, group, records) {
 }
 
 // Enter in "Search all animals": an exact name of the list opens at once; any other name is
-// looked up like on the Map page (api/animal.php: scientific name, Wikipedia, "Did you mean…")
+// looked up like on the Map page (api/animal.php: scientific name, Wikipedia, common names)
 let searchId = 0;
 async function searchAll() {
     const typed = $('ency-search-input').value.trim();
@@ -305,6 +320,8 @@ async function searchAll() {
     await loadAnimalList();
     const exact = animalList.find(a => [a.n, a.s].some(n => n && n.toLowerCase() === typed.toLowerCase()));
     if (exact) return openAnimal(exact.k, groupOfAnimal(exact), exact.r);
+    const groupBtn = groupByWord(typed);
+    if (groupBtn) { hideList('ency-search-input', 'ency-suggest'); return groupBtn.click(); }
 
     const id = ++searchId;
     renderList('ency-search-input', 'ency-suggest', [], typed, { message: '<i class="fa-solid fa-spinner fa-spin"></i> Looking up this name…' });
@@ -314,15 +331,34 @@ async function searchAll() {
     if (id !== searchId) return;   // the user searched again meanwhile
 
     const known = key => animalList.find(a => a.k === key);
+    if (data.found?.group) return showKind(data.found);
     if (data.found) {
         const a = known(data.found.key);
-        return openAnimal(data.found.key, a ? groupOfAnimal(a) : null, a?.r);
-    }
-    if (data.suggestions?.length) {
-        const list = data.suggestions.map(s => ({ k: s.key, n: s.name, s: s.scientificName, r: s.koreaRecords, g: known(s.key) ? groupOfAnimal(known(s.key)) : null }));
-        return renderList('ency-search-input', 'ency-suggest', list, typed, { title: 'Did you mean…' });
+        return openAnimal(data.found.key, a ? groupOfAnimal(a) : groupOfAnimal({ t: data.found.path }), a?.r);
     }
     renderList('ency-search-input', 'ency-suggest', [], typed, { message: escapeHtml(data.error || `No animal called "${typed}" was found.`) });
+}
+
+// A whole group by its name or a word of it ("reptiles", "Insect", "shrimps" -> Crabs & shrimps):
+// the group button of the tree, or null
+function groupByWord(text) {
+    const singular = s => s.replace(/s$/, '');
+    const w = text.trim().toLowerCase();
+    const forms = [w, singular(w), w.replace(/es$/, '')];
+    return [...document.querySelectorAll('.tree-item')].find(b => {
+        const name = b.dataset.name.toLowerCase();
+        return [name, ...name.split(/\s*&\s*/)].some(part => forms.includes(singular(part)));
+    }) || null;
+}
+
+// A searched kind of animal ("deer", "snakes"): cards of all of them, inside their group
+function showKind(found) {
+    hideList('ency-search-input', 'ency-suggest');
+    state.group = groupOfAnimal({ t: found.path }) || state.group;
+    state.kind = found;
+    $('group-search-input').value = '';
+    loadGroup();
+    if (window.matchMedia('(max-width: 820px)').matches) setTreeOpen(false);
 }
 
 // Enter in "Search mammals…": an exact name or the first suggestion of this group opens
@@ -393,6 +429,7 @@ setupSearch('group-search-input', 'group-search-btn', 'group-suggest', searchGro
 // -----------------------------------------------------------------------------
 document.querySelectorAll('.tree-item').forEach(btn => btn.addEventListener('click', () => {
     state.group = btn.dataset.key;
+    state.kind = null;                    // the whole group again, not a searched kind
     $('group-search-input').value = '';   // a search typed for the previous group does not apply
     loadGroup();
     if (window.matchMedia('(max-width: 820px)').matches) {

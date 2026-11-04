@@ -157,6 +157,7 @@ $tree = [
         <div id="species-detail"></div>
     </dialog>
 
+    <script src="js/photo-viewer.js?v=<?= filemtime(__DIR__ . '/js/photo-viewer.js') ?>"></script>
     <script src="js/encyclopedia.js?v=<?= filemtime(__DIR__ . '/js/encyclopedia.js') ?>"></script>
 </body>
 </html>
