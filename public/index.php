@@ -42,6 +42,11 @@ $page = 'map';
           <div class="sidebar-scroll">
 
             <section class="side-section">
+                <!-- Locate Me at the very top, above the place search (usability test, 31 Oct) -->
+                <button class="btn-primary locate-btn" id="locate-btn" type="button">
+                    <i class="fa-solid fa-location-crosshairs"></i> Locate Me
+                </button>
+
                 <h3 class="side-title"><i class="fa-solid fa-location-dot"></i> Search Location</h3>
                 <div class="suggest-wrap">
                     <div class="search-box">
@@ -53,9 +58,14 @@ $page = 'map';
                     <!-- Place suggestions while typing (api/places.php), like the animal suggestions below -->
                     <div class="animal-suggest" id="location-suggest" role="listbox" aria-label="Place suggestions" hidden></div>
                 </div>
-                <button class="btn-primary" id="locate-btn" type="button">
-                    <i class="fa-solid fa-location-dot"></i> Locate Me
-                </button>
+                <h3 class="side-subtitle"><i class="fa-solid fa-crosshairs"></i> Search Radius</h3>
+                <div class="chips radius-chips">
+                    <button class="chip" data-radius="5">5 km</button>
+                    <button class="chip active" data-radius="10">10 km</button>
+                    <button class="chip" data-radius="25">25 km</button>
+                    <button class="chip" data-radius="50">50 km</button>
+                    <button class="chip" data-radius="100">100 km</button>
+                </div>
 
                 <h3 class="side-subtitle"><i class="fa-solid fa-location-dot"></i> Quick Locations</h3>
                 <div class="chips">
@@ -66,6 +76,15 @@ $page = 'map';
                     <button class="chip" data-place="Hallasan">Hallasan</button>
                     <button class="chip" data-place="Seoraksan">Seoraksan</button>
                     <button class="chip" data-place="Suncheon Bay">Suncheon Bay</button>
+                </div>
+
+                <!-- One tap, like the radius (was a folded "Filters" dropdown) -->
+                <h3 class="side-subtitle"><i class="fa-solid fa-list-ol"></i> Number of Records</h3>
+                <div class="chips radius-chips">
+                    <button class="chip" data-limit="30">30</button>
+                    <button class="chip active" data-limit="75">75</button>
+                    <button class="chip" data-limit="150">150</button>
+                    <button class="chip" data-limit="300">300</button>
                 </div>
             </section>
 
@@ -78,20 +97,8 @@ $page = 'map';
                         <input type="text" id="animal-input" placeholder="Animal name (e.g. water deer, Pica pica)"
                                autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="animal-suggest">
                     </div>
-                    <!-- Suggestions while typing, or a "Did you mean …?" list when a name fits several animals.
-                         It drops down over the sections below, like a search engine's suggestions. -->
+                    <!-- Suggestions while typing. It drops down over the sections below, like a search engine's suggestions. -->
                     <div class="animal-suggest" id="animal-suggest" role="listbox" aria-label="Animal suggestions" hidden></div>
-                </div>
-            </section>
-
-            <section class="side-section">
-                <h3 class="side-title"><i class="fa-solid fa-crosshairs"></i> Search Radius</h3>
-                <div class="chips radius-chips">
-                    <button class="chip" data-radius="5">5 km</button>
-                    <button class="chip active" data-radius="10">10 km</button>
-                    <button class="chip" data-radius="25">25 km</button>
-                    <button class="chip" data-radius="50">50 km</button>
-                    <button class="chip" data-radius="100">100 km</button>
                 </div>
             </section>
 
@@ -108,17 +115,6 @@ $page = 'map';
                     <input type="date" id="date-to" title="To date">
                 </div>
             </section>
-
-            <details class="side-section filters">
-                <summary><span><i class="fa-solid fa-filter"></i> Filters</span><i class="fa-solid fa-chevron-down caret"></i></summary>
-                <label for="limit-select" class="field-label">Max records</label>
-                <select id="limit-select">
-                    <option value="30">30 records</option>
-                    <option value="75" selected>75 records</option>
-                    <option value="150">150 records</option>
-                    <option value="300">300 records</option>
-                </select>
-            </details>
 
           </div>
 
@@ -176,6 +172,8 @@ $page = 'map';
                         <button id="page-next" title="Next page"><i class="fa-solid fa-chevron-right"></i></button>
                     </div>
                 </div>
+                <!-- "Showing 75 of 11,247 records in this area": explains why some animals are missing -->
+                <p class="records-note" id="records-note" hidden></p>
                 <div class="table-wrap">
                     <table class="sightings">
                         <thead>
@@ -201,12 +199,16 @@ $page = 'map';
 
             <div class="profile-body" id="profile-body" hidden>
                 <div class="profile-photo">
-                    <img id="profile-img" alt="Species photo">
+                    <img id="profile-img" alt="Species photo" title="Click to see the photo large">
                     <div class="photo-fallback" id="photo-fallback"><i class="fa-solid fa-image"></i><span id="photo-text">No photo available</span></div>
+                    <!-- Opens the photo large with more photos of the species (js/photo-viewer.js) -->
+                    <button class="photo-expand" id="photo-expand" type="button" hidden><i class="fa-solid fa-expand"></i> More photos</button>
                 </div>
                 <span class="group-badge" id="profile-badge"></span>
                 <h3 class="profile-name" id="profile-name"></h3>
                 <p class="profile-sci" id="profile-sci"></p>
+                <!-- IUCN Red List status: is the species threatened? (same data as the Encyclopedia) -->
+                <p class="profile-status" id="profile-status" hidden></p>
 
                 <dl class="taxonomy" id="profile-taxonomy"></dl>
 
@@ -231,6 +233,7 @@ $page = 'map';
     <div class="toast-container" id="toast-container" role="status" aria-live="polite"></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="js/photo-viewer.js?v=<?= filemtime(__DIR__ . '/js/photo-viewer.js') ?>"></script>
     <script src="js/app.js?v=<?= filemtime(__DIR__ . '/js/app.js') ?>"></script>
 </body>
 </html>

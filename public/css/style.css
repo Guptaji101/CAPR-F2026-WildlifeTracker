@@ -12,8 +12,8 @@
 
     --ink:     #1e293b;
     --text:    #334155;
-    --muted:   #64748b;
-    --faint:   #94a3b8;
+    --muted:   #56657a;   /* text: 5.4:1 or more on every background (WCAG AA; #64748b failed on light green) */
+    --faint:   #94a3b8;   /* icons and lines only: too light for text */
     --line:    #e2e8f0;
     --bg:      #f6f8f7;
     --white:   #ffffff;
@@ -204,29 +204,7 @@ button { font-family: inherit; cursor: pointer; }
 }
 .date-range > i { font-size: 11px; color: var(--faint); }
 
-.filters summary {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    list-style: none;
-    font-size: 14px;
-    color: var(--ink);
-    cursor: pointer;
-}
-.filters summary::-webkit-details-marker { display: none; }
-.filters summary span { display: flex; gap: 12px; align-items: center; }
-.filters summary .caret { font-size: 11px; color: var(--muted); transition: transform 0.2s; }
-.filters[open] summary .caret { transform: rotate(180deg); }
-.field-label { display: block; margin: 14px 0 6px; font-size: 12px; color: var(--muted); }
-.filters select {
-    width: 100%;
-    height: 34px;
-    padding: 0 8px;
-    border: 1px solid #cbd5e1;
-    border-radius: var(--radius-sm);
-    font: inherit;
-    font-size: 13px;
-}
+.locate-btn { margin-bottom: 16px; }
 
 /* ----------------------------------------------------------------------------
    Map card
@@ -367,6 +345,7 @@ button { font-family: inherit; cursor: pointer; }
 .table-head { display: flex; align-items: center; justify-content: space-between; padding: 0 4px 12px; }
 .table-head h2 { display: flex; align-items: center; gap: 12px; font-size: 17px; font-weight: 700; color: var(--ink); }
 .table-head h2 i { font-size: 20px; color: var(--green-900); }
+.records-note { margin: 0 4px 12px; padding: 8px 12px; border-radius: var(--radius-sm); background: var(--green-50); color: var(--green-900); font-size: 12.5px; }
 .pager { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
 .pager span { margin-right: 6px; }
 .pager button {
@@ -463,7 +442,7 @@ table.sightings { width: 100%; border-collapse: collapse; }
     align-items: center;
     justify-content: center;
     gap: 8px;
-    color: var(--faint);
+    color: var(--muted);
     font-size: 12px;
 }
 .photo-fallback i { font-size: 26px; }
@@ -471,6 +450,8 @@ table.sightings { width: 100%; border-collapse: collapse; }
 .profile .group-badge { display: inline-flex; align-items: center; gap: 6px; color: var(--white); padding: 4px 12px; font-size: 12px; }
 .profile-name { font-size: 18px; font-weight: 700; color: var(--green-900); margin: 10px 0 2px; }
 .profile-sci { font-style: italic; color: var(--muted); font-size: 13px; margin-bottom: 14px; }
+.profile-status { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: -6px 0 14px; font-size: 12px; color: var(--muted); }
+.status-badge { padding: 3px 10px; border-radius: 999px; color: var(--white); font-weight: 700; }
 
 .taxonomy {
     display: grid;
@@ -494,7 +475,7 @@ table.sightings { width: 100%; border-collapse: collapse; }
 .gbif-btn { height: 40px; }
 .ency-link { justify-content: center; height: 40px; margin-top: 8px; }
 .profile { scroll-margin-top: calc(var(--topbar-h) + 10px); }   /* stays clear of the sticky header when scrolled to */
-.loc-none { color: var(--faint); font-style: italic; }
+.loc-none { color: var(--muted); font-style: italic; }
 
 /* "Showing only Coal Tit" bar above the map (species filter from the Encyclopedia) */
 .species-filter {
@@ -525,7 +506,7 @@ table.sightings { width: 100%; border-collapse: collapse; }
 @media (prefers-reduced-motion: reduce) { .apply-btn.pending { animation: none; } }
 
 /* Suggestions under the Find an Animal box: a drop-down that covers the sections below it,
-   like a search engine's suggestion list (also used for the "Did you mean …?" list) */
+   like a search engine's suggestion list */
 .suggest-wrap { position: relative; }
 .animal-suggest {
     position: absolute; top: calc(100% - 8px); left: 0; right: 0; z-index: 30;
@@ -595,22 +576,70 @@ dialog .btn-primary { margin-top: 6px; }
     z-index: 2000; display: flex; flex-direction: column; align-items: center; gap: 8px;
     width: max-content; max-width: calc(100vw - 24px); pointer-events: none;
 }
+/* Large enough to read at a glance (usability test, 31 Oct: the old 13px messages were missed) */
 .toast {
     display: flex;
     align-items: center;
-    gap: 10px;
-    max-width: 520px;
+    gap: 12px;
+    max-width: 640px;
     pointer-events: auto;
     animation: toast-in .25s ease-out;
-    padding: 11px 16px;
+    padding: 16px 22px;
     border-radius: var(--radius-sm);
     background: var(--green-900);
     color: var(--white);
-    font-size: 13px;
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 1.4;
     box-shadow: var(--shadow-lg);
 }
+.toast i { font-size: 20px; flex-shrink: 0; }
 .toast.error { background: #b91c1c; }
 @keyframes toast-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+
+/* ----------------------------------------------------------------------------
+   Photo viewer (js/photo-viewer.js): a photo large, with more photos of the animal
+   ---------------------------------------------------------------------------- */
+#profile-img, .detail-photo { cursor: zoom-in; }
+.photo-expand {
+    position: absolute; right: 8px; bottom: 8px; z-index: 1;
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 10px; border: 0; border-radius: 999px;
+    background: rgba(17, 24, 39, 0.72); color: var(--white); font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.photo-expand:hover, .photo-expand:focus-visible { background: rgba(17, 24, 39, 0.9); }
+
+.photo-viewer {
+    width: min(1000px, 94vw); max-height: 94vh; padding: 18px 20px 16px;
+    border: 0; border-radius: var(--radius); background: #111827; color: #e5e7eb;
+}
+.photo-viewer::backdrop { background: rgba(0, 0, 0, 0.7); }
+.viewer-close {
+    position: absolute; top: 10px; right: 12px; width: 34px; height: 34px;
+    border: 0; border-radius: 50%; background: rgba(255, 255, 255, 0.12); color: var(--white); font-size: 16px; cursor: pointer;
+}
+.viewer-title { margin: 0 48px 12px 0; font-size: 18px; font-weight: 700; color: var(--white); }
+.viewer-stage { position: relative; display: grid; place-items: center; height: min(60vh, 620px); }
+.viewer-stage img { max-width: 100%; max-height: min(60vh, 620px); object-fit: contain; border-radius: var(--radius-sm); transition: opacity .15s; }
+.viewer-spinner { position: absolute; display: none; font-size: 30px; color: var(--white); }
+.viewer-stage.loading img { opacity: 0.4; }
+.viewer-stage.loading .viewer-spinner { display: block; }
+.viewer-nav {
+    position: absolute; top: 50%; transform: translateY(-50%); z-index: 1;
+    width: 42px; height: 42px; border: 0; border-radius: 50%;
+    background: rgba(255, 255, 255, 0.16); color: var(--white); font-size: 18px; cursor: pointer;
+}
+.viewer-nav[data-step="-1"] { left: 4px; }
+.viewer-nav[data-step="1"] { right: 4px; }
+.viewer-nav:hover, .viewer-close:hover { background: rgba(255, 255, 255, 0.3); }
+.viewer-credit { margin: 10px 0 8px; font-size: 12.5px; color: #9ca3af; min-height: 1em; }
+.viewer-credit a { color: #86efac; }
+.viewer-thumbs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+.viewer-thumbs button { flex: 0 0 auto; width: 64px; height: 64px; padding: 0; border: 2px solid transparent; border-radius: 6px; overflow: hidden; background: #1f2937; cursor: pointer; }
+.viewer-thumbs button.active { border-color: #4ade80; }
+.viewer-thumbs img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.viewer-message { font-size: 13px; color: #9ca3af; }
+.photo-viewer :focus-visible { outline: 2px solid #4ade80; outline-offset: 2px; }
 
 /* ----------------------------------------------------------------------------
    Smaller screens (NFR-06)

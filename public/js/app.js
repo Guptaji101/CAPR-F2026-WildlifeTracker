@@ -17,6 +17,7 @@ const state = {
     fromDate: '',
     toDate: '',
     sightings: [],
+    total: 0,             // all records of the searched area in GBIF (only `limit` are loaded)
     markers: [],
     page: 0,
     pageSize: 10,
@@ -469,47 +470,84 @@ async function findAnimal() {
     }
 
     // An exact name from the list of Korean animals needs no server request
-    const known = (animalList || []).find(a => [a.n, a.s].some(n => n && n.toLowerCase() === query.toLowerCase()));
+    await loadAnimalList();
+    const known = animalList.find(a => [a.n, a.s].some(n => n && n.toLowerCase() === query.toLowerCase()));
     if (known) return showAnimal(listAnimal(known));
+    // "reptiles", "birds": one of the six groups
+    const group = groupOfWord(query);
+    if (group) return showGroup(group);
 
     setLoading(true, `Looking up "${query}"...`);
     const animalId = ++state.animalId;   // a newer animal search makes this one out of date
     try {
         const data = await safeJsonFetch(`api/animal.php?q=${encodeURIComponent(query)}`);
         if (animalId !== state.animalId) return;   // the user already chose another animal
-        if (data.found) {
-            showAnimal(data.found);
-        } else {
-            // Several animals have this name: let the user pick one
-            setLoading(false);
-            showSuggestions(data.suggestions || []);
-        }
+        showAnimal(data.found);
     } catch (err) {
         if (animalId !== state.animalId) return;
         console.error(err);
-        showToast(err.message, 'error');
         setLoading(false);
+        showNoAnimal(err.message);
     }
 }
 
-// Filter the map on one species (the same filter the Encyclopedia's "See … on the map" uses)
-function showAnimal(animal) {
+// The word for one of the six groups ("reptiles", "Bird", "fishes"), or null
+function groupOfWord(text) {
+    const w = text.trim().toLowerCase();
+    const forms = [w, w.replace(/s$/, ''), w.replace(/es$/, '')];
+    return Object.keys(GROUPS).find(g => forms.includes(GROUPS[g].label.toLowerCase().replace(/s$/, ''))) || null;
+}
+
+// Tick exactly these groups (the checkboxes follow)
+function setGroups(keys) {
+    state.groups = new Set(keys);
+    document.querySelectorAll('#group-list input').forEach(i => { i.checked = state.groups.has(i.value); });
+}
+
+// Show one whole group, as if the user had ticked only that group
+function showGroup(groupKey) {
     state.animalId++;   // an animal lookup still running is now out of date
-    state.speciesFilter = { key: animal.key, name: animal.name };
+    state.speciesFilter = null;
     showSpeciesFilter();
-    $('animal-input').value = animal.name;
-    hideSuggestions();
-    // The address keeps the filter, so reloading the page or sharing the link shows the same animal
-    history.replaceState(null, '', `?species=${animal.key}&name=${encodeURIComponent(animal.name)}`);
+    history.replaceState(null, '', location.pathname);
+    setGroups([groupKey]);
+    $('animal-input').value = GROUPS[groupKey].label;
     if (isPhoneLayout()) setFiltersOpen(false);
     loadSightings();
 }
 
-// "Did you mean…" list from the server, when a typed name fits several animals
-function showSuggestions(list) {
-    renderSuggestions('Did you mean…', list.map(a => ({
-        key: a.key, name: a.name, sci: a.scientificName, records: a.koreaRecords,
-    })));
+// A failed animal search empties the map and the table, so the pins of an earlier search are
+// not mistaken for results; "Search sightings" brings back all animals of the place.
+function showNoAnimal(message) {
+    state.searchId++;   // a sightings search still running is now out of date
+    state.speciesFilter = null;
+    showSpeciesFilter();
+    setGroups(Object.keys(GROUPS));   // ticks of an earlier search ("frog" -> Amphibians) are undone
+    history.replaceState(null, '', location.pathname);
+    state.sightings = [];
+    state.total = 0;
+    renderAll(message);
+    markFiltersChanged();
+    showToast(message, 'error');
+}
+
+// Filter the map on one species (the same filter the Encyclopedia's "See … on the map" uses),
+// or on a whole kind of animal from api/animal.php ("Deer": all deer; keys = its taxon keys)
+function showAnimal(animal) {
+    state.animalId++;   // an animal lookup still running is now out of date
+    const keys = animal.keys || [animal.key];
+    const name = animal.group ? `${animal.name} (all kinds)` : animal.name;
+    state.speciesFilter = { key: keys[0], keys, name };
+    showSpeciesFilter();
+    $('animal-input').value = animal.name;
+    hideSuggestions();
+    // Only the animal's group is ticked, so the user sees where it belongs ("frog" -> Amphibians).
+    // Some fish have only "Chordata" in GBIF: then the ticks stay as they are.
+    if (animal.cls && animal.cls !== 'Chordata') setGroups([groupOf({ taxonGroup: animal.cls })]);
+    // The address keeps the filter, so reloading the page or sharing the link shows the same animal
+    history.replaceState(null, '', keys.length === 1 ? `?species=${keys[0]}&name=${encodeURIComponent(name)}` : location.pathname);
+    if (isPhoneLayout()) setFiltersOpen(false);
+    loadSightings();
 }
 
 // --- Suggestions while typing -------------------------------------------------------------
@@ -527,7 +565,7 @@ function loadAnimalList() {
     return animalListLoading;
 }
 // An entry of the list in the shape showAnimal() expects
-const listAnimal = a => ({ key: a.k, name: a.n || a.s });
+const listAnimal = a => ({ key: a.k, name: a.n || a.s, cls: a.c });
 
 // The 6 best-known animals (most records in South Korea; the list is already in that order)
 // whose English or scientific name has a word starting with the typed text: "deer" finds
@@ -551,15 +589,15 @@ function boldMatch(name, text) {
 }
 
 // Draws a list of animals under the box. Every entry is a button: click (or arrow keys + Enter)
-// to show that animal. Used both for suggestions while typing and for "Did you mean…".
-function renderSuggestions(title, items, typed = '') {
+// to show that animal.
+function renderSuggestions(items, typed = '') {
     const box = $('animal-suggest');
     if (!items.length) return hideSuggestions();
-    box.innerHTML = (title ? `<div class="suggest-title">${title}</div>` : '') + items.map((a, i) => {
+    box.innerHTML = items.map((a, i) => {
         // Group icon from the class; some fish only have "Chordata" in GBIF, so they get a plain paw
         const icon = a.cls && a.cls !== 'Chordata' ? groupIconHtml(groupOf({ taxonGroup: a.cls }), 16) : '<i class="fa-solid fa-paw"></i>';
         const where = a.records ? `${a.records.toLocaleString()} records in Korea` : 'not recorded in Korea';
-        return `<button type="button" role="option" id="suggest-${i}" data-key="${a.key}" data-name="${escapeHtml(a.name)}"
+        return `<button type="button" role="option" id="suggest-${i}" data-key="${a.key}" data-name="${escapeHtml(a.name)}" data-cls="${escapeHtml(a.cls || '')}"
                 aria-label="${escapeHtml([a.name, a.sci].filter(Boolean).join(', '))}">
             ${icon}
             <span class="suggest-text">
@@ -635,6 +673,7 @@ function updateRadiusCircle() {
     state.radiusLabel = L.marker([labelLat, state.currentLng], {
         icon: L.divIcon({ className: '', html: `<span class="radius-label">${state.radiusKm} km</span>`, iconSize: [0, 0] }),
         interactive: false,
+        keyboard: false,   // only a label: not a button for the keyboard or screen readers
     }).addTo(map);
 }
 
@@ -679,7 +718,7 @@ async function loadSightings() {
     // One species (from the Encyclopedia), or the ticked groups. With every group ticked no taxon
     // filter is sent, so all animals are returned.
     if (state.speciesFilter) {
-        url += `&taxa=${state.speciesFilter.key}`;
+        url += `&taxa=${(state.speciesFilter.keys || [state.speciesFilter.key]).join(',')}`;
     } else if (state.groups.size < Object.keys(GROUPS).length) {
         const keys = [...state.groups].flatMap(g => GROUPS[g].keys);
         url += `&taxa=${keys.join(',')}`;
@@ -700,6 +739,7 @@ async function loadSightings() {
         if (searchId !== state.searchId) return;   // a newer search has started
         if (!data.fallback) rememberSightings(url, data);
         state.sightings = (data.results || []).map(r => ({ ...r }));   // a fresh copy each time
+        state.total = data.fallback ? 0 : (data.total || 0);   // all records of the area (GBIF count)
         state.page = 0;
         const place = ($('location-input').value || state.currentLocationName || 'this place').split(',')[0];
         const noAnimal = `No ${state.speciesFilter?.name} sightings within ${state.radiusKm} km of ${place}. Try a larger radius, or show all animals.`;
@@ -717,6 +757,7 @@ async function loadSightings() {
         console.error(err);
         showToast(`Failed to load sightings: ${err.message}`, 'error');
         state.sightings = [];
+        state.total = 0;
         renderAll(`Could not load wildlife records. ${err.message}`);
     } finally {
         if (searchId === state.searchId) setLoading(false);
@@ -755,6 +796,9 @@ function renderMarkers() {
                 iconAnchor: [4, 30],
             })
         }).addTo(map);
+        // Leaflet makes each pin a keyboard button; this gives it a name for screen readers
+        // (accessibility scan, 31 Oct: "role=button element has no accessible name")
+        marker.getElement()?.setAttribute('aria-label', `${name}, ${g.label}, ${formatDate(r.eventDate)}`);
 
         marker.bindTooltip(`<b>${escapeHtml(name)}</b><br><i>${escapeHtml(r.scientificName || '')}</i><br>${g.label} &bull; ${escapeHtml(formatDate(r.eventDate))}`,
             { className: 'pin-tip', direction: 'top', offset: [12, -28] });
@@ -770,6 +814,13 @@ function renderTable(emptyMessage) {
     const end = Math.min(start + state.pageSize, total);
 
     setText('page-info', total ? `Showing ${start + 1}–${end} of ${total}` : 'Showing 0 of 0');
+
+    // An area often has thousands of records but only the chosen number is loaded, so with all
+    // groups ticked the most-recorded groups (birds, insects) can crowd out the rest
+    const note = $('records-note');
+    note.hidden = !(total && state.total > total);
+    if (!note.hidden) note.textContent = `Showing ${total} of ${state.total.toLocaleString()} records in this area. `
+        + 'To see other animals, tick fewer animal groups or choose more records.';
     $('page-prev').disabled = state.page === 0;
     $('page-next').disabled = end >= total;
 
@@ -907,6 +958,8 @@ async function showProfile(record) {
 
     renderTaxonomy({ kingdom: 'Animalia', class: record.taxonGroup });
     setPhoto(sizedImage(record.image, 'medium'), 'Searching GBIF media archive...');
+    $('photo-expand').hidden = !(record.speciesKey || record.image);
+    $('profile-status').hidden = true;
 
     const gbifBtn = $('profile-gbif');
     gbifBtn.href = record.key ? `https://www.gbif.org/occurrence/${record.key}` : 'https://www.gbif.org';
@@ -915,6 +968,7 @@ async function showProfile(record) {
         if (!record.image) setPhoto(null, 'No media attached to this occurrence.');
         return;
     }
+    showStatus(record);
 
     const speciesData = await getSpecies(record.speciesKey);
     if (!speciesData) {
@@ -937,6 +991,33 @@ async function showProfile(record) {
     gbifBtn.href = speciesData.gbifUrl || `https://www.gbif.org/species/${record.speciesKey}`;
 }
 
+// IUCN Red List categories: label, badge color and what it means (the same labels as the Encyclopedia)
+const IUCN = {
+    LC: ['Least Concern', '#2f9e44', 'not threatened'],
+    NT: ['Near Threatened', '#74b816', 'may become threatened soon'],
+    VU: ['Vulnerable', '#f59f00', 'at high risk of extinction in the wild'],
+    EN: ['Endangered', '#e8590c', 'at very high risk of extinction in the wild'],
+    CR: ['Critically Endangered', '#e03131', 'at extremely high risk of extinction in the wild'],
+    EW: ['Extinct in the Wild', '#862e9c', 'survives only in captivity'],
+    EX: ['Extinct', '#212529', 'no longer exists'],
+    DD: ['Data Deficient', '#868e96', 'not enough data to judge'],
+};
+
+// Conservation status from GBIF (api/encyclopedia.php?action=facts), shown under the name.
+// Not assessed or not reachable: the line stays hidden.
+async function showStatus(record) {
+    try {
+        const f = await safeJsonFetch(`api/encyclopedia.php?action=facts&speciesKey=${record.speciesKey}`);
+        if (state.sightings[state.selected] !== record) return;   // another sighting is selected now
+        const status = IUCN[f.iucn?.code];
+        if (!status) return;
+        const [label, color, meaning] = status;
+        $('profile-status').innerHTML = `<span class="status-badge" style="background:${color}">${label}</span>
+            <span title="IUCN Red List of Threatened Species">IUCN: ${meaning}</span>`;
+        $('profile-status').hidden = false;
+    } catch { /* no status: nothing to show */ }
+}
+
 function renderTaxonomy(t) {
     // "Alcedo atthis" is shown as "A. atthis", as in field guides
     let species = t.species || '';
@@ -949,6 +1030,18 @@ function renderTaxonomy(t) {
     ];
     $('profile-taxonomy').innerHTML = rows.map(([label, value, italic]) =>
         `<dt>${label}</dt><dd class="${italic && value ? 'italic' : ''}">${escapeHtml(value || '—')}</dd>`).join('');
+}
+
+// The profile photo large, with more photos of the species (js/photo-viewer.js)
+function openProfilePhotos() {
+    const record = state.sightings[state.selected];
+    if (!record) return;
+    const img = $('profile-img');
+    openPhotoViewer({
+        url: img.style.display === 'block' ? img.src : null,   // the photo shown, if it loaded
+        title: $('profile-name').textContent,
+        speciesKey: record.speciesKey,
+    });
 }
 
 function setPhoto(url, fallbackText) {
@@ -998,7 +1091,8 @@ document.addEventListener('DOMContentLoaded', () => {
         $('animal-input').value = params.get('name') || '';
     }
     showSpeciesFilter();
-    $('species-filter-clear').addEventListener('click', () => { clearSpeciesFilter(); loadSightings(); });
+    // "Show all animals": no animal filter and every group ticked again
+    $('species-filter-clear').addEventListener('click', () => { clearSpeciesFilter(); setGroups(Object.keys(GROUPS)); loadSightings(); });
 
     buildGroupControls();
 
@@ -1018,7 +1112,7 @@ document.addEventListener('DOMContentLoaded', () => {
         await loadAnimalList();   // instant after the first time
         const typed = e.target.value;
         if (typed !== $('animal-input').value) return;   // the user has typed more meanwhile
-        renderSuggestions('', matchAnimals(typed), typed);
+        renderSuggestions(matchAnimals(typed), typed);
     });
     $('animal-input').addEventListener('keydown', onAnimalKey);
     closeWhenFocusLeaves('animal-input', 'animal-suggest', hideSuggestions);
@@ -1026,7 +1120,7 @@ document.addEventListener('DOMContentLoaded', () => {
     $('animal-suggest').addEventListener('mousedown', (e) => e.preventDefault());   // keep the focus in the box
     $('animal-suggest').addEventListener('click', (e) => {
         const btn = e.target.closest('button');
-        if (btn) showAnimal({ key: Number(btn.dataset.key), name: btn.dataset.name });
+        if (btn) showAnimal({ key: Number(btn.dataset.key), name: btn.dataset.name, cls: btn.dataset.cls || null });
     });
     $('filters-toggle').addEventListener('click', () => setFiltersOpen(!$('layout').classList.contains('filters-open')));
     $('locate-btn').addEventListener('click', useCurrentLocation);
@@ -1053,10 +1147,11 @@ document.addEventListener('DOMContentLoaded', () => {
     $('date-from').addEventListener('change', (e) => { state.fromDate = e.target.value; markFiltersChanged(); });
     $('date-to').addEventListener('change', (e) => { state.toDate = e.target.value; markFiltersChanged(); });
 
-    $('limit-select').addEventListener('change', (e) => {
-        state.limit = parseInt(e.target.value) || 75;
+    document.querySelectorAll('.chip[data-limit]').forEach(chip => chip.addEventListener('click', () => {
+        document.querySelectorAll('.chip[data-limit]').forEach(c => c.classList.toggle('active', c === chip));
+        state.limit = parseInt(chip.dataset.limit) || 75;
         markFiltersChanged();
-    });
+    }));
 
     $('apply-btn').addEventListener('click', () => {
         if (isPhoneLayout()) setFiltersOpen(false);   // phones: fold the settings away to show the results
@@ -1075,6 +1170,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const btn = e.target.closest('.btn-view');
         if (btn) selectSighting(parseInt(btn.dataset.index), { reveal: true });
     });
+
+    $('profile-img').addEventListener('click', openProfilePhotos);
+    $('photo-expand').addEventListener('click', openProfilePhotos);
 
     $('profile-close').addEventListener('click', () => {
         if (state.selected !== null && state.markers[state.selected]) {
