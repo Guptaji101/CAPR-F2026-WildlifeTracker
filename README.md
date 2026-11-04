@@ -24,9 +24,10 @@ students, hikers, eco-clubs and anyone curious about the wildlife around them. N
 - See the animals recorded within 5–100 km as color-coded pins and in a table with photos.
 - Filter by animal group (mammals, birds, reptiles, amphibians, fish, invertebrates), date and
   number of records, then press **Search sightings**.
-- **Find an Animal:** type a name ("water deer", "magpie", "Pica pica") with suggestions while
+- **Find an Animal:** type a name ("water deer", "magpie", "Pica pica") or a kind ("deer", "snakes") with suggestions while
   typing, and see only that animal's sightings.
-- Species Profile with photo, taxonomy and a link to the original GBIF record.
+- Species Profile with photo, conservation status (IUCN), taxonomy and a link to the original GBIF record.
+- Click a photo (Map or Encyclopedia) to see it large and browse more photos of the animal.
 
 **Animal Encyclopedia**
 - The best-known animals of 12 groups in South Korea (5 vertebrate, 7 invertebrate groups),
@@ -61,7 +62,7 @@ Works on phones, tablets and desktops, and with the keyboard and screen readers.
 ## Project Structure
 ```
 public/            the website (Map page index.php, Encyclopedia encyclopedia.php)
-  api/             JSON endpoints: places, sightings, species, animal names, encyclopedia
+  api/             JSON endpoints: places, sightings, species, animal names, encyclopedia, photos
   js/, css/        page logic and styles
   data/            list of the 2000 most-recorded animals in South Korea (for suggestions)
 includes/          shared PHP: GBIF client, Wikipedia client, cache, settings, database

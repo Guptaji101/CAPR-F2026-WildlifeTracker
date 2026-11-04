@@ -14,10 +14,10 @@ results in the testing report (Week 12)
 | Place search, Quick Locations, Locate Me, place suggestions | FR-01, FR-11 | TC-01 – TC-10 |
 | Map, base maps, legend | FR-02, FR-08 | TC-11 – TC-14 |
 | Sightings: pins, table, filters, Search button | FR-03 – FR-06 | TC-15 – TC-26 |
-| Species Profile and GBIF link | FR-07, FR-09 | TC-27 – TC-31 |
+| Species Profile and GBIF link | FR-07, FR-09 | TC-27 – TC-31, TC-75 – TC-76 |
 | Messages and loading states | FR-10 | TC-32 – TC-36 |
-| Find an Animal | FR-13 | TC-37 – TC-43 |
-| Animal Encyclopedia and its searches | FR-12 | TC-44 – TC-55 |
+| Find an Animal | FR-13 | TC-37 – TC-43, TC-69 – TC-72, TC-77 |
+| Animal Encyclopedia and its searches | FR-12 | TC-44 – TC-55, TC-73 – TC-74 |
 | Non-functional requirements | NFR-01 – NFR-08 | TC-56 – TC-68 |
 | Usability test with users | NFR-05 | Section 6 |
 
@@ -91,8 +91,8 @@ Unless a step says otherwise, start on the Map page, with the default search (Bu
 | TC-22 | Date range | Set From = 2025-01-01, To = 2025-12-31, click the Search button | Every row's date is in 2025 | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost |
 | TC-23 | Only a To date | Clear From, set To = 2020-12-31, search | All dates are on or before 2020-12-31 | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost |
 | TC-24 | Wrong date order | From = 2025-06-01, To = 2025-01-01, search | Message 'The "From" date must be on or before the "To" date'; no search | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost |
-| TC-25 | Max records | Filters → Max records = 150, search | Table shows "… of 150" (if the area has that many) | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost; Busan 25 km |
-| TC-26 | Max records visible | Open **Filters** on a short window or a laptop screen; scroll the sidebar to the bottom | "Max records" is fully visible above the Search button (not covered) | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost; short window |
+| TC-25 | Number of records | Under **Number of Records** click **150**, then **Search sightings** | Table shows "… of 150" (if the area has that many); above the table "Showing 150 of N records in this area" when the area has more | Re-test | | | Pass on 2026-10-27 (Paudel Amrit) with the old Filters dropdown; replaced by buttons on 31 Oct |
+| TC-26 | Number of records visible | On a short window or a laptop screen, look at the sidebar | Locate Me, Search Location, Search Radius, Quick Locations and Number of Records are at the top, none covered by the Search button | Re-test | | | Pass on 2026-10-27 (Paudel Amrit) with the old Filters dropdown; sidebar order changed on 31 Oct |
 
 ### 4.4 Species Profile (FR-07, FR-09)
 
@@ -103,6 +103,8 @@ Unless a step says otherwise, start on the Map page, with the default search (Bu
 | TC-29 | Fish group | Search Ulsan, select a fish (e.g. Chinese minnow) | Badge says **Fish** (not Invertebrates); Class "Actinopterygii" | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost; Ulsan, fish badge + Class Actinopterygii |
 | TC-30 | GBIF link | Click **Explore on GBIF Network** | GBIF page of the species opens in a new tab; WildTrack stays open | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost |
 | TC-31 | Close profile | Click X in the Species Profile (or press Esc) | Selection cleared; "Select a sighting…" shown | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost |
+| TC-75 | Photo viewer | Select a sighting, click its photo (or **More photos**); use the arrows and the → key; press Esc | Photo opens large with up to 12 more photos below, each with photographer and licence; arrows change the photo; Esc closes only the viewer (profile stays); the profile also shows the IUCN status | | | | Added 31 Oct (usability test) |
+| TC-76 | Photo viewer in the Encyclopedia | Open a card, click its photo | The viewer opens over the card with more photos; closing it leaves the card open | | | | Added 31 Oct |
 
 ### 4.5 Messages and loading (FR-10)
 
@@ -123,8 +125,13 @@ Unless a step says otherwise, start on the Map page, with the default search (Bu
 | TC-39 | Common name | Type `water deer`, press Enter | Only water deer sightings; bar "Showing only …" | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost |
 | TC-40 | Scientific name | Type `Pica pica`, press Enter | Only that species is shown | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost |
 | TC-41 | Not recorded nearby | Type `tiger`, press Enter | Message "No Tiger sightings within … km of …. Try a larger radius, or show all animals." | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost |
-| TC-42 | Unknown name | Type `xyzzy`, press Enter | Message 'No animal called "xyzzy" was found. Check the spelling or try the scientific name.' | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost |
+| TC-42 | Unknown name | Type `xyzzy`, press Enter | Message 'No animal called "xyzzy" was found. Check the spelling or try the scientific name.' (since 31 Oct the map is also emptied, see TC-72) | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost |
 | TC-43 | Show all animals | After TC-38, click **Show all animals** | Bar disappears; all animals shown again | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost |
+| TC-69 | A kind of animal | Ulsan, 100 km: type `deer`, press Enter (no suggestion picked) | Bar "Showing only Deer (all kinds)"; water deer, roe deer and sika deer pins; only **Mammals** ticked | | | | Added 31 Oct (usability test) |
+| TC-70 | Snakes, also half typed | Type `snake`, press Enter; then `sna`, press Enter | Both: "Snakes (all kinds)" with several snake species; only **Reptiles** ticked | | | | Added 31 Oct |
+| TC-71 | A whole group | Type `reptiles`, press Enter | No bar; only **Reptiles** ticked; reptile pins of several species | | | | Added 31 Oct |
+| TC-72 | Failed search empties the map | After TC-69, type `xyzzy`, press Enter | Map and table empty; big red message "No animal called …"; no suggestion list; all groups ticked again | | | | Added 31 Oct |
+| TC-77 | A name of several animals | Type `magpie`, press Enter; then type `mag` | After Enter: "Magpie (all kinds)", magpie pins, only **Birds** ticked, no list. While typing `mag`: suggestions appear again | | | | Added 4 Nov (usability test) |
 
 ### 4.7 Animal Encyclopedia (FR-12)
 
@@ -142,6 +149,8 @@ Unless a step says otherwise, start on the Map page, with the default search (Bu
 | TC-53 | Search in a group | Open Insects, type `bee` in "Search insects…" | Only insects are suggested (e.g. Western honey bee) | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost |
 | TC-54 | Wrong group | In Insects, type `magpie`, press Enter | Message that no insect has this name, pointing to the top search | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost |
 | TC-55 | Map → Encyclopedia | On the Map, select a bird, click **Read about it in the Encyclopedia** | Encyclopedia opens Birds with that bird's card | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost |
+| TC-73 | Encyclopedia: a kind of animal | In **Search all animals** type `snakes`, press Enter | Reptiles group opens with the title "Snakes (all kinds)" and snake cards; clicking a group in the tree shows the whole group again | | | | Added 31 Oct (usability test) |
+| TC-74 | Encyclopedia: a whole group | In **Search all animals** type `reptiles`, press Enter | The Reptiles group opens | | | | Added 31 Oct |
 
 ---
 
@@ -196,13 +205,14 @@ unless the person is completely stuck (then note it).
 
 | Participant | Task 1 | Task 2 | Task 3 | Task 4 | Task 5 | Comments |
 |---|---|---|---|---|---|---|
-| P1 | | | | | | |
-| P2 | | | | | | |
-| P3 | | | | | | |
-| P4 | | | | | | |
-| P5 | | | | | | |
+| P1 | ✓ | ✓ | ✓ | ✓ | ✓ | More photos in the Species Profile |
+| P2 | ✓ | ✓ | ✓ | ✓ | ✓ | Search an animal without picking a species from the suggestions |
+| P3 | ✓ | ✓ | ✓ | ✓ | ✓ | No suggestions after Enter or after a failed search |
+| P4 | ✓ | ✓ | ✓ | ✓ | ✓ | Move the Locate Me button |
+| P5 | ✓ | ✓ | ✓ | ✓ | ✓ | No data on the map after a failed search |
 
 Write for each task: **✓** done alone · **~** done with a hint · **✗** not done, plus the time in seconds.
+The table above shows Round 1, written down afterwards; the time per task was not measured.
 
 **After the tasks**, ask (1 = strongly disagree, 5 = strongly agree):
 
@@ -213,8 +223,45 @@ Write for each task: **✓** done alone · **~** done with a hint · **✗** not
 | The search suggestions helped me. | | | | | |
 | The results were fast enough. | | | | | |
 | I would use WildTrack again. | | | | | |
+| **Overall score, Round 1** | **4.5** | **4** | **5** | **4** | **4.8** |
 
 And one open question: *"What would you change first?"*
+
+In Round 1 each participant gave one overall score (average 4.46 out of 5), not a score per
+question, so the five question rows are for **Round 2**, on the version with the Round 1 fixes.
+
+### 6.1 Round 1 results
+
+**Who and how:** 5 classmates (P1–P5) from outside Group 3, organized by Gupta Aman Kumar, during a
+class break. All five did the five tasks and also explored the website freely. Start times: P1 13:00,
+P2 13:15, P3 13:30, P4 13:45, P5 13:57; the session ended at about 14:05.
+
+**Results** (written down afterwards from the organizer's memory, not measured during the test):
+- **Tasks:** all five participants completed all five tasks without problems. The time per task was
+  not measured.
+- **Ratings:** one overall score out of 5 per person: P1 4.5, P2 4, P3 5, P4 4, P5 4.8 (average
+  4.46). The participants were satisfied, with suggestions for some areas.
+- **Who suggested what:** P1: more photos in the Species Profile (report 1). P2: search an animal
+  with one press, without picking a species from the suggestions (report 5). P3: no suggestions
+  after Enter or after a failed search (report 2). P4: move the Locate Me
+  button (report 4). P5: show no data on the map after a failed search (report 6). The radius
+  suggestion was also about its position (report 8). The other reports came from the participants
+  too, but were not noted per person.
+
+| # | What the participants reported | Result |
+|---|---|---|
+| 1 | Click a photo to see it larger and explore more photos, on the Map and in the Encyclopedia | Fixed: photo viewer with more photos |
+| 2 | Hide suggestions after Enter; a failed search should show only "not found" | Fixed: no list after Enter. A name that fits several animals shows them all ("magpie"); an unknown name shows only "not found" |
+| 3 | Choose the number of records without opening a dropdown | Fixed: buttons 30 / 75 / 150 / 300 |
+| 4 | Move Locate Me to the top, above the place search | Fixed |
+| 5 | A child typing "snake" or "SNA" should see all snakes without picking a species, also in the Encyclopedia | Fixed: search by a kind of animal |
+| 6 | After a failed search the map should show no data | Fixed |
+| 7 | Make the notifications and their text bigger | Fixed |
+| 8 | Order: place search, radius, Quick Locations, number of records | Fixed |
+| 9 | Animal group ticks should follow the search ("frogs" → Amphibians) | Fixed |
+| 10 | Frogs found with Find an Animal in Ulsan (10 km) disappeared with all groups selected | Not a bug: only the chosen number of records is loaded. Note added: "Showing 75 of N records in this area" |
+| 11 | Species Profile should show whether a species may go extinct or is increasing | Partly fixed: IUCN Red List status added; population trend is not shown |
+| 12 | Searching a group like reptiles shows only one animal | Fixed: "reptiles" offered one wrong suggestion; it now shows the whole group |
 
 ---
 
