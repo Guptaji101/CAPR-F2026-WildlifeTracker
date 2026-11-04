@@ -9,10 +9,11 @@
  *   1. GBIF species/match: exact for scientific names ("Pica pica", also groups like "Cervidae").
  *   2. Wikipedia -> Wikidata: everyday English names ("tiger" -> Tiger -> GBIF 5219416;
  *      "deer" -> Deer -> the deer family).
- *   3. GBIF common-name search: all animals of that name recorded in South Korea ("magpie").
+ *   3. All animals of that name recorded in South Korea ("magpie"): first from
+ *      data/korea-animals.json, else from GBIF's common names.
  *
- * Answers {"found": {key, keys, name, scientificName, group, cls, path}}, or 404 {"error"}. keys = the GBIF taxon keys to show on the map (one for a species), group = true
- * for a whole kind, cls = its class ("Mammalia") and path = [phylum, class, order] keys, which
+ * Answers {"found": {key, keys, name, scientificName, group, cls, path}}, or 404 {"error"}.
+ * keys = the GBIF taxon keys to show on the map (one for a species), group = true for a whole kind, cls = its class ("Mammalia") and path = [phylum, class, order] keys, which
  * tell the pages which animal group to tick or open.
  */
 header('Content-Type: application/json; charset=utf-8');
@@ -149,10 +150,32 @@ if ($wiki && ($sp = gbif_get(GBIF_API . "/species/{$wiki['key']}"))
     }
 }
 
-// --- 3. All animals of that name, from GBIF's common names ---------------------
+// All animals of one name at once, without a list to pick from (usability test: a list after
+// Enter confused users). Best-known first; only its class is kept, so "eagle" gives the birds,
+// not also the eagle ray.
+function send_all(array $animals, string $q): void {
+    $animals = array_values(array_filter($animals, fn($a) => $a['class'] === $animals[0]['class']));
+    if (count($animals) === 1) send_found([(int)$animals[0]['key']], $animals[0]['name'], $animals[0]['scientificName']);
+    send_found(array_map(fn($a) => (int)$a['key'], array_slice($animals, 0, 50)), mb_convert_case($q, MB_CASE_TITLE), null, true);
+}
+
+// --- 3a. All animals of that name recorded in South Korea --------------------------
+// public/data/korea-animals.json (the list behind the suggestions while typing) holds the 2000
+// animals with the most records in South Korea, most records first. A name with a word starting
+// with the typed text ("magpie" -> Oriental Magpie, Eurasian Magpie) is a better answer than
+// GBIF's common-name search below, which puts magpie moths and fish with no Korean records first.
+$list = json_decode(@file_get_contents(__DIR__ . '/../data/korea-animals.json') ?: '[]', true) ?: [];
+$wordStart = '/(^|[\s\-\'\/(])' . preg_quote(mb_strtolower($q), '/') . '/u';
+$local = [];
+foreach ($list as $a) {
+    if (!preg_match($wordStart, mb_strtolower(($a['n'] ?? '') . ' / ' . ($a['s'] ?? '')))) continue;
+    $local[] = ['key' => $a['k'], 'name' => $a['n'] ?: $a['s'], 'scientificName' => $a['s'], 'class' => $a['c'] ?? null];
+}
+if ($local) send_all($local, $q);
+
+// --- 3b. All animals of that name, from GBIF's common names ------------------------
 // GBIF lists "magpie" moths and fish before the Eurasian magpie, so 50 candidates are fetched
-// and only the ones recorded in South Korea are kept. The user sees them all at once, without
-// a list to pick from (usability test: a list after Enter confused users).
+// and only the ones recorded in South Korea are kept.
 $search = gbif_get(GBIF_API . '/species/search?' . http_build_query([
     'q' => $q, 'qField' => 'VERNACULAR', 'datasetKey' => BACKBONE, 'rank' => 'SPECIES',
     'highertaxonKey' => 1, 'status' => 'ACCEPTED', 'limit' => 50,
@@ -181,10 +204,7 @@ if ($candidates) {
     // for "reptiles") confused users in the usability test (31 Oct)
     $candidates = array_values(array_filter($candidates, fn($c) => $c['koreaRecords'] > 0));
     usort($candidates, fn($a, $b) => $b['koreaRecords'] <=> $a['koreaRecords']);
-    // Only the class of the best-known one: "eagle" gives the birds, not also the eagle ray
-    $candidates = array_values(array_filter($candidates, fn($c) => $c['class'] === ($candidates[0]['class'] ?? null)));
-    if (count($candidates) === 1) send_found([(int)$candidates[0]['key']], $candidates[0]['name'], $candidates[0]['scientificName']);
-    if ($candidates) send_found(array_map(fn($c) => (int)$c['key'], $candidates), mb_convert_case($q, MB_CASE_TITLE), null, true);
+    if ($candidates) send_all($candidates, $q);
 }
 
 http_response_code(404);
