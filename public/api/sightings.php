@@ -72,7 +72,8 @@ $results = array_map(fn($r) => [
     'locality'       => $r['locality'] ?? null,
 ], $rawResults);
 
-$response = ['count' => count($results), 'results' => $results];
+// total = all matching records in GBIF, so the page can say "Showing 75 of 11,247"
+$response = ['count' => count($results), 'total' => $data['count'] ?? count($results), 'results' => $results];
 if (!empty($data['fallback'])) {
     $response['fallback'] = true;
     $response['reason']   = $data['error'];
