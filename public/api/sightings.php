@@ -5,25 +5,33 @@ header('Access-Control-Allow-Origin: *');
 require_once __DIR__ . '/../../includes/gbif.php';
 require_once __DIR__ . '/../../includes/cache.php';
 
-$lat = isset($_GET['lat']) ? (float)$_GET['lat'] : null;
-$lng = isset($_GET['lng']) ? (float)$_GET['lng'] : null;
-
-if ($lat === null || $lng === null) {
+if (!isset($_GET['lat'], $_GET['lng'])) {
     http_response_code(400);
     echo json_encode(['error' => 'lat and lng are required']);
     exit;
 }
+// Text such as "abc" would become 0 with (float) and search the sea off Africa: refuse it
+if (!is_numeric($_GET['lat']) || !is_numeric($_GET['lng'])
+        || abs((float)$_GET['lat']) > 90 || abs((float)$_GET['lng']) > 180) {
+    http_response_code(400);
+    echo json_encode(['error' => 'lat and lng must be numbers (lat -90 to 90, lng -180 to 180)']);
+    exit;
+}
+$lat = (float)$_GET['lat'];
+$lng = (float)$_GET['lng'];
 
 $radius = isset($_GET['radius']) ? (float)$_GET['radius'] : 10;
 // Comma-separated GBIF taxon keys for the selected animal groups; empty = all animals
 $taxa   = array_values(array_filter(array_map('intval', explode(',', $_GET['taxa'] ?? ''))));
 $from   = $_GET['from']  ?? null;
 $to     = $_GET['to']    ?? null;
-$limit  = isset($_GET['limit']) ? (int)$_GET['limit'] : 50;
+// At least 1 record (a negative limit made GBIF fall back to its default of 20); gbif.php caps it at 300
+$limit  = max(1, isset($_GET['limit']) ? (int)$_GET['limit'] : 50);
 
-// Dates must be YYYY-MM-DD and in order; GBIF rejects anything else
+// Dates must be real dates in YYYY-MM-DD and in order; GBIF rejects anything else
+// (checkdate() also refuses dates that look right but don't exist, such as 2025-13-45)
 foreach (['From' => $from, 'To' => $to] as $label => $date) {
-    if ($date && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+    if ($date && (!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $date, $m) || !checkdate((int)$m[2], (int)$m[3], (int)$m[1]))) {
         http_response_code(400);
         echo json_encode(['error' => "Invalid $label date (use YYYY-MM-DD)"]);
         exit;
@@ -80,4 +88,4 @@ if (!empty($data['fallback'])) {
 } else {
     cache_put($cacheKey, $response);   // sample data is never cached: the next search tries GBIF again
 }
-echo json_encode($response);
+echo json_encode($response);

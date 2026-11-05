@@ -179,9 +179,10 @@ function gbif_sample_fallback(float $lat, float $lng): array
 
 /**
  * Simple GET request to GBIF (one attempt). Returns the decoded JSON, or null on any error.
- * Used by species.php and encyclopedia.php.
+ * Used by species.php and encyclopedia.php. The optional $status receives GBIF's HTTP status
+ * (0 if GBIF could not be reached), so a caller can tell "not found" (404) from an outage.
  */
-function gbif_get(string $url): ?array {
+function gbif_get(string $url, ?int &$status = null): ?array {
     $ch = curl_init($url);
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
@@ -193,6 +194,7 @@ function gbif_get(string $url): ?array {
     $raw  = curl_exec($ch);
     $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
+    $status = $raw === false ? 0 : (int)$code;
     if ($raw === false || $code !== 200) return null;
     return json_decode($raw, true);
 }

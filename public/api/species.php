@@ -81,7 +81,13 @@ if ($cached && $cached['fresh']) {
 }
 
 // Rule 3: otherwise ask GBIF for the taxonomy record...
-$species = gbif_get("https://api.gbif.org/v1/species/{$speciesKey}");
+$species = gbif_get("https://api.gbif.org/v1/species/{$speciesKey}", $gbifStatus);
+if (!$species && $gbifStatus === 404) {
+    // GBIF has no species with this key: say so, instead of a 502 that looks like a server problem
+    http_response_code(404);
+    echo json_encode(['error' => 'Species not found']);
+    exit;
+}
 if (!$species) {
     // Rule 5: GBIF failed, but an older copy is better than an error (NFR-04)
     if ($cached) send_species($cached, 'STALE');
