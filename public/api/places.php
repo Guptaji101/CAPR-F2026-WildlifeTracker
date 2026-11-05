@@ -42,11 +42,15 @@ curl_setopt_array($ch, [
 ]);
 $raw  = curl_exec($ch);
 $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+$error = curl_error($ch);
 curl_close($ch);
 
 // No suggestions is not an error: the user can still type the name and press Enter
 $data = ($raw !== false && $code === 200) ? json_decode($raw, true) : null;
 if (!$data) {
+    // Goes to the server log (Render: Logs tab), so the reason for a failure can be seen.
+    // Only the reason is written, not what the visitor typed.
+    error_log("places.php: Photon failed, HTTP $code" . ($error ? ", $error" : ''));
     echo json_encode(['places' => []]);
     exit;
 }
