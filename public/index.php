@@ -216,6 +216,7 @@ $page = 'map';
                     <div class="meta-row"><i class="fa-regular fa-calendar-days"></i><div><span>Date Observed</span><b id="meta-date"></b></div></div>
                     <div class="meta-row"><i class="fa-solid fa-location-dot"></i><div><span>Locality</span><b id="meta-locality"></b></div></div>
                     <div class="meta-row"><i class="fa-solid fa-crosshairs"></i><div><span>Coordinates</span><b id="meta-coords"></b></div></div>
+                    <div class="meta-row"><i class="fa-solid fa-clock-rotate-left"></i><div><span>Record Last Updated</span><b id="meta-updated"></b></div></div>
                 </div>
 
                 <a href="#" id="profile-gbif" class="btn-primary gbif-btn" target="_blank" rel="noopener noreferrer">

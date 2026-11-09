@@ -955,6 +955,7 @@ async function showProfile(record) {
     setText('meta-date', formatDate(record.eventDate));
     setText('meta-locality', [record.locality, record.country].filter(Boolean).join(', ') || 'Not specified');
     setText('meta-coords', formatCoords(record));
+    setText('meta-updated', formatDate(record.updated));
 
     renderTaxonomy({ kingdom: 'Animalia', class: record.taxonGroup });
     setPhoto(sizedImage(record.image, 'medium'), 'Searching GBIF media archive...');

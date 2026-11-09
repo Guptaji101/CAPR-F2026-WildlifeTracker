@@ -46,7 +46,8 @@ if ($from && $to && $from > $to) {
 // The same search in the last hour (same place, radius, groups, dates and limit) is answered
 // from the cache: GBIF needs 2–5 seconds, the cache a few milliseconds. New records reach GBIF
 // slowly, so an hour-old answer is still up to date.
-$cacheKey = 'sightings:' . json_encode([$lat, $lng, $radius, $taxa, $from, $to, $limit]);
+// ("sightings3": newest records first and fuller place names since 9 Nov; older cached answers are not reused)
+$cacheKey = 'sightings3:' . json_encode([$lat, $lng, $radius, $taxa, $from, $to, $limit]);
 if ($cached = cache_get($cacheKey, 3600)) {
     echo json_encode($cached);
     exit;
@@ -64,6 +65,21 @@ if (isset($data['error']) && empty($data['fallback'])) {
 
 $rawResults = $data['results'] ?? [];
 
+// Where the animal was seen, as exactly as the record says. Most records have no "locality" but a
+// "verbatimLocality" such as "Gwaebeop-dong, Busan, Busan, KR": keep its parts once each, without
+// the country (shown separately), and add the province if it is not in it yet.
+function place_name(array $r): ?string
+{
+    $text = $r['locality'] ?? $r['verbatimLocality'] ?? $r['municipality'] ?? '';
+    $parts = [];
+    foreach ([...explode(',', $text), $r['stateProvince'] ?? ''] as $p) {
+        $p = trim($p);
+        if ($p === '' || in_array(mb_strtolower($p), ['kr', 'korea', 'south korea', 'republic of korea', '대한민국'])) continue;
+        $parts[mb_strtolower($p)] ??= $p;
+    }
+    return $parts ? implode(', ', $parts) : null;
+}
+
 $results = array_map(fn($r) => [
     'key'            => $r['key'] ?? null,
     'speciesKey'     => $r['speciesKey'] ?? null,
@@ -77,7 +93,8 @@ $results = array_map(fn($r) => [
     'lng'            => $r['decimalLongitude'] ?? null,
     'eventDate'      => $r['eventDate'] ?? null,
     'country'        => $r['country'] ?? null,
-    'locality'       => $r['locality'] ?? null,
+    'locality'       => place_name($r),
+    'updated'        => $r['modified'] ?? null,   // when the record was last changed at its source
 ], $rawResults);
 
 // total = all matching records in GBIF, so the page can say "Showing 75 of 11,247"

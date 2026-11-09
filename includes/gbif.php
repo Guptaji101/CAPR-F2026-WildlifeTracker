@@ -41,45 +41,98 @@ function gbif_search_nearby(
     ?string $toDate = null, int $limit = 50
 ): array {
     $cfg = gbif_config();
-
+    $limit = min($limit, 300);
     $safeRadius = min($radiusKm, 100); // GBIF geoDistance accepts up to 100km cleanly
 
-    $params = [
-    'geoDistance'   => $lat . ',' . $lng . ',' . $safeRadius . 'km',
-    'hasCoordinate' => 'true',
-    'kingdomKey'    => 1,
-    'limit'         => min($limit, 300),
-];
-    // "*" leaves the start of the range open, so a To date on its own still applies
-    if ($fromDate || $toDate) $params['eventDate'] = ($fromDate ?: '*') . ',' . ($toDate ?: date('Y-m-d'));
-
-    $query = http_build_query($params);
+    $query = http_build_query([
+        'geoDistance'   => $lat . ',' . $lng . ',' . $safeRadius . 'km',
+        'hasCoordinate' => 'true',
+        'kingdomKey'    => 1,
+    ]);
     // GBIF ORs repeated taxonKey parameters, so several animal groups can be requested at once
     foreach (gbif_expand_taxa($taxonKeys) as $key) $query .= '&taxonKey=' . (int)$key;
 
-    $url = $cfg['base_url'] . '/occurrence/search?' . $query;
+    // Newest records first. GBIF cannot sort by date: it returns records in its own order (near
+    // Busan on 9 Nov 2026 the first 300 were from January to May, though records up to November
+    // existed). So ask for the last month first, then the rest of the last year, then older
+    // records, each time only for as many records as are still missing (0 = just the count).
+    // A From/To date chosen by the user limits the windows.
+    $end = $toDate ?: date('Y-m-d');
+    $windows = [];
+    $upper = $end;
+    foreach (['-1 month', '-1 year', null] as $back) {
+        $lower = $back ? date('Y-m-d', strtotime($back, strtotime($end))) : null;
+        $last = $lower === null || ($fromDate && $lower <= $fromDate);
+        if ($fromDate && ($lower === null || $lower < $fromDate)) $lower = $fromDate;
+        $windows[] = ($lower ?? '*') . ',' . $upper;   // "*" leaves the start open
+        if ($last) break;
+        $upper = date('Y-m-d', strtotime('-1 day', strtotime($lower)));
+    }
 
-    // Try up to 3 times with backoff, at most 40 seconds in total. GBIF does not compress its
+    // One deadline for all requests together: at most 40 seconds, as before
+    $deadline = microtime(true) + 40;
+    $results = [];
+    $total = 0;
+    foreach ($windows as $i => $range) {
+        // Without From/To dates the last request has no date filter, so records without a date
+        // still count and can be shown (55 of 93 deer records near Ulsan have none). It also gives
+        // the full total. It may repeat records of the earlier windows, so it asks for enough
+        // extra records to cover those repeats; they are removed below.
+        $open = !$fromDate && !$toDate && $i === count($windows) - 1;
+        $missing = $limit - count($results);
+        if ($open) {
+            $url = $cfg['base_url'] . '/occurrence/search?' . $query . '&limit=' . ($missing > 0 ? $limit : 0);
+        } else {
+            $url = $cfg['base_url'] . '/occurrence/search?' . $query
+                 . '&eventDate=' . urlencode($range) . '&limit=' . $missing;
+        }
+        $json = gbif_occurrence_request($url, $deadline);
+        if (isset($json['error'])) {
+            if ($i > 0) break;   // the newer records arrived: show them rather than sample data
+            if (!empty($json['rejected'])) return ['error' => $json['error']];
+            // GBIF unreachable: return sample fallback (NFR-04)
+            return [
+                'error'     => $json['error'],
+                'fallback'  => true,
+                'results'   => gbif_sample_fallback($lat, $lng),
+                'count'     => 5,
+            ];
+        }
+        // The open request counts every record, the windows only their own part
+        $total = $open ? ($json['count'] ?? 0) : $total + ($json['count'] ?? 0);
+        foreach ($json['results'] ?? [] as $r) $results[$r['key'] ?? count($results)] ??= $r;   // no repeats
+    }
+    // Within a window GBIF's order is not by date either, so sort the whole list (records
+    // without a date go last) and keep the number of records asked for
+    $results = array_values($results);
+    usort($results, fn($a, $b) => strcmp($b['eventDate'] ?? '', $a['eventDate'] ?? ''));
+    return ['count' => $total, 'results' => array_slice($results, 0, $limit)];
+}
+
+// One GBIF occurrence search with retries. Returns GBIF's JSON, or ['error' => …] with
+// 'rejected' => true when GBIF refused the request (retrying or sample data would not help).
+function gbif_occurrence_request(string $url, float $deadline): array
+{
+    // Try up to 3 times with backoff, within the deadline. GBIF does not compress its
     // answers (150 records ≈ 1 MB), so on a slow connection a good answer can take 10–20 seconds
     // to arrive: an attempt is therefore only stopped if GBIF cannot be reached within 10 seconds
     // or the data stops flowing (under 2 KB/s for 8 seconds), never while it is still arriving.
     // (A fixed 15-second cut-off threw away slow but working answers and showed sample data.)
-    $lastError = null;
-    $deadline = microtime(true) + 40;
+    $lastError = 'No time left for GBIF';
     for ($attempt = 1; $attempt <= 3; $attempt++) {
         $left = (int)floor($deadline - microtime(true));
-        if ($left < 3) break;   // not enough time left for a useful attempt: show the sample data
+        if ($left < 3) break;   // not enough time left for a useful attempt
         $ch = curl_init($url);
         curl_setopt_array($ch, [
-    CURLOPT_RETURNTRANSFER   => true,
-    CURLOPT_CONNECTTIMEOUT   => min(10, $left),
-    CURLOPT_LOW_SPEED_LIMIT  => 2048,   // bytes per second…
-    CURLOPT_LOW_SPEED_TIME   => 8,      // …for 8 seconds = stalled
-    CURLOPT_TIMEOUT          => $left,
-    CURLOPT_ENCODING       => '',
-    CURLOPT_USERAGENT      => 'CAPR-F2026-WildlifeTracker/1.0 (student project)',
-    CURLOPT_HTTPHEADER     => ['Accept: application/json'],
-]);
+            CURLOPT_RETURNTRANSFER   => true,
+            CURLOPT_CONNECTTIMEOUT   => min(10, $left),
+            CURLOPT_LOW_SPEED_LIMIT  => 2048,   // bytes per second…
+            CURLOPT_LOW_SPEED_TIME   => 8,      // …for 8 seconds = stalled
+            CURLOPT_TIMEOUT          => $left,
+            CURLOPT_ENCODING         => '',
+            CURLOPT_USERAGENT        => 'CAPR-F2026-WildlifeTracker/1.0 (student project)',
+            CURLOPT_HTTPHEADER       => ['Accept: application/json'],
+        ]);
         $raw  = curl_exec($ch);
         $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $err  = curl_error($ch);
@@ -93,7 +146,7 @@ function gbif_search_nearby(
         } elseif ($code >= 400 && $code < 500 && $code !== 429) {
             // GBIF is reachable but rejected the request (e.g. a bad date range):
             // retrying won't help, and showing sample data would hide the real problem
-            return ['error' => "GBIF rejected the request (HTTP $code)"];
+            return ['error' => "GBIF rejected the request (HTTP $code)", 'rejected' => true];
         } else {
             $lastError = $err ?: "HTTP $code";
         }
@@ -101,14 +154,7 @@ function gbif_search_nearby(
         // Wait before retrying (1s, 2s, 3s)
         if ($attempt < 3) sleep($attempt);
     }
-
-    // All retries failed — return sample fallback
-    return [
-        'error'     => $lastError,
-        'fallback'  => true,
-        'results'   => gbif_sample_fallback($lat, $lng),
-        'count'     => 5,
-    ];
+    return ['error' => $lastError];
 }
 
 /**

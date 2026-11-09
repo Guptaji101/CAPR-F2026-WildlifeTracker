@@ -97,7 +97,8 @@
 .detail-summary { margin-top: 14px; font-size: 14.5px; line-height: 1.65; color: var(--text); }
 .detail-taxonomy { font-size: 13.5px; color: var(--text); line-height: 1.7; }
 .detail-links { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
-.detail-links .btn-primary { width: auto; padding: 0 18px; }
+/* margin-top: 0 cancels "dialog .btn-primary" (style.css), which pushed the Wikipedia button 6px below the others */
+.detail-links .btn-primary { width: auto; padding: 0 18px; margin-top: 0; }
 
 /* ---- Smaller screens ---- */
 @media (max-width: 820px) {
