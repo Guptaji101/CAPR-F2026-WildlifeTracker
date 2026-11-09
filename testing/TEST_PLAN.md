@@ -265,15 +265,17 @@ P2 13:15, P3 13:30, P4 13:45, P5 13:57; the session ended at about 14:05.
 
 ---
 
-## 7. Summary (fill in after the test run)
+## 7. Summary (status: 9 Nov 2026)
 
 | | Number |
 |---|---|
-| Test cases run | |
-| Passed | |
-| Failed (bug issues opened) | |
-| Blocked | |
-| Bugs fixed and re-tested | |
+| Test cases in this plan | 77 |
+| Test cases run | 73 |
+| Passed | 73 (TC-66 after its re-test) |
+| Failed (bug issues opened) | 1 (TC-66 → bug #13) |
+| Blocked | 0 |
+| Bugs fixed and re-tested | 1 (#13) |
+| Pending | 4 (TC-73 to TC-76, Singh Shubham Kumar) |
 
 These numbers, the usability results and the most important bugs go into the testing report
 (Week 12).
