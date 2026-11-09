@@ -218,11 +218,11 @@ The table above shows Round 1, written down afterwards; the time per task was no
 
 | Question | P1 | P2 | P3 | P4 | P5 |
 |---|---|---|---|---|---|
-| The website was easy to use. | | | | |5 |
-| I always knew what the website was doing (loading, results, errors). | | | | 4| |
-| The search suggestions helped me. | | | | | 5|
-| The results were fast enough. | | | | | 5|
-| I would use WildTrack again. | | | | | 5|
+| The website was easy to use. | 5|5|5|5|5 |
+| I always knew what the website was doing (loading, results, errors). | 4.5|5|5|4 |
+| The search suggestions helped me. |5 |5 | 5|5| 5|
+| The results were fast enough. |5 | 4.5| 5| 4.5| 5|
+| I would use WildTrack again. | 5|5 |5 |5 | 5|
 | **Overall score, Round 1** | **4.5** | **4** | **5** | **4** | **4.8** |
 
 And one open question: *"What would you change first?"*
