@@ -86,6 +86,12 @@ $page = 'map';
                     <button class="chip" data-limit="150">150</button>
                     <button class="chip" data-limit="300">300</button>
                 </div>
+                <!-- Any number from 30 to 1000; the buttons above are the quick choices -->
+                <div class="limit-slider">
+                    <label for="limit-range">Or choose any number: <b id="limit-value">75</b> records</label>
+                    <input type="range" id="limit-range" min="30" max="1000" step="5" value="75">
+                    <p class="limit-hint">More than 300 records can take 20–40 seconds to load.</p>
+                </div>
             </section>
 
             <section class="side-section">

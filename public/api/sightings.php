@@ -25,8 +25,9 @@ $radius = isset($_GET['radius']) ? (float)$_GET['radius'] : 10;
 $taxa   = array_values(array_filter(array_map('intval', explode(',', $_GET['taxa'] ?? ''))));
 $from   = $_GET['from']  ?? null;
 $to     = $_GET['to']    ?? null;
-// At least 1 record (a negative limit made GBIF fall back to its default of 20); gbif.php caps it at 300
-$limit  = max(1, isset($_GET['limit']) ? (int)$_GET['limit'] : 50);
+// At least 1 record (a negative limit made GBIF fall back to its default of 20), at most 1000
+// (GBIF_MAX_RECORDS in gbif.php; more than 300 are fetched in pages)
+$limit  = min(GBIF_MAX_RECORDS, max(1, isset($_GET['limit']) ? (int)$_GET['limit'] : 50));
 
 // Dates must be real dates in YYYY-MM-DD and in order; GBIF rejects anything else
 // (checkdate() also refuses dates that look right but don't exist, such as 2025-13-45)

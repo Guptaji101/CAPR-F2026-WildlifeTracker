@@ -35,13 +35,74 @@ function gbif_class(array $r): ?string {
     return in_array((int)($r['orderKey'] ?? 0), FISH_ORDER_KEYS) ? 'Actinopterygii' : null;
 }
 
+// The most records one sightings search may load. GBIF sends at most 300 per request, so above 300
+// they come in pages (gbif_occurrence_records), fetched at the same time.
+const GBIF_MAX_RECORDS = 1000;
+
+// Up to $want records of one search (0 = only the count). GBIF sends at most 300 records per
+// request, and each request arrives at only about 140 KB/s (300 records ≈ 2 MB ≈ 14 s, measured
+// 9 Nov 2026). So a larger number is asked for in pages of 300 ("offset") all at the same time
+// (curl_multi): 1000 records then take about as long as 300. Up to 300 records: one request with
+// retries, as before. If the first page fails, it is tried again with retries; another page that
+// fails is left out.
+function gbif_occurrence_records(string $url, int $want, float $deadline): array
+{
+    if ($want <= 300) return gbif_occurrence_request($url . '&limit=' . $want . '&offset=0', $deadline);
+
+    $mh = curl_multi_init();
+    $handles = [];
+    for ($offset = 0; $offset < $want; $offset += 300) {
+        $ch = curl_init($url . '&limit=' . min(300, $want - $offset) . '&offset=' . $offset);
+        curl_setopt_array($ch, gbif_curl_options(max(3, (int)floor($deadline - microtime(true)))));
+        curl_multi_add_handle($mh, $ch);
+        $handles[$offset] = $ch;
+    }
+    do {
+        $status = curl_multi_exec($mh, $running);
+        if ($running) curl_multi_select($mh);
+    } while ($running && $status === CURLM_OK);
+    $pages = [];
+    foreach ($handles as $offset => $ch) {
+        $page = json_decode((string)curl_multi_getcontent($ch), true);
+        if (curl_getinfo($ch, CURLINFO_HTTP_CODE) === 200 && $page) $pages[$offset] = $page;
+        curl_multi_remove_handle($mh, $ch);
+        curl_close($ch);
+    }
+    curl_multi_close($mh);
+
+    // The first page gives the total; without it, ask for it once more with retries
+    $pages[0] ??= gbif_occurrence_request($url . '&limit=300&offset=0', $deadline);
+    if (isset($pages[0]['error'])) return $pages[0];
+    $records = [];
+    foreach ($pages as $page) $records = array_merge($records, $page['results'] ?? []);
+    return ['count' => $pages[0]['count'] ?? 0, 'results' => $records];
+}
+
+// cURL settings for a GBIF request with $left seconds to go. GBIF does not compress its answers
+// (150 records ≈ 1 MB), so on a slow connection a good answer can take 10–20 seconds to arrive: a
+// request is therefore only stopped if GBIF cannot be reached within 10 seconds or the data stops
+// flowing (under 2 KB/s for 8 seconds), never while it is still arriving.
+function gbif_curl_options(int $left): array
+{
+    return [
+        CURLOPT_RETURNTRANSFER   => true,
+        CURLOPT_CONNECTTIMEOUT   => min(10, $left),
+        CURLOPT_LOW_SPEED_LIMIT  => 2048,   // bytes per second…
+        CURLOPT_LOW_SPEED_TIME   => 8,      // …for 8 seconds = stalled
+        CURLOPT_TIMEOUT          => $left,
+        CURLOPT_ENCODING         => '',
+        CURLOPT_USERAGENT        => 'CAPR-F2026-WildlifeTracker/1.0 (student project)',
+        CURLOPT_HTTPHEADER       => ['Accept: application/json'],
+    ];
+}
+
 function gbif_search_nearby(
     float $lat, float $lng, float $radiusKm = 10,
     array $taxonKeys = [], ?string $fromDate = null,
     ?string $toDate = null, int $limit = 50
 ): array {
     $cfg = gbif_config();
-    $limit = min($limit, 300);
+    $limit = min($limit, GBIF_MAX_RECORDS);
     $safeRadius = min($radiusKm, 100); // GBIF geoDistance accepts up to 100km cleanly
 
     $query = http_build_query([
@@ -80,13 +141,9 @@ function gbif_search_nearby(
         // extra records to cover those repeats; they are removed below.
         $open = !$fromDate && !$toDate && $i === count($windows) - 1;
         $missing = $limit - count($results);
-        if ($open) {
-            $url = $cfg['base_url'] . '/occurrence/search?' . $query . '&limit=' . ($missing > 0 ? $limit : 0);
-        } else {
-            $url = $cfg['base_url'] . '/occurrence/search?' . $query
-                 . '&eventDate=' . urlencode($range) . '&limit=' . $missing;
-        }
-        $json = gbif_occurrence_request($url, $deadline);
+        $url = $cfg['base_url'] . '/occurrence/search?' . $query . ($open ? '' : '&eventDate=' . urlencode($range));
+        $want = $open ? ($missing > 0 ? $limit : 0) : $missing;
+        $json = gbif_occurrence_records($url, $want, $deadline);
         if (isset($json['error'])) {
             if ($i > 0) break;   // the newer records arrived: show them rather than sample data
             if (!empty($json['rejected'])) return ['error' => $json['error']];
@@ -113,26 +170,14 @@ function gbif_search_nearby(
 // 'rejected' => true when GBIF refused the request (retrying or sample data would not help).
 function gbif_occurrence_request(string $url, float $deadline): array
 {
-    // Try up to 3 times with backoff, within the deadline. GBIF does not compress its
-    // answers (150 records ≈ 1 MB), so on a slow connection a good answer can take 10–20 seconds
-    // to arrive: an attempt is therefore only stopped if GBIF cannot be reached within 10 seconds
-    // or the data stops flowing (under 2 KB/s for 8 seconds), never while it is still arriving.
+    // Try up to 3 times with backoff, within the deadline (settings: gbif_curl_options).
     // (A fixed 15-second cut-off threw away slow but working answers and showed sample data.)
     $lastError = 'No time left for GBIF';
     for ($attempt = 1; $attempt <= 3; $attempt++) {
         $left = (int)floor($deadline - microtime(true));
         if ($left < 3) break;   // not enough time left for a useful attempt
         $ch = curl_init($url);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER   => true,
-            CURLOPT_CONNECTTIMEOUT   => min(10, $left),
-            CURLOPT_LOW_SPEED_LIMIT  => 2048,   // bytes per second…
-            CURLOPT_LOW_SPEED_TIME   => 8,      // …for 8 seconds = stalled
-            CURLOPT_TIMEOUT          => $left,
-            CURLOPT_ENCODING         => '',
-            CURLOPT_USERAGENT        => 'CAPR-F2026-WildlifeTracker/1.0 (student project)',
-            CURLOPT_HTTPHEADER       => ['Accept: application/json'],
-        ]);
+        curl_setopt_array($ch, gbif_curl_options($left));
         $raw  = curl_exec($ch);
         $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $err  = curl_error($ch);

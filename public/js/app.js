@@ -820,7 +820,9 @@ function renderTable(emptyMessage) {
     const note = $('records-note');
     note.hidden = !(total && state.total > total);
     if (!note.hidden) note.textContent = `Showing ${total} of ${state.total.toLocaleString()} records in this area. `
-        + 'To see other animals, tick fewer animal groups or choose more records.';
+        + (state.limit >= 1000
+            ? '1000 is the most one search can show: tick fewer animal groups or choose a smaller radius.'
+            : 'To see other animals, tick fewer animal groups or choose more records.');
     $('page-prev').disabled = state.page === 0;
     $('page-next').disabled = end >= total;
 
@@ -1148,11 +1150,17 @@ document.addEventListener('DOMContentLoaded', () => {
     $('date-from').addEventListener('change', (e) => { state.fromDate = e.target.value; markFiltersChanged(); });
     $('date-to').addEventListener('change', (e) => { state.toDate = e.target.value; markFiltersChanged(); });
 
-    document.querySelectorAll('.chip[data-limit]').forEach(chip => chip.addEventListener('click', () => {
-        document.querySelectorAll('.chip[data-limit]').forEach(c => c.classList.toggle('active', c === chip));
-        state.limit = parseInt(chip.dataset.limit) || 75;
+    // Number of records: the buttons (30, 75, 150, 300) and the slider (30–1000) set the same value
+    const setLimit = (n) => {
+        state.limit = n;
+        document.querySelectorAll('.chip[data-limit]').forEach(c => c.classList.toggle('active', +c.dataset.limit === n));
+        $('limit-range').value = n;
+        setText('limit-value', n);
         markFiltersChanged();
-    }));
+    };
+    document.querySelectorAll('.chip[data-limit]').forEach(chip =>
+        chip.addEventListener('click', () => setLimit(parseInt(chip.dataset.limit) || 75)));
+    $('limit-range').addEventListener('input', (e) => setLimit(parseInt(e.target.value) || 75));
 
     $('apply-btn').addEventListener('click', () => {
         if (isPhoneLayout()) setFiltersOpen(false);   // phones: fold the settings away to show the results
