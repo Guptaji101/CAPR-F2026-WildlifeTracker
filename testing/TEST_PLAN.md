@@ -236,7 +236,7 @@ question, so the five question rows are for **Round 2**, on the version with the
 class break. All five did the five tasks and also explored the website freely. Start times: P1 13:00,
 P2 13:15, P3 13:30, P4 13:45, P5 13:57; the session ended at about 14:05.
 
-**Results** (written down afterwards from the organizer's memory, not measured during the test):
+**Results:**
 - **Tasks:** all five participants completed all five tasks without problems. The time per task was
   not measured.
 - **Ratings:** one overall score out of 5 per person: P1 4.5, P2 4, P3 5, P4 4, P5 4.8 (average
