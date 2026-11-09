@@ -212,23 +212,25 @@ unless the person is completely stuck (then note it).
 | P5 | ✓ | ✓ | ✓ | ✓ | ✓ | No data on the map after a failed search |
 
 Write for each task: **✓** done alone · **~** done with a hint · **✗** not done, plus the time in seconds.
-The table above shows Round 1, written down afterwards; the time per task was not measured.
+The table above shows Round 1. In Round 2 all five again did every task alone (see 6.2). The time per
+task was not measured in either round.
 
 **After the tasks**, ask (1 = strongly disagree, 5 = strongly agree):
 
 | Question | P1 | P2 | P3 | P4 | P5 |
 |---|---|---|---|---|---|
-| The website was easy to use. | 5|5|5|5|5 |
-| I always knew what the website was doing (loading, results, errors). | 4.5|5|5|4 |5
-| The search suggestions helped me. |5 |5 | 5|5| 5|
-| The results were fast enough. |5 | 4.5| 5| 4.5| 5|
-| I would use WildTrack again. | 5|5 |5 |5 | 5|
+| The website was easy to use. | 5 | 5 | 5 | 5 | 5 |
+| I always knew what the website was doing (loading, results, errors). | 4.5 | 5 | 5 | 4 | 5 |
+| The search suggestions helped me. | 5 | 5 | 5 | 5 | 5 |
+| The results were fast enough. | 5 | 4.5 | 5 | 4.5 | 5 |
+| I would use WildTrack again. | 5 | 5 | 5 | 5 | 5 |
+| **Average of the five questions, Round 2** | **4.9** | **4.9** | **5.0** | **4.7** | **5.0** |
 | **Overall score, Round 1** | **4.5** | **4** | **5** | **4** | **4.8** |
 
 And one open question: *"What would you change first?"*
 
-In Round 1 each participant gave one overall score (average 4.46 out of 5), not a score per
-question, so the five question rows are for **Round 2**, on the version with the Round 1 fixes.
+The five question rows are from **Round 2** (9 Nov), on the version with the Round 1 fixes. In
+Round 1 each participant gave only one overall score (average 4.46 out of 5), not a score per question.
 
 ### 6.1 Round 1 results
 
@@ -263,15 +265,30 @@ P2 13:15, P3 13:30, P4 13:45, P5 13:57; the session ended at about 14:05.
 | 11 | Species Profile should show whether a species may go extinct or is increasing | Partly fixed: IUCN Red List status added; population trend is not shown |
 | 12 | Searching a group like reptiles shows only one animal | Fixed: "reptiles" offered one wrong suggestion; it now shows the whole group |
 
+
+### 6.2 Round 2 results
+
+**Who and how:** the same 5 classmates (P1–P5), on 9 Nov 2026 during a class break, on the version
+with the Round 1 fixes. Gupta Aman Kumar opened the website and read out the tasks; no hints were given.
+
+**Results:**
+- **Tasks:** all five participants did all five tasks alone. The time per task was not measured.
+- **Ratings:** each participant scored every question from 1 to 5 (table in section 6). Average per
+  person: P1 4.9, P2 4.9, P3 5.0, P4 4.7, P5 5.0; average of all answers 4.9 out of 5
+  (Round 1: 4.46).
+- **Per question (average):** easy to use 5.0, knew what the website was doing 4.7, suggestions
+  helped 5.0, fast enough 4.8, would use again 5.0. The lowest scores were for knowing what the
+  website was doing and for speed.
+
 ---
 
 ## 7. Summary (status: 9 Nov 2026)
 
 | | Number |
 |---|---|
-| Test cases in this plan | 77 |
-| Test cases run | 73 |
-| Passed | 73 (TC-66 after its re-test) |
+| Test cases in this plan | 86 (TC-01 to TC-77, plus API-01 to API-09) |
+| Test cases run | 82 |
+| Passed | 82 (TC-66 after its re-test) |
 | Failed (bug issues opened) | 1 (TC-66 → bug #13) |
 | Blocked | 0 |
 | Bugs fixed and re-tested | 1 (#13) |
