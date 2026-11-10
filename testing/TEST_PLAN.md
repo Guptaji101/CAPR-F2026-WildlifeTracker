@@ -13,8 +13,8 @@ results in the testing report (Week 12)
 |---|---|---|
 | Place search, Quick Locations, Locate Me, place suggestions | FR-01, FR-11 | TC-01 – TC-10 |
 | Map, base maps, legend | FR-02, FR-08 | TC-11 – TC-14 |
-| Sightings: pins, table, filters, Search button | FR-03 – FR-06 | TC-15 – TC-26 |
-| Species Profile and GBIF link | FR-07, FR-09 | TC-27 – TC-31, TC-75 – TC-76 |
+| Sightings: pins, table, filters, Search button | FR-03 – FR-06 | TC-15 – TC-26, TC-78 – TC-79 |
+| Species Profile and GBIF link | FR-07, FR-09 | TC-27 – TC-31, TC-75 – TC-76, TC-80 |
 | Messages and loading states | FR-10 | TC-32 – TC-36 |
 | Find an Animal | FR-13 | TC-37 – TC-43, TC-69 – TC-72, TC-77 |
 | Animal Encyclopedia and its searches | FR-12 | TC-44 – TC-55, TC-73 – TC-74 |
@@ -285,17 +285,16 @@ with the Round 1 fixes. Gupta Aman Kumar opened the website and read out the tas
 
 ---
 
-## 7. Summary (status: 10 Nov 2026)
+## 7. Summary (status: 10 Nov 2026, final)
 
 | | Number |
 |---|---|
 | Test cases in this plan | 89 (TC-01 to TC-80, plus API-01 to API-09) |
-| Test cases run | 82 |
-| Passed | 82 (TC-66 after its re-test) |
-| Failed (bug issues opened) | 1 (TC-66 → bug #13) |
+| Test cases run | 89 |
+| Passed | 89 (TC-66 and TC-75 after their re-tests) |
+| Failed (bug issues opened) | 2 (TC-66 → bug #13, TC-75 → bug #17) |
 | Blocked | 0 |
-| Bugs fixed and re-tested | 1 (#13) |
-| Pending | 7 (TC-73 to TC-76, Singh Shubham Kumar; TC-78 to TC-80, Paudel Amrit) |
+| Bugs fixed and re-tested | 2 (#13, #17) |
 
 These numbers, the usability results and the most important bugs go into the testing report
 (Week 12).
