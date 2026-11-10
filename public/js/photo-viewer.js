@@ -2,7 +2,7 @@
  * Photo viewer, shared by the Map page and the Animal Encyclopedia (usability test, 31 Oct:
  * users wanted to click a photo to see it large and to browse more photos of the animal).
  *
- * openPhotoViewer({ url, title, speciesKey }) shows the photo large in a dialog, with more photos
+ * openPhotoViewer({ url, title, speciesKey, credit, license, record }) shows the photo large in a dialog, with more photos
  * of the species underneath (api/photos.php). A click on a small photo shows it large; the arrow
  * buttons or the arrow keys show the previous / next photo; Esc or a click outside closes it.
  */
@@ -54,9 +54,10 @@ function viewerDialog() {
     return dlg;
 }
 
-async function openPhotoViewer({ url, title, speciesKey }) {
+async function openPhotoViewer({ url, title, speciesKey, credit, license, record }) {
     const dlg = viewerDialog();
-    Object.assign(viewer, { photos: url ? [{ url }] : [], index: 0, speciesKey });
+    const first = { url, credit, license, record };   // the clicked photo, with its credit if we have it (#17)
+    Object.assign(viewer, { photos: url ? [first] : [], index: 0, speciesKey });
     document.getElementById('viewer-title').textContent = title || 'Photos';
     document.getElementById('viewer-img').removeAttribute('src');   // no photo of the animal opened before
     showViewerPhoto(0);
@@ -73,7 +74,7 @@ async function openPhotoViewer({ url, title, speciesKey }) {
 
     // The photo that was clicked stays first (with its credit if GBIF has it); the others follow
     const same = p => url && viewerSize(p.url, 'large') === viewerSize(url, 'large');
-    viewer.photos = url ? [more.find(same) || { url }, ...more.filter(p => !same(p))] : more;
+    viewer.photos = url ? [more.find(same) || first, ...more.filter(p => !same(p))] : more;
     showViewerPhoto(viewer.index);
     showThumbs(viewer.photos.length > 1 ? '' : 'No other photos of this animal on GBIF yet.');
 }

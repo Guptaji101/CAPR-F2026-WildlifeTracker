@@ -47,8 +47,9 @@ if ($from && $to && $from > $to) {
 // The same search in the last hour (same place, radius, groups, dates and limit) is answered
 // from the cache: GBIF needs 2–5 seconds, the cache a few milliseconds. New records reach GBIF
 // slowly, so an hour-old answer is still up to date.
-// ("sightings3": newest records first and fuller place names since 9 Nov; older cached answers are not reused)
-$cacheKey = 'sightings3:' . json_encode([$lat, $lng, $radius, $taxa, $from, $to, $limit]);
+// ("sightings4": newest records first and fuller place names since 9 Nov, photo credit since 10 Nov;
+// older cached answers are not reused)
+$cacheKey = 'sightings4:' . json_encode([$lat, $lng, $radius, $taxa, $from, $to, $limit]);
 if ($cached = cache_get($cacheKey, 3600)) {
     echo json_encode($cached);
     exit;
@@ -90,6 +91,9 @@ $results = array_map(fn($r) => [
     'taxonGroup'     => gbif_class($r) ?? $r['phylum'] ?? null,   // decides the group, color and icon
     'phylum'         => $r['phylum'] ?? null,
     'image'          => $r['media'][0]['identifier'] ?? null,
+    // who took the photo and its licence, shown in the photo viewer (#17)
+    'imageCredit'    => $r['media'][0]['rightsHolder'] ?? $r['media'][0]['creator'] ?? $r['recordedBy'] ?? null,
+    'imageLicense'   => short_license($r['media'][0]['license'] ?? null),
     'lat'            => $r['decimalLatitude'] ?? null,
     'lng'            => $r['decimalLongitude'] ?? null,
     'eventDate'      => $r['eventDate'] ?? null,
@@ -106,4 +110,4 @@ if (!empty($data['fallback'])) {
 } else {
     cache_put($cacheKey, $response);   // sample data is never cached: the next search tries GBIF again
 }
-echo json_encode($response);
+echo json_encode($response);

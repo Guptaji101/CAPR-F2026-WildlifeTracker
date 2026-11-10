@@ -29,13 +29,6 @@ if ($cached = cache_get($cacheKey, 86400)) {
     exit;
 }
 
-// "http://creativecommons.org/licenses/by-nc/4.0/" -> "CC BY-NC"; public domain -> "CC0"
-function short_license(?string $url): string {
-    if (!$url) return '';
-    if (preg_match('~/(publicdomain|zero)/~', $url)) return 'CC0';
-    return preg_match('~/licenses/([a-z\-]+)/~', $url, $m) ? 'CC ' . strtoupper($m[1]) : '';
-}
-
 $photos = [];
 // Photos taken in South Korea first; if there are too few, photos from anywhere
 foreach ([['country' => 'KR'], []] as $where) {

@@ -289,3 +289,10 @@ function gbif_get(string $url, ?int &$status = null): ?array {
     if ($raw === false || $code !== 200) return null;
     return json_decode($raw, true);
 }
+
+// "http://creativecommons.org/licenses/by-nc/4.0/" -> "CC BY-NC"; public domain -> "CC0"
+function short_license(?string $url): string {
+    if (!$url) return '';
+    if (preg_match('~/(publicdomain|zero)/~', $url)) return 'CC0';
+    return preg_match('~/licenses/([a-z\-]+)/~', $url, $m) ? 'CC ' . strtoupper($m[1]) : '';
+}

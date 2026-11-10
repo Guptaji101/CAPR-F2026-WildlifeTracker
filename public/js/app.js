@@ -1044,6 +1044,9 @@ function openProfilePhotos() {
         url: img.style.display === 'block' ? img.src : null,   // the photo shown, if it loaded
         title: $('profile-name').textContent,
         speciesKey: record.speciesKey,
+        credit: record.imageCredit,      // the sighting's own photographer and licence (#17)
+        license: record.imageLicense,
+        record: record.key,
     });
 }
 
