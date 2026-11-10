@@ -93,6 +93,8 @@ Unless a step says otherwise, start on the Map page, with the default search (Bu
 | TC-24 | Wrong date order | From = 2025-06-01, To = 2025-01-01, search | Message 'The "From" date must be on or before the "To" date'; no search | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost |
 | TC-25 | Number of records | Under **Number of Records** click **150**, then **Search sightings** | Table shows "… of 150" (if the area has that many); above the table "Showing 150 of N records in this area" when the area has more | Pass | Paudel Amrit | 2026-11-04 | Re-test: Live site (wildtrack-lq88.onrender.com), Chrome; Busan 10 km: "Showing 150 of 22068 records". First run Pass on 2026-10-27 with the old Filters dropdown |
 | TC-26 | Number of records visible | On a short window or a laptop screen, look at the sidebar | Locate Me, Search Location, Search Radius, Quick Locations and Number of Records are at the top, none covered by the Search button | Pass | Paudel Amrit | 2026-11-04 | Re-test: Live site (wildtrack-lq88.onrender.com), Chrome; order correct; in a short window the sidebar scrolls and nothing is covered by the Search button. First run Pass on 2026-10-27 |
+| TC-78 | Newest sightings first | Open the Map page (Busan, 10 km, all groups), look at the Date column; then set From = 2024-01-01, To = 2024-12-31 and search | The first row has a recent date (within the last weeks); dates go down from row to row; "Showing 75 of N records" with N about 22,000. With the 2024 dates: all rows in 2024, newest first | | | | Added 9 Nov |
+| TC-79 | Number of records slider | Under the record buttons move the slider to **450**, click **Apply filters & search**; then click **75**; then move the slider to **1000** in Busan with 25 km and search | Slider label and summary say 450; no button is highlighted; 450 records load (within 40 s). Clicking 75 moves the slider back to 75. At 1000: 1000 records load and the note says that 1000 is the most one search can show | | | | Added 9 Nov |
 
 ### 4.4 Species Profile (FR-07, FR-09)
 
@@ -105,6 +107,7 @@ Unless a step says otherwise, start on the Map page, with the default search (Bu
 | TC-31 | Close profile | Click X in the Species Profile (or press Esc) | Selection cleared; "Select a sighting…" shown | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost |
 | TC-75 | Photo viewer | Select a sighting, click its photo (or **More photos**); use the arrows and the → key; press Esc | Photo opens large with up to 12 more photos below, each with photographer and licence; arrows change the photo; Esc closes only the viewer (profile stays); the profile also shows the IUCN status | | | | Added 31 Oct (usability test) |
 | TC-76 | Photo viewer in the Encyclopedia | Open a card, click its photo | The viewer opens over the card with more photos; closing it leaves the card open | | | | Added 31 Oct |
+| TC-80 | Place and record date in the profile | Open the Map page, select sightings in the first table rows | Location column and Species Profile show a place such as "Choryang-dong, Busan" where the record has one (only the country, in grey, where it has none); the profile shows **Record Last Updated** with a date | | | | Added 9 Nov |
 
 ### 4.5 Messages and loading (FR-10)
 
@@ -282,17 +285,17 @@ with the Round 1 fixes. Gupta Aman Kumar opened the website and read out the tas
 
 ---
 
-## 7. Summary (status: 9 Nov 2026)
+## 7. Summary (status: 10 Nov 2026)
 
 | | Number |
 |---|---|
-| Test cases in this plan | 86 (TC-01 to TC-77, plus API-01 to API-09) |
+| Test cases in this plan | 89 (TC-01 to TC-80, plus API-01 to API-09) |
 | Test cases run | 82 |
 | Passed | 82 (TC-66 after its re-test) |
 | Failed (bug issues opened) | 1 (TC-66 → bug #13) |
 | Blocked | 0 |
 | Bugs fixed and re-tested | 1 (#13) |
-| Pending | 4 (TC-73 to TC-76, Singh Shubham Kumar) |
+| Pending | 7 (TC-73 to TC-76, Singh Shubham Kumar; TC-78 to TC-80, Paudel Amrit) |
 
 These numbers, the usability results and the most important bugs go into the testing report
 (Week 12).
