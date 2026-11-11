@@ -21,6 +21,7 @@ $page = 'map';
 
     <!-- ?v=file time makes browsers fetch the new file after every change -->
     <link rel="stylesheet" href="css/style.css?v=<?= filemtime(__DIR__ . '/css/style.css') ?>">
+    <link rel="stylesheet" href="css/depth3d.css?v=<?= filemtime(__DIR__ . '/css/depth3d.css') ?>">
 </head>
 <body>
 
@@ -240,6 +241,7 @@ $page = 'map';
     <div class="toast-container" id="toast-container" role="status" aria-live="polite"></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="js/tilt3d.js?v=<?= filemtime(__DIR__ . '/js/tilt3d.js') ?>"></script>
     <script src="js/photo-viewer.js?v=<?= filemtime(__DIR__ . '/js/photo-viewer.js') ?>"></script>
     <script src="js/app.js?v=<?= filemtime(__DIR__ . '/js/app.js') ?>"></script>
 </body>

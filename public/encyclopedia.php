@@ -64,6 +64,7 @@ $tree = [
     <!-- ?v=file time makes browsers fetch the new file after every change -->
     <link rel="stylesheet" href="css/style.css?v=<?= filemtime(__DIR__ . '/css/style.css') ?>">
     <link rel="stylesheet" href="css/encyclopedia.css?v=<?= filemtime(__DIR__ . '/css/encyclopedia.css') ?>">
+    <link rel="stylesheet" href="css/depth3d.css?v=<?= filemtime(__DIR__ . '/css/depth3d.css') ?>">
 </head>
 <body>
 
@@ -157,6 +158,7 @@ $tree = [
         <div id="species-detail"></div>
     </dialog>
 
+    <script src="js/tilt3d.js?v=<?= filemtime(__DIR__ . '/js/tilt3d.js') ?>"></script>
     <script src="js/photo-viewer.js?v=<?= filemtime(__DIR__ . '/js/photo-viewer.js') ?>"></script>
     <script src="js/encyclopedia.js?v=<?= filemtime(__DIR__ . '/js/encyclopedia.js') ?>"></script>
 </body>
