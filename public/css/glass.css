@@ -1,0 +1,124 @@
+/* ============================================================================
+   glass.css – frosted-glass look for WildTrack
+   Loaded after depth3d.css. The page gets a soft colored background, and the panels are
+   see-through white with a blur, so the colors and the map shine through them.
+   Text stays dark on a mostly white glass, so it is as easy to read as before.
+   Browsers without backdrop-filter get almost solid white panels instead.
+   ============================================================================ */
+
+:root {
+    --glass:        rgba(255, 255, 255, 0.66);   /* panels: sidebar, cards, profile */
+    --glass-strong: rgba(255, 255, 255, 0.82);   /* things you read a lot: lists, dialogs */
+    --glass-light:  rgba(255, 255, 255, 0.52);   /* small things on top of the map */
+    --glass-edge:   rgba(255, 255, 255, 0.75);   /* the bright rim of the glass */
+    --glass-blur:   blur(16px) saturate(170%);
+}
+
+/* ---- Soft colored background behind the glass (green, teal and a little sun) ---- */
+body {
+    background:
+        radial-gradient(1100px 620px at 8% -8%, rgba(34, 197, 94, 0.20), transparent 60%),
+        radial-gradient(900px 600px at 100% 10%, rgba(20, 184, 166, 0.18), transparent 60%),
+        radial-gradient(800px 560px at 55% 110%, rgba(250, 204, 21, 0.14), transparent 60%),
+        linear-gradient(180deg, #eef6f1 0%, #f3f7f6 100%);
+    background-attachment: fixed;
+}
+
+/* ---- Glass panels ---- */
+.topbar,
+.sidebar,
+.search-action,
+.card,
+.sp-card,
+.grid-message {
+    background-color: var(--glass);
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
+    border-color: var(--glass-edge);
+}
+.topbar  { border-bottom: 1px solid var(--glass-edge); box-shadow: 0 4px 18px rgba(15, 23, 42, 0.05); }
+.sidebar { border-right: 1px solid var(--glass-edge); }
+.search-action { background-color: rgba(255, 255, 255, 0.72); border-top-color: var(--glass-edge); }
+.card, .sp-card { border: 1px solid var(--glass-edge); }
+
+/* A thin light line along the top edge, like light on the edge of a glass pane */
+.card, .sp-card { box-shadow: var(--shadow-3d, 0 8px 24px rgba(15, 23, 42, 0.08)), inset 0 1px 0 rgba(255, 255, 255, 0.95); }
+
+/* The list of sightings and the profile facts are read a lot: a bit more solid */
+.table-card, .profile { background-color: var(--glass-strong); }
+.sightings th { background: rgba(248, 250, 252, 0.7); }
+.taxonomy { background: rgba(248, 250, 252, 0.65); }
+.records-note { background: rgba(220, 252, 231, 0.65); border: 1px solid rgba(255, 255, 255, 0.7); }
+
+/* Text boxes and chips: glass too */
+.search-box, .date-range input, .chip:not(.active), .btn-view, .pager button {
+    background-color: rgba(255, 255, 255, 0.7);
+}
+
+/* ---- Glass on top of the map: the legend, map style buttons and zoom buttons ---- */
+.map-legend, .basemap-tabs, .map-controls button {
+    background-color: var(--glass-light);
+    -webkit-backdrop-filter: blur(10px) saturate(180%);
+    backdrop-filter: blur(10px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.7);
+}
+.map-legend h4, .legend-item { color: var(--ink); }
+.map-controls button:hover { background-color: rgba(255, 255, 255, 0.85); }
+.radius-label { -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+
+/* ---- Lists of suggestions open over other things: almost solid, so they are easy to read ---- */
+.place-suggest, .animal-suggest, .suggest-list, [role="listbox"] {
+    background-color: rgba(255, 255, 255, 0.9);
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
+    backdrop-filter: blur(18px) saturate(160%);
+}
+
+/* ---- Dialogs (About, animal page): frosted glass over a blurred page ---- */
+dialog:not(.photo-viewer) {
+    background-color: var(--glass-strong);
+    -webkit-backdrop-filter: blur(22px) saturate(170%);
+    backdrop-filter: blur(22px) saturate(170%);
+    border: 1px solid var(--glass-edge);
+}
+dialog:not(.photo-viewer)::backdrop {
+    background: rgba(15, 23, 42, 0.28);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+}
+/* The photo viewer stays dark, with dark glass around the photo */
+.photo-viewer {
+    background-color: rgba(15, 23, 42, 0.78);
+    -webkit-backdrop-filter: blur(20px) saturate(140%);
+    backdrop-filter: blur(20px) saturate(140%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.photo-viewer::backdrop { -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+
+/* ---- Messages at the top: colored glass ---- */
+.toast { -webkit-backdrop-filter: blur(12px) saturate(160%); backdrop-filter: blur(12px) saturate(160%); }
+
+/* ---- Encyclopedia: the group tree and the active group ---- */
+.tree-item.active, .top-nav a.active {
+    background-color: rgba(220, 252, 231, 0.75);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 2px 6px rgba(21, 128, 61, 0.10);
+}
+.tree-item:hover, .top-nav a:hover { background-color: rgba(240, 253, 244, 0.7); }
+
+/* ---- Browsers without the blur: nearly solid white, so text never sits on a busy background ---- */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .topbar, .sidebar, .search-action, .card, .sp-card, .grid-message,
+    .map-legend, .basemap-tabs, .map-controls button, dialog:not(.photo-viewer) {
+        background-color: rgba(255, 255, 255, 0.95);
+    }
+    .photo-viewer { background-color: rgba(15, 23, 42, 0.95); }
+}
+
+/* ---- People who ask their system for more contrast get solid panels ---- */
+@media (prefers-contrast: more) {
+    .topbar, .sidebar, .search-action, .card, .sp-card, .map-legend, .basemap-tabs,
+    .map-controls button, dialog:not(.photo-viewer) {
+        background-color: #fff;
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
+    }
+}

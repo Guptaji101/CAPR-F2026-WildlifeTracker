@@ -22,6 +22,7 @@ $page = 'map';
     <!-- ?v=file time makes browsers fetch the new file after every change -->
     <link rel="stylesheet" href="css/style.css?v=<?= filemtime(__DIR__ . '/css/style.css') ?>">
     <link rel="stylesheet" href="css/depth3d.css?v=<?= filemtime(__DIR__ . '/css/depth3d.css') ?>">
+    <link rel="stylesheet" href="css/glass.css?v=<?= filemtime(__DIR__ . '/css/glass.css') ?>">
 </head>
 <body>
 
