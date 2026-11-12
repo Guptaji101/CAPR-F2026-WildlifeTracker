@@ -1,0 +1,80 @@
+/* Sliding option rows (segmented.js), like an iPhone segmented control: one track, and a green
+   thumb under the chosen option that slides to the next choice. Loaded after style.css,
+   depth3d.css and glass.css, so the buttons inside lose their own pill, shadow and lift. */
+.segmented {
+    position: relative;
+    display: flex;
+    gap: 0;
+    padding: 3px;
+    border-radius: 999px;
+    background-color: rgba(15, 23, 42, 0.07);
+    box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.10);
+    touch-action: pan-y;       /* sideways sliding is ours; scrolling the page still works */
+    user-select: none;
+    -webkit-user-select: none;
+    cursor: pointer;
+}
+.segmented > .seg-thumb {
+    position: absolute;
+    top: 3px;
+    bottom: 3px;
+    left: 3px;
+    width: 0;
+    border-radius: 999px;
+    background: var(--green-700);
+    background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0) 60%);
+    box-shadow: 0 2px 6px rgba(21, 128, 61, 0.35);
+    pointer-events: none;
+    z-index: 0;
+}
+.segmented.seg-ready > .seg-thumb {
+    transition: transform .3s cubic-bezier(.3, .7, .2, 1), width .3s cubic-bezier(.3, .7, .2, 1), box-shadow .2s;
+}
+/* While the button is held, the thumb follows a little faster and looks lifted */
+.segmented.dragging > .seg-thumb {
+    transition-duration: .15s;
+    box-shadow: 0 4px 14px rgba(21, 128, 61, 0.45);
+}
+.segmented.no-active > .seg-thumb { opacity: 0; }
+
+.segmented > button {
+    position: relative;
+    z-index: 1;
+    flex: 1;
+    border: 0 !important;
+    border-radius: 999px !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    transform: none !important;
+    color: var(--text);
+    font-weight: 500;
+    transition: color .2s;
+    cursor: pointer;
+}
+.segmented > button.active { color: var(--white); font-weight: 600; }
+/* While sliding, the option under the finger is the white one */
+.segmented.dragging > button.active:not(.seg-over) { color: var(--text); font-weight: 500; }
+.segmented.dragging > button.seg-over { color: var(--white); font-weight: 600; }
+.segmented > button:focus-visible { outline: 2px solid var(--green-600); outline-offset: 1px; }
+
+/* The map style tabs keep their place, size and glass background on the map */
+.basemap-tabs.segmented { border-radius: 12px; }
+.basemap-tabs.segmented > .seg-thumb, .basemap-tabs.segmented > button { border-radius: 9px !important; }
+.basemap-tabs.segmented > button + button { border-left: 0; }
+/* The box ends right after "Topographic", as before: it is exactly as wide as its three tabs */
+.basemap-tabs.segmented { width: max-content; right: auto; }
+.basemap-tabs.segmented > button { flex: 0 0 auto; }
+
+/* "Did you mean…" above the similar names after an animal search that found nothing */
+.suggest-title {
+    padding: 8px 12px 4px;
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: .03em;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .segmented.seg-ready > .seg-thumb { transition: none; }
+}

@@ -69,7 +69,10 @@ if (savedSearch && Number.isFinite(savedSearch.lat) && Number.isFinite(savedSear
 state.speciesFilter = null;
 function showSpeciesFilter() {
     $('species-filter').hidden = !state.speciesFilter;
-    if (state.speciesFilter) setText('species-filter-name', state.speciesFilter.name);
+    if (state.speciesFilter) {
+        setText('species-filter-name', state.speciesFilter.name);
+        $('species-filter-name').title = state.speciesFilter.allNames || '';   // the whole list on hover
+    }
 }
 function clearSpeciesFilter() {
     state.speciesFilter = null;
@@ -236,20 +239,24 @@ function updateFiltersSummary() {
 }
 
 // --- Search button and summary --------------------------------------------------------------
-// Filter changes wait for the "Search sightings" button, so the user decides when to search
-// and always sees what will be searched, for example "Busan · 25 km · Birds, Mammals · max 75".
+// Every setting searches at once (11 Nov): radius, number of records, groups and dates. A short
+// pause lets the user tick several groups or click through the options without a search for
+// every click. "Search sightings" stays to search again; the summary above it shows what is
+// shown, for example "Busan · 25 km · Birds, Mammals · max 75".
 state.filtersChanged = false;
+let searchTimer = null;
 
-function markFiltersChanged() {
-    state.filtersChanged = true;
+function scheduleSearch(delay = 300) {
     updateSearchSummary();
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(loadSightings, delay);
 }
 
 function updateSearchSummary() {
     const typed = $('location-input').value.trim();
     const place = (typed || state.currentLocationName || 'Busan').split(',')[0];
     const allGroups = state.groups.size === Object.keys(GROUPS).length;
-    const what = state.speciesFilter ? `only ${state.speciesFilter.name}`
+    const what = state.speciesFilter ? `only ${state.speciesFilter.query ? `"${state.speciesFilter.query}"` : state.speciesFilter.name}`
         : allGroups ? 'all animals'
         : state.groups.size ? [...state.groups].map(g => GROUPS[g].label).join(', ')
         : 'no group ticked';
@@ -459,36 +466,155 @@ function followLiveLocation() {
 }
 
 // =============================================================================
-// Find an Animal: typed name -> GBIF species key (api/animal.php) -> species filter
+// Find an Animal: the typed keyword -> every animal it fits -> sightings filter
 // =============================================================================
+// The search keeps the user's keyword (11 Nov). Enter never swaps it for another name (before,
+// "pi" became "Central Asian Pitviper"): it shows every animal whose English, scientific or
+// Korean name has a word starting with the keyword, in any animal group ("boar": Wild boar,
+// "tiger": tiger, tiger shark, tiger moth…; "고라니": water deer). Only when nothing fits does it
+// say "not found", and then it offers similar names (also for small typos).
 async function findAnimal() {
     const query = $('animal-input').value.trim();
     hideSuggestions();
     if (!query) {
-        showToast('Type an animal name, for example "water deer" or "Pica pica"', 'error');
+        showToast('Type an animal name, for example "water deer", "boar" or "고라니"', 'error');
         return;
     }
-
-    // An exact name from the list of Korean animals needs no server request
     await loadAnimalList();
-    const known = animalList.find(a => [a.n, a.s].some(n => n && n.toLowerCase() === query.toLowerCase()));
-    if (known) return showAnimal(listAnimal(known));
     // "reptiles", "birds": one of the six groups
     const group = groupOfWord(query);
     if (group) return showGroup(group);
 
+    const matches = keywordMatches(query);
+    if (matches.length) return showKeyword(query, matches.map(listAnimal));
+
+    // Not in the list of animals recorded in Korea: ask the server (GBIF names, Wikipedia,
+    // Wikidata), but use its answer only if it really fits the keyword, for example a whole kind
+    // ("snake": all snakes). Any other answer is offered as a suggestion, never shown as the result.
     setLoading(true, `Looking up "${query}"...`);
     const animalId = ++state.animalId;   // a newer animal search makes this one out of date
+    let found = null;
     try {
-        const data = await safeJsonFetch(`api/animal.php?q=${encodeURIComponent(query)}`);
-        if (animalId !== state.animalId) return;   // the user already chose another animal
-        showAnimal(data.found);
+        found = (await safeJsonFetch(`api/animal.php?q=${encodeURIComponent(query)}`)).found;
     } catch (err) {
-        if (animalId !== state.animalId) return;
-        console.error(err);
-        setLoading(false);
-        showNoAnimal(err.message);
+        console.warn(err.message);   // "not found" is an answer too
     }
+    if (animalId !== state.animalId) return;   // the user already chose another animal
+    setLoading(false);
+    if (found && fitsKeyword(found, query)) return showKeyword(query, [found]);
+    showNoAnimal(query, found);
+}
+
+// A word of a name starts with the keyword ("boar" fits "Wild boar"); plurals count too
+// ("snakes" fits "snake"). Korean has no spaces between parts of a name, so a Korean keyword may
+// be anywhere in the name ("노루" fits "보노루").
+const HANGUL = /[ㄱ-ㆎ가-힣]/;
+function keywordRegex(query) {
+    const q = query.trim().toLowerCase();
+    const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    if (HANGUL.test(q)) return new RegExp(esc(q));
+    const forms = [...new Set([q, q.replace(/es$/, ''), q.replace(/s$/, '')])].filter(f => f.length >= 2);
+    return new RegExp(`(^|[\\s\\-'/(])(${forms.map(esc).join('|')})`);
+}
+const animalNames = a => [a.n, a.s, ...(a.ko || [])].filter(Boolean);
+// The names people use: English and Korean (the scientific name only if there is no English one)
+const commonNames = a => [a.n || a.s, ...(a.ko || [])].filter(Boolean);
+
+// Every animal of the list that the keyword fits, best-known first (the list's order).
+// Everyday names come first: "hen" finds the Hen Harrier, not also two beetles whose scientific
+// name starts with "Hen…" (Henosepilachna). Only if no everyday name fits are scientific names
+// searched, so "Circus cyaneus" still works.
+function keywordMatches(text) {
+    const q = text.trim();
+    if (!animalList || (q.length < 2 && !HANGUL.test(q))) return [];
+    const re = keywordRegex(q);
+    const fits = names => a => names(a).some(n => re.test(n.toLowerCase()));
+    const common = animalList.filter(fits(commonNames));
+    return common.length ? common : animalList.filter(fits(animalNames));
+}
+
+function fitsKeyword(found, query) {
+    const re = keywordRegex(query);
+    return [found.name, found.scientificName].some(n => n && re.test(n.toLowerCase()));
+}
+
+// Similar names for a keyword that found nothing: the keyword inside a name ("oar" in "boar"),
+// or a word that differs by a letter or two ("bore" -> "boar"). Plus the server's best guess.
+function similarAnimals(query, hint) {
+    const q = query.trim().toLowerCase();
+    const allowed = q.length <= 4 ? 1 : 2;
+    const scored = [];
+    for (const a of animalList || []) {
+        let best = Infinity, same = 0;
+        for (const name of commonNames(a)) {   // everyday names only, as in keywordMatches()
+            const low = name.toLowerCase();
+            // inside a word of an English or Korean name ("oar" in "boar"; "tivi" is not
+            // "Peridea lativitta", which has no English name)
+            if (q.length >= 3 && low.includes(q) && name !== a.s) { best = 0; break; }
+            // the whole name ("wild bore" -> "wild boar"), then each of its words ("bore" -> "boar")
+            for (const w of [low, ...low.split(/[\s\-'/()]+/)]) {
+                if (Math.abs(w.length - q.length) > allowed) continue;
+                const d = editDistance(q, w);
+                let p = 0;
+                while (p < q.length && q[p] === w[p]) p++;   // letters the same from the start
+                if (d < best || (d === best && p > same)) { best = d; same = p; }
+            }
+        }
+        if (best <= allowed) scored.push({ a, best, same });
+    }
+    // Closest first; for the same distance, the name that starts most like the keyword ("magpy":
+    // Magpie before Map). The sort is stable, so best-known first after that.
+    scored.sort((x, y) => x.best - y.best || y.same - x.same);
+    const items = scored.slice(0, 6).map(({ a }) => ({ ...listAnimal(a), sci: a.n ? a.s : '', records: a.r }));
+    if (hint && !items.some(i => i.key === hint.key)) {
+        items.unshift({ key: hint.key, keys: hint.keys, name: hint.name, cls: hint.cls, sci: hint.scientificName || '' });
+    }
+    return items.slice(0, 6);
+}
+
+// How many letters must change to turn one word into the other (Levenshtein distance)
+function editDistance(a, b) {
+    let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+    for (let i = 1; i <= a.length; i++) {
+        const cur = [i];
+        for (let j = 1; j <= b.length; j++) {
+            cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+        }
+        prev = cur;
+    }
+    return prev[b.length];
+}
+
+// Show every animal the keyword fits. The keyword stays in the box as the user typed it, and the
+// groups in which it was found are ticked; unticking one of them leaves its animals out.
+function showKeyword(query, animals) {
+    state.animalId++;   // an animal lookup still running is now out of date
+    const entries = animals.map(a => ({
+        keys: a.keys || [a.key],
+        name: a.group ? `${a.name} (all kinds)` : a.name,
+        group: a.cls && a.cls !== 'Chordata' ? groupOf({ taxonGroup: a.cls }) : null,   // some fish only have "Chordata"
+    }));
+    // The bar names the animals, so it is clear what the keyword found ("tiger": Tiger Keelback,
+    // Tiger Shrike, Asian tiger mosquito); a long list shows the first 3 and "+ N more"
+    const names = entries.map(e => e.name);
+    const label = `"${query}": ${names.slice(0, 3).join(', ')}${names.length > 3 ? ` + ${names.length - 3} more` : ''}`;
+    state.speciesFilter = { query, entries, name: label, allNames: names.join(', ') };
+    showSpeciesFilter();
+    $('animal-input').value = query;
+    hideSuggestions();
+    const groups = new Set(entries.map(e => e.group));
+    setGroups(groups.has(null) ? Object.keys(GROUPS) : [...groups]);
+    history.replaceState(null, '', location.pathname);
+    if (isPhoneLayout()) setFiltersOpen(false);
+    loadSightings();
+}
+
+// The taxon keys the sightings search sends for the animal filter: one species, or every animal
+// a keyword fits within the ticked groups (at most 150, best-known first, to keep the address short)
+function animalFilterKeys() {
+    const f = state.speciesFilter;
+    if (!f.entries) return f.keys || [f.key];
+    return f.entries.filter(e => !e.group || state.groups.has(e.group)).flatMap(e => e.keys).slice(0, 150);
 }
 
 // The word for one of the six groups ("reptiles", "Bird", "fishes"), or null
@@ -517,8 +643,9 @@ function showGroup(groupKey) {
 }
 
 // A failed animal search empties the map and the table, so the pins of an earlier search are
-// not mistaken for results; "Search sightings" brings back all animals of the place.
-function showNoAnimal(message) {
+// not mistaken for results; "Search sightings" brings back all animals of the place. The keyword
+// stays in the box, and similar names are offered under it (only now, never after a found animal).
+function showNoAnimal(query, hint) {
     state.searchId++;   // a sightings search still running is now out of date
     state.speciesFilter = null;
     showSpeciesFilter();
@@ -526,9 +653,14 @@ function showNoAnimal(message) {
     history.replaceState(null, '', location.pathname);
     state.sightings = [];
     state.total = 0;
+    $('animal-input').value = query;
+    const similar = similarAnimals(query, hint);
+    const message = `No animal called "${query}" was found. `
+        + (similar.length ? 'Did you mean one of the names under the box?' : 'Check the spelling, or try the scientific name.');
     renderAll(message);
-    markFiltersChanged();
+    updateSearchSummary();
     showToast(message, 'error');
+    if (similar.length) renderSuggestions(similar, '', 'Did you mean…');
 }
 
 // Filter the map on one species (the same filter the Encyclopedia's "See … on the map" uses),
@@ -558,7 +690,7 @@ let animalList = null;
 let animalListLoading = null;
 function loadAnimalList() {
     // One download, shared by every caller (also when the user types before it has arrived)
-    animalListLoading ??= fetch('data/korea-animals.json')
+    animalListLoading ??= fetch(`data/korea-animals.json?v=${document.querySelector('meta[name=animal-list-version]')?.content || ''}`)
         .then(res => res.json())
         .then(list => { animalList = list; })
         .catch(() => { animalList = []; });   // no list: the box still works with Enter
@@ -568,16 +700,15 @@ function loadAnimalList() {
 const listAnimal = a => ({ key: a.k, name: a.n || a.s, cls: a.c });
 
 // The 6 best-known animals (most records in South Korea; the list is already in that order)
-// whose English or scientific name has a word starting with the typed text: "deer" finds
-// "Chinese Water Deer", "mag" finds "Oriental Magpie", but "pica" does not find "apicalis".
+// that the typed text fits (keywordMatches): "deer" finds "Chinese Water Deer", "mag" finds
+// "Oriental Magpie", "고라" finds the water deer by its Korean name 고라니.
 function matchAnimals(text) {
-    const q = text.trim().toLowerCase();
-    if (q.length < 2 || !animalList) return [];
-    const wordStart = new RegExp(`(^|[\\s\\-'/(])${q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`);
-    return animalList
-        .filter(a => [a.n, a.s].some(n => n && wordStart.test(n.toLowerCase())))
-        .slice(0, 6)
-        .map(a => ({ ...listAnimal(a), sci: a.n ? a.s : '', records: a.r, cls: a.c }));
+    const korean = HANGUL.test(text);
+    const re = korean ? keywordRegex(text) : null;
+    return keywordMatches(text).slice(0, 6).map(a => ({
+        ...listAnimal(a), sci: a.n ? a.s : '', records: a.r, cls: a.c,
+        ko: korean ? (a.ko || []).find(n => re.test(n.toLowerCase())) : '',   // the Korean name that was typed
+    }));
 }
 
 // Typed text in bold inside a name, as in a search engine's suggestions
@@ -590,18 +721,19 @@ function boldMatch(name, text) {
 
 // Draws a list of animals under the box. Every entry is a button: click (or arrow keys + Enter)
 // to show that animal.
-function renderSuggestions(items, typed = '') {
+function renderSuggestions(items, typed = '', title = '') {
     const box = $('animal-suggest');
     if (!items.length) return hideSuggestions();
-    box.innerHTML = items.map((a, i) => {
+    box.innerHTML = (title ? `<div class="suggest-title">${escapeHtml(title)}</div>` : '') + items.map((a, i) => {
         // Group icon from the class; some fish only have "Chordata" in GBIF, so they get a plain paw
         const icon = a.cls && a.cls !== 'Chordata' ? groupIconHtml(groupOf({ taxonGroup: a.cls }), 16) : '<i class="fa-solid fa-paw"></i>';
         const where = a.records ? `${a.records.toLocaleString()} records in Korea` : 'not recorded in Korea';
-        return `<button type="button" role="option" id="suggest-${i}" data-key="${a.key}" data-name="${escapeHtml(a.name)}" data-cls="${escapeHtml(a.cls || '')}"
-                aria-label="${escapeHtml([a.name, a.sci].filter(Boolean).join(', '))}">
+        const keys = (a.keys || [a.key]).join(',');
+        return `<button type="button" role="option" id="suggest-${i}" data-key="${a.key}" data-keys="${keys}" data-name="${escapeHtml(a.name)}" data-cls="${escapeHtml(a.cls || '')}"
+                aria-label="${escapeHtml([a.name, a.ko, a.sci].filter(Boolean).join(', '))}">
             ${icon}
             <span class="suggest-text">
-                <span class="suggest-main">${boldMatch(a.name, typed)}</span>
+                <span class="suggest-main">${boldMatch(a.name, typed)}${a.ko ? ` · ${boldMatch(a.ko, typed)}` : ''}</span>
                 <span class="suggest-sub">${a.sci ? `<i>${boldMatch(a.sci, typed)}</i> · ` : ''}${where}</span>
             </span>
         </button>`;
@@ -694,6 +826,7 @@ function recenterMap() {
 // Sightings: fetching and rendering
 // =============================================================================
 async function loadSightings() {
+    clearTimeout(searchTimer);   // this search replaces one that was waiting to start
     if (state.currentLat === null || state.currentLng === null) return;
 
     if (state.fromDate && state.toDate && state.fromDate > state.toDate) {
@@ -718,7 +851,19 @@ async function loadSightings() {
     // One species (from the Encyclopedia), or the ticked groups. With every group ticked no taxon
     // filter is sent, so all animals are returned.
     if (state.speciesFilter) {
-        url += `&taxa=${(state.speciesFilter.keys || [state.speciesFilter.key]).join(',')}`;
+        const keys = animalFilterKeys();
+        if (!keys.length) {
+            // The keyword's animals are all in groups the user has unticked
+            state.searchId++;
+            state.sightings = [];
+            state.total = 0;
+            const msg = `None of the animals called "${state.speciesFilter.query}" is in the ticked groups. Tick more groups, or show all animals.`;
+            renderAll(msg);
+            showToast(msg, 'error');
+            setLoading(false);
+            return;
+        }
+        url += `&taxa=${keys.join(',')}`;
     } else if (state.groups.size < Object.keys(GROUPS).length) {
         const keys = [...state.groups].flatMap(g => GROUPS[g].keys);
         url += `&taxa=${keys.join(',')}`;
@@ -742,7 +887,9 @@ async function loadSightings() {
         state.total = data.fallback ? 0 : (data.total || 0);   // all records of the area (GBIF count)
         state.page = 0;
         const place = ($('location-input').value || state.currentLocationName || 'this place').split(',')[0];
-        const noAnimal = `No ${state.speciesFilter?.name} sightings within ${state.radiusKm} km of ${place}. Try a larger radius, or show all animals.`;
+        // The message names what the user searched: their keyword ("boar"), or the animal they picked
+        const what = state.speciesFilter?.query ? `"${state.speciesFilter.query}"` : state.speciesFilter?.name;
+        const noAnimal = `No sightings of ${what} within ${state.radiusKm} km of ${place}. Try a larger radius, or show all animals.`;
         renderAll(state.speciesFilter ? noAnimal : undefined);
         // The table is below the map, so a filtered search with no results also shows a message on top
         if (state.speciesFilter && !state.sightings.length && !data.fallback) showToast(noAnimal, 'error');
@@ -1126,7 +1273,8 @@ document.addEventListener('DOMContentLoaded', () => {
     $('animal-suggest').addEventListener('mousedown', (e) => e.preventDefault());   // keep the focus in the box
     $('animal-suggest').addEventListener('click', (e) => {
         const btn = e.target.closest('button');
-        if (btn) showAnimal({ key: Number(btn.dataset.key), name: btn.dataset.name, cls: btn.dataset.cls || null });
+        if (btn) showAnimal({ key: Number(btn.dataset.key), keys: btn.dataset.keys.split(',').map(Number),
+            name: btn.dataset.name, cls: btn.dataset.cls || null });
     });
     $('filters-toggle').addEventListener('click', () => setFiltersOpen(!$('layout').classList.contains('filters-open')));
     $('locate-btn').addEventListener('click', useCurrentLocation);
@@ -1134,36 +1282,40 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.chip[data-place]').forEach(chip =>
         chip.addEventListener('click', () => quickSelect(chip.dataset.place, chip)));
 
-    // Filters: a change is only remembered (and shown in the summary); the search runs when the
-    // user clicks "Search sightings". The radius circle changes at once, so the user sees the area.
+    // Filters: every change searches at once (after a short pause, see scheduleSearch). The radius
+    // circle changes immediately, so the user sees the area while the search runs.
     document.querySelectorAll('.chip[data-radius]').forEach(chip => chip.addEventListener('click', () => {
         document.querySelectorAll('.chip[data-radius]').forEach(c => c.classList.toggle('active', c === chip));
         state.radiusKm = parseFloat(chip.dataset.radius) || 10;
         updateRadiusCircle();
-        markFiltersChanged();
+        scheduleSearch(300);
     }));
 
     $('group-list').addEventListener('change', (e) => {
-        if (state.speciesFilter) clearSpeciesFilter();
+        // A keyword stays: the ticked groups only decide which of its animals are shown.
+        // A single species from the Encyclopedia ends when the groups change.
+        if (state.speciesFilter && !state.speciesFilter.entries) clearSpeciesFilter();
         if (e.target.checked) state.groups.add(e.target.value);
         else state.groups.delete(e.target.value);
-        markFiltersChanged();
+        scheduleSearch(600);   // time to tick several groups
     });
 
-    $('date-from').addEventListener('change', (e) => { state.fromDate = e.target.value; markFiltersChanged(); });
-    $('date-to').addEventListener('change', (e) => { state.toDate = e.target.value; markFiltersChanged(); });
+    $('date-from').addEventListener('change', (e) => { state.fromDate = e.target.value; scheduleSearch(400); });
+    $('date-to').addEventListener('change', (e) => { state.toDate = e.target.value; scheduleSearch(400); });
 
-    // Number of records: the buttons (30, 75, 150, 300) and the slider (30–1000) set the same value
-    const setLimit = (n) => {
+    // Number of records: the buttons (30, 75, 150, 300) and the slider (30–1000) set the same value.
+    // A button searches at once; the slider searches when it is let go.
+    const setLimit = (n, search = true) => {
         state.limit = n;
         document.querySelectorAll('.chip[data-limit]').forEach(c => c.classList.toggle('active', +c.dataset.limit === n));
         $('limit-range').value = n;
         setText('limit-value', n);
-        markFiltersChanged();
+        if (search) scheduleSearch(250); else updateSearchSummary();
     };
     document.querySelectorAll('.chip[data-limit]').forEach(chip =>
         chip.addEventListener('click', () => setLimit(parseInt(chip.dataset.limit) || 75)));
-    $('limit-range').addEventListener('input', (e) => setLimit(parseInt(e.target.value) || 75));
+    $('limit-range').addEventListener('input', (e) => setLimit(parseInt(e.target.value) || 75, false));
+    $('limit-range').addEventListener('change', (e) => setLimit(parseInt(e.target.value) || 75));
 
     $('apply-btn').addEventListener('click', () => {
         if (isPhoneLayout()) setFiltersOpen(false);   // phones: fold the settings away to show the results

@@ -74,8 +74,25 @@ foreach (array_chunk($counts, 25) as $n => $chunk) {
     echo '.', ($n + 1) % 20 ? '' : " " . count($animals) . "\n";
 }
 
+// 2b. Korean names (for example 고라니 for the water deer), so the search also works in Korean.
+//     GBIF's species search cannot find Korean names, but each species' list of names has them.
+echo "\nKorean names";
+foreach (array_chunk(array_keys($animals), 25) as $n => $chunk) {
+    $names = get_many(array_map(fn($i) => GBIF . '/species/' . $animals[$i]['k'] . '/vernacularNames?limit=200', $chunk));
+    foreach ($chunk as $j => $i) {
+        $ko = [];
+        foreach ($names[$j]['results'] ?? [] as $v) {
+            $name = trim($v['vernacularName'] ?? '');
+            if ($name !== '' && (($v['language'] ?? '') === 'kor' || preg_match('/\p{Hangul}/u', $name))) $ko[$name] = true;
+        }
+        if ($ko) $animals[$i]['ko'] = array_slice(array_keys($ko), 0, 4);   // a few names are enough
+    }
+    echo '.';
+}
+
 // 3. Save (most records first, as GBIF returned them)
 if (!is_dir(dirname(OUT))) mkdir(dirname(OUT), 0777, true);
 file_put_contents(OUT, json_encode($animals, JSON_UNESCAPED_UNICODE));
-printf("\nSaved %d animals (%d with an English name) to %s (%d KB)\n",
-    count($animals), count(array_filter($animals, fn($a) => $a['n'])), realpath(OUT), filesize(OUT) / 1024);
+printf("\nSaved %d animals (%d with an English name, %d with a Korean name) to %s (%d KB)\n",
+    count($animals), count(array_filter($animals, fn($a) => $a['n'])), count(array_filter($animals, fn($a) => !empty($a['ko']))),
+    realpath(OUT), filesize(OUT) / 1024);

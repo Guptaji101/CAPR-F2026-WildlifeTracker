@@ -7,6 +7,8 @@ $page = 'map';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- version of the animal list, so browsers load a rebuilt list at once (like the CSS/JS links) -->
+    <meta name="animal-list-version" content="<?= filemtime(__DIR__ . '/data/korea-animals.json') ?>">
     <title>WildTrack &mdash; Wildlife Sighting Mapping & Species Distribution Tracker</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -23,6 +25,7 @@ $page = 'map';
     <link rel="stylesheet" href="css/style.css?v=<?= filemtime(__DIR__ . '/css/style.css') ?>">
     <link rel="stylesheet" href="css/depth3d.css?v=<?= filemtime(__DIR__ . '/css/depth3d.css') ?>">
     <link rel="stylesheet" href="css/glass.css?v=<?= filemtime(__DIR__ . '/css/glass.css') ?>">
+    <link rel="stylesheet" href="css/segmented.css?v=<?= filemtime(__DIR__ . '/css/segmented.css') ?>">
 </head>
 <body>
 
@@ -245,5 +248,6 @@ $page = 'map';
     <script src="js/tilt3d.js?v=<?= filemtime(__DIR__ . '/js/tilt3d.js') ?>"></script>
     <script src="js/photo-viewer.js?v=<?= filemtime(__DIR__ . '/js/photo-viewer.js') ?>"></script>
     <script src="js/app.js?v=<?= filemtime(__DIR__ . '/js/app.js') ?>"></script>
+    <script src="js/segmented.js?v=<?= filemtime(__DIR__ . '/js/segmented.js') ?>"></script>
 </body>
 </html>

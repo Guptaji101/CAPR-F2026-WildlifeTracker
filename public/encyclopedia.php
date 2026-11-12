@@ -54,6 +54,8 @@ $tree = [
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- version of the animal list, so browsers load a rebuilt list at once (like the CSS/JS links) -->
+    <meta name="animal-list-version" content="<?= filemtime(__DIR__ . '/data/korea-animals.json') ?>">
     <title>Animal Encyclopedia &mdash; WildTrack</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">

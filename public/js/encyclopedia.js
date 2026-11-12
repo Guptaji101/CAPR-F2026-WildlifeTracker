@@ -229,7 +229,7 @@ async function openSpecies(key, records) {
 // searched in the browser, so suggestions appear while typing without asking the server.
 let animalList = null, animalListLoading = null;
 function loadAnimalList() {
-    animalListLoading ??= fetch('data/korea-animals.json').then(r => r.json())
+    animalListLoading ??= fetch(`data/korea-animals.json?v=${document.querySelector('meta[name=animal-list-version]')?.content || ''}`).then(r => r.json())
         .then(list => { animalList = list; }).catch(() => { animalList = []; });
     return animalListLoading;
 }
@@ -243,13 +243,17 @@ function groupOfAnimal(a) {
 const groupButton = key => document.querySelector(`.tree-item[data-key="${key}"]`);
 
 // The 8 best-known animals (most records first; the list is in that order) whose English or
-// scientific name has a word starting with the typed text; only one group if `group` is given
+// scientific name has a word starting with the typed text, or whose Korean name contains it
+// ("고라니": water deer; 11 Nov); only one group if `group` is given
+const HANGUL = /[ㄱ-ㆎ가-힣]/;
 function matchAnimals(text, group = null) {
     const q = text.trim().toLowerCase();
-    if (q.length < 2 || !animalList) return [];
-    const wordStart = new RegExp(`(^|[\\s\\-'/(])${q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`);
+    const korean = HANGUL.test(q);
+    if ((q.length < 2 && !korean) || !animalList) return [];
+    const esc = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const wordStart = new RegExp(korean ? esc : `(^|[\\s\\-'/(])${esc}`);
     return animalList
-        .filter(a => [a.n, a.s].some(n => n && wordStart.test(n.toLowerCase())))
+        .filter(a => [a.n, a.s, ...(a.ko || [])].some(n => n && wordStart.test(n.toLowerCase())))
         .map(a => ({ ...a, g: groupOfAnimal(a) }))
         // In a group: only that group. At the top: all animals, also the few without a group in the
         // tree (millipedes, barnacles…): their card opens without changing the group.
@@ -318,7 +322,7 @@ async function searchAll() {
     const typed = $('ency-search-input').value.trim();
     if (!typed) return;
     await loadAnimalList();
-    const exact = animalList.find(a => [a.n, a.s].some(n => n && n.toLowerCase() === typed.toLowerCase()));
+    const exact = animalList.find(a => [a.n, a.s, ...(a.ko || [])].some(n => n && n.toLowerCase() === typed.toLowerCase()));
     if (exact) return openAnimal(exact.k, groupOfAnimal(exact), exact.r);
     const groupBtn = groupByWord(typed);
     if (groupBtn) { hideList('ency-search-input', 'ency-suggest'); return groupBtn.click(); }
