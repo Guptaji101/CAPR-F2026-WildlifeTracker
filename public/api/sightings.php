@@ -56,8 +56,9 @@ if ($from && $to && $from > $to) {
 // slowly (days after the sighting), so a 6-hour-old answer is still up to date. (Was 1 hour
 // until 16 Nov: most visitors then waited for GBIF, because the keep-awake job runs only every
 // few hours.)
-// ("sightings5": cleaner place names since 16 Nov; older cached answers are not reused)
-$cacheKey = 'sightings5:' . json_encode([$lat, $lng, $radius, $taxa, $from, $to, $limit]);
+// ("sightings6": cleaner place names and no records with flagged coordinates since 16 Nov;
+// older cached answers are not reused)
+$cacheKey = 'sightings6:' . json_encode([$lat, $lng, $radius, $taxa, $from, $to, $limit]);
 if ($cached = cache_get($cacheKey, 6 * 3600)) {
     echo json_encode($cached);
     exit;

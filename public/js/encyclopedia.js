@@ -57,17 +57,24 @@ const viewKey = () => state.group + (state.kind ? `:${state.kind.keys}` : '');
 function showIntro(btn, total) {
     const d = btn.dataset;
     const kind = state.kind;   // a searched kind of animal ("Deer"), shown inside its group
-    $('crumbs').textContent = `Animals › ${d.division} › ${d.name}${kind ? ` › ${kind.name}` : ''}`;
-    $('intro-icon').innerHTML = btn.querySelector('.tree-icon').innerHTML;
-    $('intro-icon').style.cssText = `color:${d.color};background:${d.color}1f`;
-    $('intro-name').textContent = kind ? `${kind.name} (all kinds)` : d.name;
+    // Search results across all groups ("Animals called "cat"") are not inside one group: no group
+    // in the crumbs, a search icon, and no group highlighted in the tree (see loadGroup)
+    $('crumbs').textContent = kind?.keyword ? `Animals › Search › ${kind.name}`
+        : `Animals › ${d.division} › ${d.name}${kind ? ` › ${kind.name}` : ''}`;
+    $('intro-icon').innerHTML = kind?.keyword ? '<i class="fa-solid fa-magnifying-glass"></i>' : btn.querySelector('.tree-icon').innerHTML;
+    $('intro-icon').style.cssText = kind?.keyword ? 'color:var(--green-700);background:var(--green-50)' : `color:${d.color};background:${d.color}1f`;
+    // A searched word with several animals ("pige": the pigeons) shows them all (16 Nov)
+    $('intro-name').textContent = kind?.keyword ? `Animals called ${kind.name}` : kind ? `${kind.name} (all kinds)` : d.name;
     $('intro-latin').textContent = kind ? (kind.scientificName || '') : d.latin;
-    $('intro-desc').textContent = kind
+    $('intro-desc').textContent = kind?.keyword
+        ? `Every animal of South Korea whose name fits ${kind.name}, most records first${groupsOf(kind.keys)}. Click a card to read about it, or a group on the left to see the whole group.`
+        : kind
         ? `Every kind of ${kind.name.toLowerCase()} recorded in South Korea (part of the ${d.name.toLowerCase()} group). Click a group on the left to see the whole group again.`
         : d.desc;
-    // The group search names the open group, e.g. "Search insects…"
-    $('group-search-input').placeholder = `Search ${d.name.toLowerCase()}…`;
-    $('group-search-label').textContent = `Search ${d.name.toLowerCase()}`;
+    // The group search names the open group, e.g. "Search insects…"; on search results it only
+    // filters the cards shown (16 Nov)
+    $('group-search-input').placeholder = kind?.keyword ? 'Filter matching animals…' : `Search ${d.name.toLowerCase()}…`;
+    $('group-search-label').textContent = kind?.keyword ? 'Filter matching animals' : `Search ${d.name.toLowerCase()}`;
     $('intro-facts').innerHTML = total === undefined
         ? '<i class="fa-solid fa-spinner fa-spin"></i> Asking GBIF for the most-recorded species…'
         : `<b>${fmt(total)}</b> records in South Korea on GBIF. Below are the most-recorded species in South Korea, most records first.`;
@@ -75,7 +82,8 @@ function showIntro(btn, total) {
 
 async function loadGroup() {
     const btn = currentGroupButton();
-    document.querySelectorAll('.tree-item').forEach(b => b.classList.toggle('active', b === btn));
+    // On search results across groups no group is highlighted (they are not limited to it)
+    document.querySelectorAll('.tree-item').forEach(b => b.classList.toggle('active', b === btn && !state.kind?.keyword));
     history.replaceState(null, '', `#${state.group}`);
     $('tree-current').textContent = btn.dataset.name;
     showIntro(btn);
@@ -104,6 +112,7 @@ async function loadGroup() {
     }
     grid.innerHTML = data.species.map(s => cardHtml(s, null)).join('');
     state.list = data.species;
+    filterCards();   // the box may still hold a word typed before the cards arrived
     if (state.openAfterLoad) {
         openSpecies(state.openAfterLoad, state.openRecords);   // records: known when opened from the search
         state.openAfterLoad = state.openRecords = null;
@@ -114,17 +123,56 @@ async function loadGroup() {
         if (requested !== viewKey()) return;
         const sp = await getSpecies(s.speciesKey);
         const card = grid.querySelector(`[data-key="${s.speciesKey}"]`);
-        if (card && requested === viewKey()) card.outerHTML = cardHtml(s, sp);
+        if (card && requested === viewKey()) {
+            card.outerHTML = cardHtml(s, sp);
+            filterCards();   // a card that just got its name follows the filter being typed
+        }
     });
+}
+
+// Instant card filter (16 Nov): while the user types in "Search mammals…", the cards on the page
+// narrow down to the ones that fit every typed word, in the name, scientific name or summary
+// ("black bear", "korea endemic"). Small typos count too ("sqirrel"). The suggestion list under
+// the box works as before; an empty box shows all cards again.
+function filterCards() {
+    const grid = $('species-grid');
+    const words = $('group-search-input').value.trim().toLowerCase().split(/\s+/).filter(w => w.length >= 2);
+    const cards = [...grid.querySelectorAll('.sp-card[data-key]:not(.loading)')];
+    let shown = 0;
+    for (const card of cards) {
+        const text = card.textContent.toLowerCase();
+        const textWords = text.split(/[^a-z가-힣ㄱ-ㅎ0-9]+/);
+        // a word fits when it is in the text, or (4+ letters) one letter away from one of its words
+        const fits = w => text.includes(w) || (w.length >= 4 && textWords.some(t =>
+            Math.abs(t.length - w.length) <= 1 && editDistance(w, t) <= 1));
+        const ok = words.every(fits);
+        card.style.display = ok ? '' : 'none';
+        if (ok) shown++;
+    }
+    let note = $('card-filter-note');
+    if (!note) {
+        note = document.createElement('p');
+        note.id = 'card-filter-note';
+        note.className = 'card-filter-note';
+        note.setAttribute('aria-live', 'polite');
+        grid.before(note);
+    }
+    note.hidden = !words.length || !cards.length;
+    note.textContent = shown
+        ? `${shown} of ${cards.length} cards fit "${$('group-search-input').value.trim()}".`
+        : `No card on this page fits "${$('group-search-input').value.trim()}". ` + (state.kind?.keyword
+            ? 'Clear this box to see all the results again.'
+            : `Press Enter to search all ${groupButton(state.group).dataset.name.toLowerCase()}.`);
 }
 
 // -----------------------------------------------------------------------------
 // Cards and detail dialog
 // -----------------------------------------------------------------------------
-// English name if known (GBIF writes some in lower case, so capitalize the first letter)
+// English name if known, in Title Case like on the Map page ("Eurasian Red Squirrel";
+// toTitleCase in animal-search.js); else the scientific name as it is
 function displayName(sp) {
-    const name = sp?.vernacularName || sp?.species || 'Unnamed species';
-    return name.charAt(0).toUpperCase() + name.slice(1);
+    if (sp?.vernacularName) return toTitleCase(sp.vernacularName);
+    return sp?.species || 'Unnamed species';
 }
 
 // Wikipedia summary, or a short description from the taxonomy when there is no English article
@@ -159,10 +207,34 @@ function photoHtml(sp, cls) {
     return `<div class="${cls}">${icon}${img}${more}</div>`;
 }
 
+// On search results across groups ("Animals called "cat"") each card names its animal group, as a
+// small badge in the group's colour and icon from the tree (16 Nov: the tree no longer shows one)
+function groupOfKey(key) {
+    const a = animalList?.find(x => x.k === key) || EVERYDAY_ANIMALS.find(x => x.k === key);
+    return a ? groupOfAnimal(a) : null;
+}
+// "in Birds (5) and Insects (1)": the groups of the found animals, for the results description
+function groupsOf(keys) {
+    const counts = new Map();
+    for (const k of keys) {
+        const name = groupButton(groupOfKey(k))?.dataset.name;
+        if (name) counts.set(name, (counts.get(name) || 0) + 1);
+    }
+    const parts = [...counts].map(([name, n]) => `${name} (${n})`);
+    if (!parts.length) return '';
+    return `, in ${parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts.at(-1)}` : parts[0]}`;
+}
+function groupBadge(key) {
+    const btn = groupButton(groupOfKey(key));
+    if (!btn) return '';
+    return `<span class="sp-group" style="color:${btn.dataset.color};background:${btn.dataset.color}1a">
+        ${btn.querySelector('.tree-icon').innerHTML} ${escapeHtml(btn.dataset.name)}</span>`;
+}
+
 function cardHtml(s, sp) {
     if (sp === null && !speciesCache.has(s.speciesKey)) {
         return `<article class="sp-card loading" data-key="${s.speciesKey}"><div class="sp-photo"><i class="fa-solid fa-spinner fa-spin"></i></div>
-            <div class="sp-body"><h3>Loading…</h3></div></article>`;
+            <div class="sp-body">${state.kind?.keyword ? groupBadge(s.speciesKey) : ''}<h3>Loading…</h3></div></article>`;
     }
     const name = displayName(sp);
     // A click anywhere on the card opens it. For the keyboard and screen readers the name is a
@@ -171,6 +243,7 @@ function cardHtml(s, sp) {
     return `<article class="sp-card" data-key="${s.speciesKey}" onclick="openSpecies(${s.speciesKey}, ${s.records})">
         ${photoHtml(sp, 'sp-photo')}
         <div class="sp-body">
+            ${state.kind?.keyword ? groupBadge(s.speciesKey) : ''}
             <h3><button type="button" class="sp-open">${escapeHtml(name)}</button></h3>
             <p class="sp-sci">${escapeHtml(sp?.species || '')}</p>
             <p class="sp-summary">${escapeHtml(summaryText(sp))}</p>
@@ -248,20 +321,20 @@ const groupButton = key => document.querySelector(`.tree-item[data-key="${key}"]
 // fits, with the same rules as the Map page (findByKeyword in animal-search.js: everyday names
 // first, whole words before parts of words, Korean names: "고라니" = water deer); only one group
 // if `group` is given
-function matchAnimals(text, group = null) {
-    return inGroup(findByKeyword(animalList, text), group);
+function matchAnimals(text, group = null, max = 8) {
+    return inGroup(findByKeyword(animalList, text), group, max);
 }
 // Similar names when nothing fits (typos: "sparow" -> sparrows), the same as on the Map page
 function similarAnimals(text, group = null) {
     return inGroup(similarNames(animalList, text, 50), group);
 }
-function inGroup(animals, group) {
+function inGroup(animals, group, max = 8) {
     return animals
         .map(a => ({ ...a, g: groupOfAnimal(a) }))
         // In a group: only that group. At the top: all animals, also the few without a group in the
         // tree (millipedes, barnacles…): their card opens without changing the group.
         .filter(a => !group || a.g === group)
-        .slice(0, 8);
+        .slice(0, max);
 }
 
 function boldMatch(name, text) {
@@ -280,7 +353,7 @@ function renderList(inputId, boxId, animals, typed, { message = '' } = {}) {
         + animals.map((a, i) => {
             const btn = groupButton(a.g);
             const icon = btn ? `<span class="group-icon" style="background:${btn.dataset.color};width:22px;height:22px;font-size:11px">${btn.querySelector('.tree-icon').innerHTML}</span>` : '<i class="fa-solid fa-paw"></i>';
-            const name = a.n || a.s;
+            const name = a.n ? toTitleCase(a.n) : a.s;
             // a Korean search shows the Korean name it found ("Chinese Water Deer · 고라니")
             const ko = HANGUL.test(typed) ? (a.ko || []).find(n => n.includes(typed.trim())) : '';
             const where = [btn?.dataset.name, a.r ? `${fmt(a.r)} records in Korea` : ''].filter(Boolean).join(' · ');
@@ -326,18 +399,21 @@ let searchId = 0;
 async function searchAll() {
     const typed = $('ency-search-input').value.trim();
     if (!typed) return;
+    rememberSearch(typed);   // for "Recent searches" when the box is empty
     await loadAnimalList();
-    const exact = animalList.find(a => [a.n, a.s, ...(a.ko || [])].some(n => n && n.toLowerCase() === typed.toLowerCase()));
-    if (exact) return openAnimal(exact.k, groupOfAnimal(exact), exact.r);
     const groupBtn = groupByWord(typed);
     if (groupBtn) { hideList('ency-search-input', 'ency-suggest'); return groupBtn.click(); }
+    // One card opens at once only for an animal's full name that no other animal fits ("wild boar",
+    // "고라니", "wild hen"). Any other word shows its results as cards (16 Nov: "cat" opened only the
+    // domestic Cat, though the Leopard cat fits too, while "duck" showed all ducks).
+    const matches = matchAnimals(typed, null, 24);   // up to 24 as cards; the list shows 8
+    if (matches.length === 1 && isFullName(matches[0], typed)) return openAnimal(matches[0].k, matches[0].g, matches[0].r);
 
     // The animals of the list that fit the word stay in the list (to click) while the server is
     // asked for a whole kind ("bat": all bats, which the list does not have) or a name it knows
     const id = ++searchId;
-    const matches = matchAnimals(typed);
     const said = `"${escapeHtml(typed)}"`;
-    renderList('ency-search-input', 'ency-suggest', matches, typed,
+    renderList('ency-search-input', 'ency-suggest', matches.slice(0, 8), typed,
         { message: `<i class="fa-solid fa-spinner fa-spin"></i> Looking for all kinds of ${said}…` });
     let data;
     try { data = await getJson(`api/animal.php?q=${encodeURIComponent(typed)}`); }
@@ -347,11 +423,9 @@ async function searchAll() {
     const found = data.found;
     // A whole kind that the word names ("bat", "deer", "snakes"): its cards
     if (isKindFor(found, typed)) return showKind(found);
-    // Animals of the list that fit the word: the user picks one (the keyword is not swapped for another name)
-    if (matches.length === 1) return openAnimal(matches[0].k, matches[0].g, matches[0].r);   // "hen": Hen Harrier
-    if (matches.length) {
-        return renderList('ency-search-input', 'ency-suggest', matches, typed, { message: `Animals called ${said}: pick one` });
-    }
+    // Animals of the list that fit the word: their cards ("pige": the pigeons; "cat": Cat and Leopard
+    // cat; "dog": the Raccoon dog), under the user's word (it is not swapped for another name)
+    if (matches.length) return showMatches(typed, matches);
     // A name the server knows that fits the word ("tiger" -> Tiger, "Pica pica")
     const re = keywordRegex(typed);
     if (found && [found.name, found.scientificName].some(n => n && re.test(n.toLowerCase()))) {
@@ -379,6 +453,26 @@ function groupByWord(text) {
     }) || null;
 }
 
+// The typed text is the whole name of this animal (English, scientific, Korean, or one of its
+// everyday words: "wild hen"), not only a word of it
+function isFullName(a, typed) {
+    const t = typed.trim().toLowerCase();
+    return [a.n, a.s, ...(a.ko || []), ...(a.words || [])].some(n => n && n.toLowerCase() === t);
+}
+
+// Several animals fit the searched word ("pige": Rock Pigeon, Hill Pigeon, Japanese Wood-Pigeon):
+// their cards, like a kind, instead of a list to pick from (16 Nov: picking one was annoying).
+// Shown inside the group of the best-known one; at most 24 (what one card list holds).
+function showMatches(typed, matches) {
+    hideList('ency-search-input', 'ency-suggest');
+    hideList('group-search-input', 'group-suggest');
+    state.group = matches.find(a => a.g)?.g || state.group;
+    state.kind = { name: `"${typed}"`, keys: matches.slice(0, 24).map(a => a.k), keyword: true };
+    $('group-search-input').value = '';
+    loadGroup();
+    if (window.matchMedia('(max-width: 820px)').matches) setTreeOpen(false);
+}
+
 // A searched kind of animal ("deer", "snakes"): cards of all of them, inside their group
 function showKind(found) {
     hideList('ency-search-input', 'ency-suggest');
@@ -392,12 +486,15 @@ function showKind(found) {
 // Enter in "Search mammals…": an exact name or the first suggestion of this group opens
 async function searchGroup() {
     const typed = $('group-search-input').value.trim();
+    // On search results the box only filters the cards shown (as you type), so Enter does nothing more
+    if (state.kind?.keyword) { hideList('group-search-input', 'group-suggest'); return filterCards(); }
     if (!typed) return;
     await loadAnimalList();
-    const matches = matchAnimals(typed, state.group);
-    const exact = matches.find(a => [a.n, a.s].some(n => n && n.toLowerCase() === typed.toLowerCase()));
-    const hit = exact || matches[0];
-    if (hit) return openAnimal(hit.k, hit.g, hit.r);
+    const matches = matchAnimals(typed, state.group, 24);
+    // The same rule as "Search all animals": one card opens only for a full name that no other
+    // animal fits; other words show their cards ("cat" in mammals: Cat and Leopard cat)
+    if (matches.length === 1 && isFullName(matches[0], typed)) return openAnimal(matches[0].k, matches[0].g, matches[0].r);
+    if (matches.length) return showMatches(typed, matches);
     const groupName = groupButton(state.group).dataset.name.toLowerCase();
     const similar = similarAnimals(typed, state.group).slice(0, 6);   // typos: "sparow" -> sparrows
     renderList('group-search-input', 'group-suggest', similar, '', {
@@ -428,11 +525,22 @@ function onSuggestKey(e, inputId, boxId, onEnter) {
 // Wire up one search box: suggestions while typing (all groups, or only the open group)
 function setupSearch(inputId, btnId, boxId, onEnter, onlyOpenGroup) {
     const input = $(inputId), box = $(boxId);
-    input.addEventListener('focus', loadAnimalList);
+    const top = inputId === 'ency-search-input';
+    // The top box, when empty, shows the last searches (recentHtml in animal-search.js)
+    const showRecent = () => {
+        const html = top ? recentHtml(boxId) : '';
+        if (!html) return hideList(inputId, boxId);
+        box.innerHTML = html;
+        box.hidden = false;
+        input.setAttribute('aria-expanded', 'true');
+    };
+    input.addEventListener('focus', () => { loadAnimalList(); if (!input.value.trim()) showRecent(); });
     input.addEventListener('input', async () => {
-        if (inputId === 'ency-search-input') searchId++;   // a name lookup still running is out of date
+        if (top) searchId++;   // a name lookup still running is out of date
         await loadAnimalList();
         const typed = input.value;
+        if (!typed.trim()) return showRecent();
+        if (!top && state.kind?.keyword) return hideList(inputId, boxId);   // results view: only the card filter
         renderList(inputId, boxId, matchAnimals(typed, onlyOpenGroup ? state.group : null), typed);
     });
     input.addEventListener('keydown', e => onSuggestKey(e, inputId, boxId, onEnter));
@@ -447,12 +555,18 @@ function setupSearch(inputId, btnId, boxId, onEnter, onlyOpenGroup) {
     box.addEventListener('mousedown', e => e.preventDefault());   // keep the focus in the box
     box.addEventListener('click', e => {
         const btn = e.target.closest('button');
+        if (btn?.dataset.recent) {   // a recent search: search that word again
+            input.value = btn.dataset.recent;
+            return onEnter();
+        }
+        if (btn && top) rememberSearch(btn.querySelector('.suggest-main')?.textContent.split(' · ')[0] || '');
         if (btn) openAnimal(Number(btn.dataset.key), btn.dataset.group || null, btn.dataset.records);
     });
     $(btnId).addEventListener('click', onEnter);
 }
 setupSearch('ency-search-input', 'ency-search-btn', 'ency-suggest', searchAll, false);
 setupSearch('group-search-input', 'group-search-btn', 'group-suggest', searchGroup, true);
+$('group-search-input').addEventListener('input', filterCards);   // the cards narrow down as you type
 
 // -----------------------------------------------------------------------------
 // Start
@@ -478,3 +592,21 @@ const [hashGroup, hashSpecies] = location.hash.slice(1).split('/');
 state.group = document.querySelector(`.tree-item[data-key="${hashGroup}"]`) ? hashGroup : 'mammals';
 if (Number(hashSpecies) > 0) state.openAfterLoad = Number(hashSpecies);
 loadGroup();
+
+// Links with a query also work (16 Nov): encyclopedia.php?taxonKey=7705930 opens that animal's card
+// (in its group), encyclopedia.php?q=wild%20boar searches the name as if typed at the top. The
+// Map page links with #group/key (above); this form is for links shared or typed by people.
+const linkParams = new URLSearchParams(location.search);
+const linkKey = Number(linkParams.get('taxonKey'));
+const linkQuery = (linkParams.get('q') || '').trim();
+if (linkKey > 0 || linkQuery) {
+    loadAnimalList().then(() => {
+        if (linkQuery) $('ency-search-input').value = linkQuery;
+        if (linkKey > 0) {
+            const a = animalList.find(x => x.k === linkKey);
+            openAnimal(linkKey, a ? groupOfAnimal(a) : null, a?.r);
+        } else {
+            searchAll();
+        }
+    });
+}

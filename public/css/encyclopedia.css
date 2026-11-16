@@ -37,6 +37,14 @@
 .group-search .animal-suggest { top: calc(100% + 4px); }
 .group-intro { position: relative; z-index: 30; }   /* its suggestion list covers the cards below */
 .animal-suggest .suggest-message { padding: 8px 12px; font-size: 12.5px; color: var(--text); line-height: 1.5; }
+/* "3 of 24 cards fit "sq"" above the cards while the group search filters them (16 Nov) */
+.card-filter-note { margin: 0 0 10px; font-size: 13px; color: var(--muted); }
+.card-filter-note[hidden] { display: none; }
+/* "Recent searches" above the last searched words, when the box is empty (16 Nov) */
+.animal-suggest .suggest-title {
+    padding: 8px 12px 4px; font-size: 11.5px; font-weight: 700; letter-spacing: .03em;
+    text-transform: uppercase; color: var(--muted);
+}
 .group-intro { padding: 22px 26px; margin-bottom: 18px; }
 .crumbs { font-size: 12.5px; color: var(--muted); margin-bottom: 12px; }
 .intro-head { display: flex; align-items: center; gap: 16px; }
@@ -70,6 +78,12 @@
 
 .sp-body { padding: 14px 16px 16px; display: flex; flex-direction: column; flex: 1; }
 .sp-body h3 { font-size: 16px; color: var(--ink); }
+/* The animal group on cards of search results ("Birds", "Insects"; 16 Nov) */
+.sp-group {
+    align-self: flex-start; display: inline-flex; align-items: center; gap: 5px; margin-bottom: 6px;
+    padding: 2px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 700;
+}
+.sp-group i { font-size: 11px; }
 .sp-sci { font-size: 13px; font-style: italic; color: var(--muted); margin-top: 2px; }
 .sp-summary {
     margin: 10px 0 12px; font-size: 13px; line-height: 1.5; color: var(--text); flex: 1;

@@ -145,6 +145,8 @@ $page = 'map';
             <!-- Shown when the map is filtered on one species (link from the Encyclopedia) -->
             <div class="species-filter" id="species-filter" hidden>
                 <i class="fa-solid fa-filter"></i> Showing only <b id="species-filter-name"></b>
+                <!-- What this filter found here, e.g. "8 sightings · 1 species" (16 Nov) -->
+                <span class="filter-stats" id="filter-stats" aria-live="polite"></span>
                 <button type="button" id="species-filter-clear"><i class="fa-solid fa-xmark"></i> Show all animals</button>
             </div>
 
@@ -226,7 +228,9 @@ $page = 'map';
                 <div class="profile-meta">
                     <div class="meta-row"><i class="fa-regular fa-calendar-days"></i><div><span>Date Observed</span><b id="meta-date"></b></div></div>
                     <div class="meta-row"><i class="fa-solid fa-location-dot"></i><div><span>Locality</span><b id="meta-locality"></b></div></div>
-                    <div class="meta-row"><i class="fa-solid fa-crosshairs"></i><div><span>Coordinates</span><b id="meta-coords"></b></div></div>
+                    <div class="meta-row"><i class="fa-solid fa-crosshairs"></i><div><span>Coordinates</span><b id="meta-coords"></b>
+                        <!-- Copies "lat, lng" for another map app (16 Nov) -->
+                        <button type="button" class="copy-coords" id="copy-coords" title="Copy the coordinates" aria-label="Copy the coordinates"><i class="fa-regular fa-copy"></i> <span>Copy</span></button></div></div>
                     <div class="meta-row"><i class="fa-solid fa-clock-rotate-left"></i><div><span>Record Last Updated</span><b id="meta-updated"></b></div></div>
                 </div>
 

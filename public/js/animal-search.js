@@ -15,7 +15,9 @@ const HANGUL = /[ㄱ-ㆎ가-힣]/;
 function keywordRegex(query, wholeWord = false) {
     const q = query.trim().toLowerCase();
     const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    if (HANGUL.test(q)) return new RegExp(esc(q));
+    // One Korean syllable ("벌" bee, "새" bird, "게" crab) is the end of an animal name (꿀벌, 참새,
+    // 꽃게), not any part of it (무당벌레 = ladybird is no bee); longer Korean words anywhere
+    if (HANGUL.test(q)) return new RegExp(q.length === 1 ? `${esc(q)}$` : esc(q));
     const forms = [...new Set([q, q.replace(/es$/, ''), q.replace(/s$/, '')])].filter(f => f.length >= 2);
     // wholeWord: the keyword is a whole word of the name ("bat" in "Blue bat star", not in "Bath")
     const end = wholeWord ? `(e?s)?($|[\\s\\-'/)])` : '';
@@ -25,11 +27,47 @@ const animalNames = a => [a.n, a.s, ...(a.ko || [])].filter(Boolean);
 // The names people use: English and Korean (the scientific name only if there is no English one)
 const commonNames = a => [a.n || a.s, ...(a.ko || [])].filter(Boolean);
 
+// Everyday words that are no animal's name in GBIF or Wikipedia, for animals that are not among the
+// 2000 of the list (16 Nov: "wild hen" found nothing, "hen" only the Hen Harrier, a bird of prey).
+// The wild chicken is called Red Junglefowl (Gallus gallus, GBIF key 9326020). Same fields as the list.
+const EVERYDAY_ANIMALS = [
+    { k: 9326020, n: 'Red Junglefowl (chicken)', s: 'Gallus gallus', c: 'Aves', t: [44, 212, 723], ko: ['닭'],
+      words: ['hen', 'rooster', 'chicken', 'cock', 'wild hen', 'wild chicken', 'wild rooster', 'junglefowl',
+              'red junglefowl', '닭', '암탉', '수탉'] },
+];
+// The everyday animal that the whole keyword means ("hens" = "hen"), or null
+function everydayAnimal(text) {
+    const forms = wordForms(text);
+    return EVERYDAY_ANIMALS.find(a => a.words.some(w => forms.includes(w))) || null;
+}
+const wordForms = text => {
+    const q = text.trim().toLowerCase().replace(/\s+/g, ' ');
+    return [q, q.replace(/s$/, ''), q.replace(/es$/, '')];
+};
+
+// Everyday words whose animals are in the list under another name (16 Nov: "pig" found the
+// pigeons, "rabbit" and "seagull" nothing). The search looks for the name on the right instead;
+// the user's word stays in the box.
+const KEYWORD_ALIASES = {
+    'pig': 'wild boar', 'wild pig': 'wild boar', 'hog': 'wild boar', 'swine': 'wild boar',
+    '돼지': '멧돼지', '산돼지': '멧돼지',
+    'rabbit': 'hare', 'bunny': 'hare',
+    'seagull': 'gull', 'sea gull': 'gull',
+    'ladybug': 'ladybird', 'lady bug': 'ladybird',
+};
+const aliasOf = text => wordForms(text).map(f => KEYWORD_ALIASES[f]).find(Boolean) || text;
+
 // Every animal of the list that the keyword fits, best-known first (the list's order).
 // Everyday names come first: "hen" finds the Hen Harrier, not also two beetles whose scientific
 // name starts with "Hen…" (Henosepilachna). Only if no everyday name fits are scientific names
 // searched, so "Circus cyaneus" still works.
+// An everyday word ("hen", "wild hen", "닭") puts its animal first (EVERYDAY_ANIMALS above).
 function findByKeyword(list, text) {
+    const everyday = everydayAnimal(text);
+    const found = findInList(list, aliasOf(text)).filter(a => !everyday || a.k !== everyday.k);
+    return everyday ? [everyday, ...found] : found;
+}
+function findInList(list, text) {
     const q = text.trim();
     if (!list || (q.length < 2 && !HANGUL.test(q))) return [];
     const re = keywordRegex(q);
@@ -94,4 +132,41 @@ function editDistance(a, b) {
         prev = cur;
     }
     return prev[b.length];
+}
+
+// Recent searches (16 Nov): the last 5 words searched on the Map or in the Encyclopedia, shown when
+// the user clicks into an empty search box. Kept in this browser only (localStorage), never sent.
+const RECENT_KEY = 'wildtrack.recentAnimals';
+function recentSearches() {
+    try { return JSON.parse(localStorage.getItem(RECENT_KEY)) || []; } catch { return []; }
+}
+function rememberSearch(text) {
+    const word = text.trim();
+    if (!word) return;
+    const list = [word, ...recentSearches().filter(w => w.toLowerCase() !== word.toLowerCase())].slice(0, 5);
+    try { localStorage.setItem(RECENT_KEY, JSON.stringify(list)); } catch { /* storage blocked: no list */ }
+}
+// The recent searches as buttons for a suggestion box (data-recent = the word to search again)
+function recentHtml(idPrefix) {
+    const words = recentSearches();
+    if (!words.length) return '';
+    const esc = s => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    return '<div class="suggest-title">Recent searches</div>' + words.map((w, i) =>
+        `<button type="button" role="option" id="${idPrefix}-${i}" data-recent="${esc(w)}" aria-label="Search again: ${esc(w)}">
+            <i class="fa-solid fa-clock-rotate-left"></i>
+            <span class="suggest-text"><span class="suggest-main">${esc(w)}</span></span>
+        </button>`).join('');
+}
+
+// Common names in Title Case, the same on every page (16 Nov): "wild boar" -> "Wild Boar",
+// "Eurasian red squirrel" -> "Eurasian Red Squirrel". The part after a hyphen stays as it is
+// ("Black-tailed Gull", "28-spotted Lady Beetle", as bird lists write it), small joining words stay
+// small ("Bird of Prey"), and names with Korean letters are left as they are. Not for scientific
+// names: those keep their own form (Genus species).
+const SMALL_WORDS = new Set(['of', 'and', 'the', 'in', 'on', 'de', 'la', 'or']);
+function toTitleCase(name) {
+    if (!name || HANGUL.test(name)) return name || '';
+    return name.split(' ').map((w, i) =>
+        i > 0 && SMALL_WORDS.has(w.toLowerCase()) ? w.toLowerCase() : w.charAt(0).toUpperCase() + w.slice(1)
+    ).join(' ');
 }

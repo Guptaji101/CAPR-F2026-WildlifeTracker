@@ -21,7 +21,13 @@ if (mb_strlen($q) < 2 || mb_strlen($q) > 60) {
     exit;
 }
 
-$cacheKey = 'places:' . mb_strtolower($q);
+// Places near the map's centre come first (16 Nov): the page sends it as lat/lng. Rounded to about
+// 10 km, so nearby searches share the cache; without them Photon ranks by importance only.
+$lat = isset($_GET['lat']) && is_numeric($_GET['lat']) ? round(max(33.0, min(38.7, (float)$_GET['lat'])), 1) : null;
+$lng = isset($_GET['lng']) && is_numeric($_GET['lng']) ? round(max(124.5, min(131.0, (float)$_GET['lng'])), 1) : null;
+$near = ($lat !== null && $lng !== null) ? ['lat' => $lat, 'lon' => $lng, 'location_bias_scale' => 0.3] : [];
+
+$cacheKey = 'places:' . mb_strtolower($q) . ($near ? ":$lat,$lng" : '');
 if ($cached = cache_get($cacheKey, 30 * 86400)) {
     echo json_encode($cached);
     exit;
@@ -29,7 +35,7 @@ if ($cached = cache_get($cacheKey, 30 * 86400)) {
 
 // bbox = South Korea (west, south, east, north); each osm_tag adds a kind of place (OR)
 $url = 'https://photon.komoot.io/api/?' . http_build_query([
-    'q' => $q, 'limit' => 15, 'lang' => 'en', 'bbox' => '124.5,33.0,131.0,38.7',
+    'q' => $q, 'limit' => 15, 'lang' => 'en', 'bbox' => '124.5,33.0,131.0,38.7', ...$near,
 ]) . '&osm_tag=place&osm_tag=natural&osm_tag=boundary:national_park'
    . '&osm_tag=leisure:nature_reserve&osm_tag=leisure:park';
 

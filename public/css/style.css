@@ -142,6 +142,9 @@ button { font-family: inherit; cursor: pointer; }
 .search-btn:hover i { color: var(--green-700); }
 .search-box input { flex: 1; border: 0; outline: none; font: inherit; font-size: 12.5px; color: var(--ink); min-width: 0; }
 .search-box:focus-within { border-color: var(--green-600); box-shadow: 0 0 0 3px rgba(31, 122, 79, 0.12); }
+/* One focus ring per search box (16 Nov): the box above shows it, so the field inside draws none
+   (the outline for every focused field further down drew a second ring inside the first) */
+.search-box input:focus, .search-box input:focus-visible { outline: none; }
 
 .btn-primary {
     display: flex;
@@ -256,6 +259,34 @@ button { font-family: inherit; cursor: pointer; }
 }
 .map-legend h4 { font-size: 12.5px; font-weight: 700; color: var(--ink); margin-bottom: 8px; }
 .legend-item { display: flex; align-items: center; gap: 9px; font-size: 11.5px; color: var(--text); padding: 3px 0; }
+/* The legend entries are switches (16 Nov): a click turns that group on or off; off = dimmed */
+button.legend-item {
+    width: 100%; margin: 0; padding: 3px 6px; margin-left: -6px; border: 0; border-radius: 6px;
+    background: none; font: inherit; font-size: 11.5px; text-align: left; cursor: pointer;
+    transition: opacity .15s, background-color .15s;
+}
+button.legend-item:hover { background: rgba(21, 128, 61, 0.10); }
+button.legend-item:focus-visible { outline: 2px solid var(--green-600); outline-offset: 1px; }
+button.legend-item.off { opacity: 0.45; }
+button.legend-item.off:hover { opacity: 0.75; }
+
+/* "8 sightings · 1 species" in the filter bar (16 Nov) */
+.filter-stats {
+    padding: 2px 10px; border-radius: 999px; background: var(--white); border: 1px solid var(--green-100);
+    font-size: 12px; font-weight: 600; color: var(--green-700);
+}
+.filter-stats:empty { display: none; }
+
+/* Copy button next to the coordinates in the Species Profile (16 Nov) */
+.copy-coords {
+    display: inline-flex; align-items: center; gap: 5px; margin-left: 8px; padding: 2px 8px; cursor: pointer;
+    border: 1px solid var(--line); border-radius: 999px; background: var(--white);
+    font: inherit; font-size: 11px; font-weight: 600; color: var(--muted); vertical-align: middle;
+}
+.copy-coords:hover { border-color: var(--green-700); color: var(--green-700); }
+.copy-coords:focus-visible { outline: 2px solid var(--green-600); outline-offset: 1px; }
+.copy-coords.copied { border-color: var(--green-700); background: var(--green-50); color: var(--green-700); }
+.copy-coords[hidden] { display: none; }
 
 .map-controls {
     position: absolute;
@@ -430,6 +461,16 @@ table.sightings { width: 100%; border-collapse: collapse; }
 
 .table-empty td { text-align: center; padding: 32px 10px; color: var(--muted); white-space: normal; }
 .table-empty i { display: block; font-size: 24px; margin-bottom: 8px; color: var(--faint); }
+/* One-click ways out of an empty result ("Search 25 km", "Clear dates"; 16 Nov) */
+.recover-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 12px; }
+.recover-btn {
+    display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; cursor: pointer;
+    border: 1px solid var(--green-700); border-radius: 999px; background: var(--white);
+    font: inherit; font-size: 12.5px; font-weight: 600; color: var(--green-700);
+}
+.recover-btn:hover { background: var(--green-50); }
+.recover-btn:focus-visible { outline: 2px solid var(--green-600); outline-offset: 2px; }
+.table-empty .recover-btn i { display: inline; font-size: 12px; margin: 0; color: inherit; }
 
 /* ----------------------------------------------------------------------------
    Species profile
@@ -700,7 +741,7 @@ dialog .btn-primary { margin-top: 6px; }
     .map-legend { top: auto; right: auto; bottom: 10px; left: 10px; min-width: 0; padding: 6px 8px; }
     .map-legend h4 { display: none; }
     #legend-list { display: grid; grid-template-columns: 1fr 1fr; column-gap: 8px; }
-    .legend-item { font-size: 10.5px; gap: 5px; padding: 1px 0; }
+    .legend-item, button.legend-item { font-size: 10.5px; gap: 5px; padding: 1px 4px; }
     .basemap-tabs button { padding: 7px 10px; font-size: 12px; }
     .topbar { padding: 0 12px; gap: 8px; }
     .brand-name { font-size: 21px; }

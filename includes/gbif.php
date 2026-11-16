@@ -108,6 +108,9 @@ function gbif_search_nearby(
     $query = http_build_query([
         'geoDistance'   => $lat . ',' . $lng . ',' . $safeRadius . 'km',
         'hasCoordinate' => 'true',
+        // Records whose coordinates GBIF flagged as wrong (swapped, zero, outside the country) are
+        // left out, so no pin lands in the sea or in the wrong place (16 Nov)
+        'hasGeospatialIssue' => 'false',
         'kingdomKey'    => 1,
     ]);
     // GBIF ORs repeated taxonKey parameters, so several animal groups can be requested at once

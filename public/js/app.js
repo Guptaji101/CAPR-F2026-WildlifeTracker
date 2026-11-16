@@ -206,10 +206,19 @@ function setLoading(isLoading, statusText = '') {
     }
 }
 
-// Name to show for a sighting: the English name, else the species, else the genus + "sp."
-// ("Hypoponera Santschi, 1938" is a genus with its author, so it becomes "Hypoponera sp.")
+// Name to show for a sighting: the English name (in Title Case, toTitleCase in animal-search.js),
+// else the species, else the genus + "sp." ("Hypoponera Santschi, 1938" is a genus with its
+// author, so it becomes "Hypoponera sp.")
+// GBIF writes countries the ISO way ("Korea, Republic of"); people say "South Korea" (16 Nov)
+function countryName(c) {
+    if (!c) return '';
+    if (/^korea,\s*republic of$/i.test(c)) return 'South Korea';
+    const m = c.match(/^(.+),\s*(.+ of)$/);   // "Iran, Islamic Republic of" -> "Islamic Republic of Iran"
+    return m ? `${m[2]} ${m[1]}` : c;
+}
+
 function plainName(r) {
-    if (r.commonName) return r.commonName;
+    if (r.commonName) return toTitleCase(r.commonName);
     if (r.species) return r.species;
     const genus = (r.scientificName || '').split(' ')[0];
     return genus ? `${genus} sp.` : 'Unknown animal';
@@ -357,7 +366,9 @@ async function loadPlaceSuggestions(typed) {
         box.hidden = false;
     }
     let places = [];
-    try { places = (await safeJsonFetch(`api/places.php?q=${encodeURIComponent(typed.trim())}`)).places || []; } catch { /* no suggestions */ }
+    // The map's centre is sent along, so places near the area being looked at come first
+    const c = map.getCenter();
+    try { places = (await safeJsonFetch(`api/places.php?q=${encodeURIComponent(typed.trim())}&lat=${c.lat.toFixed(2)}&lng=${c.lng.toFixed(2)}`)).places || []; } catch { /* no suggestions */ }
     if (id !== state.placeSuggestId || typed !== $('location-input').value) return;   // the user typed on
     if (!places.length) return hideList('location-input', 'location-suggest');
 
@@ -392,13 +403,29 @@ function pickPlace(btn) {
     goToPlace(Number(lat), Number(lng), area ? `${name}, ${area}` : name);
 }
 
+// The Quick Locations with their coordinates (the points api/geocode.php found for them), so a
+// click goes there at once without asking the geocoder first (16 Nov)
+const QUICK_PLACES = {
+    'Busan':        [35.1799528, 129.0752365, 'Busan, South Korea'],
+    'Seoul':        [37.5666791, 126.9782914, 'Seoul, South Korea'],
+    'Jeju':         [33.4887737, 126.4987083, 'Jeju, South Korea'],
+    'Ulsan':        [35.5391697, 129.3119136, 'Ulsan, South Korea'],
+    'Hallasan':     [33.361431, 126.529419, 'Hallasan, Jeju, South Korea'],
+    'Seoraksan':    [38.1340905, 128.4172172, 'Seoraksan National Park, South Korea'],
+    'Suncheon Bay': [34.9266193, 127.510122, 'Suncheon Bay National Garden, Suncheon, South Korea'],
+};
+
 function quickSelect(place, elem) {
     document.querySelectorAll('.chip[data-place]').forEach(btn => btn.classList.remove('active'));
     if (elem) elem.classList.add('active');
 
     const input = $('location-input');
     if (input) input.value = place;
-    handleSearch();
+    const known = QUICK_PLACES[place];
+    if (!known) return handleSearch();   // a place not in the list: look it up as before
+    cancelPlaceSuggestions();
+    state.placeId++;                     // a place lookup still running is now out of date
+    goToPlace(...known);
 }
 
 function useCurrentLocation() {
@@ -483,6 +510,7 @@ async function findAnimal() {
         return;
     }
     await loadAnimalList();
+    rememberSearch(query);   // for "Recent searches" when the box is empty
     // "reptiles", "birds": one of the six groups
     const group = groupOfWord(query);
     if (group) return showGroup(group);
@@ -532,7 +560,11 @@ async function addKindFromServer(query) {
     if (animalId !== state.animalId || !f || f.query !== query) return;   // a newer search since
     if (!isKindFor(found, query)) return;   // only a real kind ("Bat", Chiroptera), see animal-search.js
     if (f.animals.some(a => a.key === found.key)) return;
-    showKeyword(query, [found, ...f.animals]);
+    // Animals that only matched part of a longer word ("bear" in "Sickle-bearing Bush-cricket") give
+    // way to the kind (Bears); animals with the whole word stay ("bat": Blue bat star)
+    const whole = keywordRegex(aliasOf(query), true);
+    const kept = f.animals.filter(a => whole.test((a.name || '').toLowerCase()));
+    showKeyword(query, [found, ...kept]);
 }
 
 function fitsKeyword(found, query) {
@@ -556,7 +588,7 @@ function showKeyword(query, animals) {
     state.animalId++;   // an animal lookup still running is now out of date
     const entries = animals.map(a => ({
         keys: a.keys || [a.key],
-        name: a.group ? `${a.name} (all kinds)` : a.name,
+        name: a.group ? `${toTitleCase(a.name)} (all kinds)` : toTitleCase(a.name),
         group: a.cls && a.cls !== 'Chordata' ? groupOf({ taxonGroup: a.cls }) : null,   // some fish only have "Chordata"
     }));
     // The bar names the animals, so it is clear what the keyword found ("tiger": Tiger Keelback,
@@ -593,6 +625,7 @@ function groupOfWord(text) {
 function setGroups(keys) {
     state.groups = new Set(keys);
     document.querySelectorAll('#group-list input').forEach(i => { i.checked = state.groups.has(i.value); });
+    updateLegend();
 }
 
 // Show one whole group, as if the user had ticked only that group
@@ -633,7 +666,7 @@ function showNoAnimal(query, hint) {
 function showAnimal(animal) {
     state.animalId++;   // an animal lookup still running is now out of date
     const keys = animal.keys || [animal.key];
-    const name = animal.group ? `${animal.name} (all kinds)` : animal.name;
+    const name = animal.group ? `${toTitleCase(animal.name)} (all kinds)` : toTitleCase(animal.name);
     state.speciesFilter = { key: keys[0], keys, name };
     showSpeciesFilter();
     $('animal-input').value = animal.name;
@@ -668,7 +701,7 @@ function loadAnimalList() {
     return animalListLoading;
 }
 // An entry of the list in the shape showAnimal() expects
-const listAnimal = a => ({ key: a.k, name: a.n || a.s, cls: a.c });
+const listAnimal = a => ({ key: a.k, name: a.n ? toTitleCase(a.n) : a.s, cls: a.c });
 
 // The 6 best-known animals (most records in South Korea; the list is already in that order)
 // that the typed text fits (keywordMatches): "deer" finds "Chinese Water Deer", "mag" finds
@@ -722,6 +755,15 @@ function hideList(inputId, boxId) {
     $(inputId).removeAttribute('aria-activedescendant');
 }
 function hideSuggestions() { hideList('animal-input', 'animal-suggest'); }
+
+// An empty box shows the last searches (recentHtml in animal-search.js); nothing if there are none
+function showRecentSearches() {
+    const html = recentHtml('suggest');
+    if (!html) return hideSuggestions();
+    $('animal-suggest').innerHTML = html;
+    $('animal-suggest').hidden = false;
+    $('animal-input').setAttribute('aria-expanded', 'true');
+}
 
 // Arrow keys move through a suggestion list, Enter picks the highlighted entry (or searches the
 // typed text with onEnter), Esc closes the list. Shared by the place box and the animal box.
@@ -831,7 +873,7 @@ async function loadSightings() {
             state.sightings = [];
             state.total = 0;
             const msg = `None of the animals called "${state.speciesFilter.query}" is in the ticked groups. Tick more groups, or show all animals.`;
-            renderAll(msg);
+            renderAll(msg, true);
             showToast(msg, 'error');
             setLoading(false);
             return;
@@ -863,7 +905,7 @@ async function loadSightings() {
         // The message names what the user searched: their keyword ("boar"), or the animal they picked
         const what = state.speciesFilter?.query ? `"${state.speciesFilter.query}"` : state.speciesFilter?.name;
         const noAnimal = `No sightings of ${what} within ${state.radiusKm} km of ${place}. Try a larger radius, or show all animals.`;
-        renderAll(state.speciesFilter ? noAnimal : undefined);
+        renderAll(state.speciesFilter ? noAnimal : undefined, !data.fallback);
         // The table is below the map, so a filtered search with no results also shows a message on top
         if (state.speciesFilter && !state.sightings.length && !data.fallback) showToast(noAnimal, 'error');
 
@@ -892,11 +934,76 @@ function rememberSightings(url, data) {
     if (sightingsCache.size > 20) sightingsCache.delete(sightingsCache.keys().next().value);
 }
 
-function renderAll(emptyMessage) {
+// recover = true: the search worked but found nothing, so the empty table offers one-click ways out
+function renderAll(emptyMessage, recover = false) {
     state.selected = null;
     clearProfile();
     renderMarkers();
-    renderTable(emptyMessage);
+    renderTable(emptyMessage, recover);
+    updateFilterStats();
+}
+
+// "8 sightings · 1 species" next to the filter name in the bar above the map (16 Nov)
+function updateFilterStats() {
+    const n = state.sightings.length;
+    const kinds = new Set(state.sightings.map(r => r.speciesKey || r.species || r.scientificName)).size;
+    const plural = (k, word) => `${k.toLocaleString()} ${word}${k === 1 ? '' : 's'}`;
+    setText('filter-stats', `${plural(n, 'sighting')} · ${kinds.toLocaleString()} species`);
+}
+
+// Copies the selected sighting's "lat, lng" (16 Nov); the button says "Copied!" for 1.5 s
+async function copyCoords() {
+    const r = state.sightings[state.selected];
+    if (!r?.lat || !r?.lng) return;
+    const btn = $('copy-coords');
+    const text = `${r.lat.toFixed(6)}, ${r.lng.toFixed(6)}`;
+    try {
+        await navigator.clipboard.writeText(text);
+    } catch {
+        // Older way, for browsers that refuse the clipboard API (no HTTPS, older Safari)
+        const area = Object.assign(document.createElement('textarea'), { value: text });
+        area.style.cssText = 'position:fixed;opacity:0';
+        document.body.append(area);
+        area.select();
+        const ok = document.execCommand('copy');
+        area.remove();
+        if (!ok) return showToast('Copying is blocked in this browser: select the numbers and copy them instead', 'error');
+    }
+    btn.classList.add('copied');
+    btn.innerHTML = '<i class="fa-solid fa-check"></i> <span>Copied!</span>';
+    clearTimeout(copyCoords.timer);
+    copyCoords.timer = setTimeout(() => {
+        btn.classList.remove('copied');
+        btn.innerHTML = '<i class="fa-regular fa-copy"></i> <span>Copy</span>';
+    }, 1500);
+}
+
+// Zero-result recovery (16 Nov): buttons for what narrows the search right now, for example
+// "Search 25 km" or "Clear dates", so the user does not have to find the right setting
+const RADII = [5, 10, 25, 50, 100];
+function recoveryButtons() {
+    const out = [];
+    const bigger = RADII.find(r => r > state.radiusKm);
+    if (bigger) out.push(['radius', `<i class="fa-solid fa-expand"></i> Search ${bigger} km`]);
+    if (state.fromDate || state.toDate) out.push(['dates', '<i class="fa-regular fa-calendar-xmark"></i> Clear dates']);
+    if (state.speciesFilter) out.push(['animals', '<i class="fa-solid fa-paw"></i> Show all animals']);
+    else if (state.groups.size < Object.keys(GROUPS).length) out.push(['groups', '<i class="fa-solid fa-check-double"></i> Tick all groups']);
+    return out.length ? `<div class="recover-actions">${out.map(([a, label]) =>
+        `<button type="button" class="recover-btn" data-recover="${a}">${label}</button>`).join('')}</div>` : '';
+}
+function recover(action) {
+    if (action === 'radius') {
+        document.querySelector(`.chip[data-radius="${RADII.find(r => r > state.radiusKm)}"]`)?.click();
+    } else if (action === 'dates') {
+        state.fromDate = state.toDate = '';
+        $('date-from').value = $('date-to').value = '';
+        scheduleSearch(0);
+    } else if (action === 'animals') {
+        $('species-filter-clear').click();
+    } else if (action === 'groups') {
+        setGroups(Object.keys(GROUPS));
+        scheduleSearch(0);
+    }
 }
 
 function renderMarkers() {
@@ -927,7 +1034,7 @@ function renderMarkers() {
     });
 }
 
-function renderTable(emptyMessage) {
+function renderTable(emptyMessage, recover = false) {
     const body = $('sightings-body');
     const total = state.sightings.length;
     const start = state.page * state.pageSize;
@@ -948,7 +1055,8 @@ function renderTable(emptyMessage) {
 
     if (!total) {
         body.innerHTML = `<tr class="table-empty"><td colspan="8"><i class="fa-solid fa-paw"></i>
-            ${escapeHtml(emptyMessage || 'No fauna records found. Try increasing the radius or searching a different area.')}</td></tr>`;
+            ${escapeHtml(emptyMessage || 'No fauna records found. Try increasing the radius or searching a different area.')}
+            ${recover ? recoveryButtons() : ''}</td></tr>`;
         return;
     }
 
@@ -969,9 +1077,9 @@ function renderTable(emptyMessage) {
                 <td><span class="group-badge" style="background:${g.bg};color:${g.text}">${g.label}</span></td>
                 <td>${escapeHtml(formatDate(r.eventDate))}</td>
                 <td class="loc-cell">${r.locality
-                    ? `<span title="${escapeHtml([r.locality, r.country].filter(Boolean).join(', '))}">${escapeHtml(r.locality)}</span>`
+                    ? `<span title="${escapeHtml([r.locality, countryName(r.country)].filter(Boolean).join(', '))}">${escapeHtml(r.locality)}</span>`
                     // No place name recorded: show the country in grey so it isn't mistaken for an exact place
-                    : `<span class="loc-none" title="No exact place name was recorded">${escapeHtml(r.country || 'Not specified')}</span>`}</td>
+                    : `<span class="loc-none" title="No exact place name was recorded">${escapeHtml(countryName(r.country) || 'Not specified')}</span>`}</td>
                 <td>${escapeHtml(formatCoords(r))}</td>
                 <td><button class="btn-view" data-index="${index}">View</button></td>
             </tr>`;
@@ -993,7 +1101,7 @@ function fillCommonNames(start, end) {
         // now shows another animal and must not get this name
         if (state.sightings[start + i] !== r) return;
         const cell = document.querySelector(`#sightings-body tr[data-index="${start + i}"] .sp-name`);
-        if (cell) cell.innerText = r.commonName;
+        if (cell) cell.innerText = toTitleCase(r.commonName);
     });
 }
 
@@ -1075,8 +1183,9 @@ async function showProfile(record) {
     if (!encyLink.hidden) encyLink.href = `encyclopedia.php#${encyGroup}/${record.speciesKey}`;
     setText('profile-sci', record.scientificName || 'Unclassified');
     setText('meta-date', formatDate(record.eventDate));
-    setText('meta-locality', [record.locality, record.country].filter(Boolean).join(', ') || 'Not specified');
+    setText('meta-locality', [record.locality, countryName(record.country)].filter(Boolean).join(', ') || 'Not specified');
     setText('meta-coords', formatCoords(record));
+    $('copy-coords').hidden = !(record.lat && record.lng);   // nothing to copy without coordinates
     setText('meta-updated', formatDate(record.updated));
 
     renderTaxonomy({ kingdom: 'Animalia', class: record.taxonGroup });
@@ -1104,7 +1213,7 @@ async function showProfile(record) {
     // The user may have selected another sighting while this request was running
     if (state.sightings[state.selected] !== record) return;
 
-    if (speciesData.vernacularName) setText('profile-name', speciesData.vernacularName);
+    if (speciesData.vernacularName) setText('profile-name', toTitleCase(speciesData.vernacularName));
     if (speciesData.scientificName) setText('profile-sci', speciesData.scientificName);
     // Species saved before 19 Oct may have no class (GBIF gives none for most fish); the sighting
     // knows it ("Actinopterygii"), unless it only knows the phylum
@@ -1196,8 +1305,19 @@ function buildGroupControls() {
             ${groupIconHtml(key)} ${g.label}
         </label>`).join('');
 
+    // The map legend is also a set of switches (16 Nov): a click turns that group on or off, the
+    // same as its tick box in the sidebar; switched-off groups are dimmed
     $('legend-list').innerHTML = Object.entries(GROUPS).map(([key, g]) =>
-        `<div class="legend-item">${groupIconHtml(key, 16)} ${g.label}</div>`).join('');
+        `<button type="button" class="legend-item" data-group="${key}" aria-pressed="true"
+            title="Show or hide ${g.label.toLowerCase()}">${groupIconHtml(key, 16)} ${g.label}</button>`).join('');
+}
+// Dims the legend entries of the groups that are not ticked
+function updateLegend() {
+    document.querySelectorAll('#legend-list .legend-item').forEach(b => {
+        const on = state.groups.has(b.dataset.group);
+        b.classList.toggle('off', !on);
+        b.setAttribute('aria-pressed', String(on));
+    });
 }
 
 
@@ -1233,11 +1353,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     $('search-btn').addEventListener('click', handleSearch);
     // Find an Animal: suggestions while typing, arrow keys, Enter, Esc
-    $('animal-input').addEventListener('focus', loadAnimalList);
+    $('animal-input').addEventListener('focus', () => {
+        loadAnimalList();
+        if (!$('animal-input').value.trim()) showRecentSearches();
+    });
     $('animal-input').addEventListener('input', async (e) => {
         await loadAnimalList();   // instant after the first time
         const typed = e.target.value;
         if (typed !== $('animal-input').value) return;   // the user has typed more meanwhile
+        if (!typed.trim()) return showRecentSearches();
         renderSuggestions(matchAnimals(typed), typed);
     });
     $('animal-input').addEventListener('keydown', onAnimalKey);
@@ -1246,6 +1370,11 @@ document.addEventListener('DOMContentLoaded', () => {
     $('animal-suggest').addEventListener('mousedown', (e) => e.preventDefault());   // keep the focus in the box
     $('animal-suggest').addEventListener('click', (e) => {
         const btn = e.target.closest('button');
+        if (btn?.dataset.recent) {   // a recent search: search that word again
+            $('animal-input').value = btn.dataset.recent;
+            return findAnimal();
+        }
+        if (btn) rememberSearch(btn.dataset.name);
         if (btn) showAnimal({ key: Number(btn.dataset.key), keys: btn.dataset.keys.split(',').map(Number),
             name: btn.dataset.name, cls: btn.dataset.cls || null });
     });
@@ -1270,8 +1399,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (state.speciesFilter && !state.speciesFilter.entries) clearSpeciesFilter();
         if (e.target.checked) state.groups.add(e.target.value);
         else state.groups.delete(e.target.value);
+        updateLegend();
         scheduleSearch(600);   // time to tick several groups
     });
+    // A click on a legend entry ticks or unticks that group's box, which runs the handler above
+    $('legend-list').addEventListener('click', (e) => {
+        const item = e.target.closest('.legend-item');
+        if (item) document.querySelector(`#group-list input[value="${item.dataset.group}"]`)?.click();
+    });
+    // Clicks on the legend must not also move or zoom the map under it
+    L.DomEvent.disableClickPropagation(document.querySelector('.map-legend'));
+    L.DomEvent.disableScrollPropagation(document.querySelector('.map-legend'));
 
     $('date-from').addEventListener('change', (e) => { state.fromDate = e.target.value; scheduleSearch(400); });
     $('date-to').addEventListener('change', (e) => { state.toDate = e.target.value; scheduleSearch(400); });
@@ -1306,11 +1444,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // A click anywhere on a row opens its Species Profile (16 Nov), not only "View": on smaller
     // screens the View column is hidden or scrolled away (the View button stays for the keyboard)
     $('sightings-body').addEventListener('click', (e) => {
+        const fix = e.target.closest('[data-recover]');
+        if (fix) return recover(fix.dataset.recover);
         const row = e.target.closest('tr[data-index]');
         if (row) selectSighting(parseInt(row.dataset.index), { reveal: true });
     });
 
     $('profile-img').addEventListener('click', openProfilePhotos);
+    $('copy-coords').addEventListener('click', copyCoords);
     $('photo-expand').addEventListener('click', openProfilePhotos);
 
     $('profile-close').addEventListener('click', () => {
