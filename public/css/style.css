@@ -706,8 +706,9 @@ dialog .btn-primary { margin-top: 6px; }
     .brand-name { font-size: 21px; }
     .top-nav a, .top-nav button { font-size: 0; padding: 9px 11px; gap: 0; }
     .top-nav i { font-size: 17px; }
-    /* Sightings table on a phone: Photo, Species, Group and Date; a tap on the row opens the rest */
-    .sightings thead th:is(:nth-child(1), :nth-child(6), :nth-child(8)),
-    .sightings tr[data-index] td:is(:nth-child(1), :nth-child(6), :nth-child(8)) { display: none; }
+    /* Sightings table on a phone: Photo, Species and Date fit without sideways scrolling; the
+       group shows in the pin colour and a tap on the row opens the rest in the Species Profile */
+    .sightings thead th:is(:nth-child(1), :nth-child(4), :nth-child(6), :nth-child(8)),
+    .sightings tr[data-index] td:is(:nth-child(1), :nth-child(4), :nth-child(6), :nth-child(8)) { display: none; }
     .sp-name, .sp-sci { max-width: 140px; }
 }

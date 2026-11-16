@@ -23,13 +23,18 @@ function makeSegmented(group) {
         // Screen readers hear which option is chosen ("10 km, pressed"), not only see the green
         buttons.forEach(b => b.setAttribute('aria-pressed', String(b.classList.contains('active'))));
         if (!btn) return;
-        // Not placed yet (page load, or the row was hidden, as in the folded phone filters): the
-        // thumb appears in place at once instead of growing in from the left (16 Nov)
+        // A hidden row (the folded phone filters) has no size yet: it is placed when it is shown
+        // (ResizeObserver below). Without this the class change below started this function again
+        // and again, and the page froze on phones (16 Nov).
+        if (!btn.offsetWidth) return;
+        // Not placed yet (page load, or the row was just shown): the thumb appears in place at once
+        // instead of growing in from the left. Classes are only changed when they really change:
+        // every class change calls this function again (MutationObserver below).
         const first = !thumb.offsetWidth;
-        if (first) group.classList.remove('seg-ready');
+        if (first && group.classList.contains('seg-ready')) group.classList.remove('seg-ready');
         thumb.style.width = `${btn.offsetWidth}px`;
         thumb.style.transform = `translateX(${btn.offsetLeft - thumb.offsetLeft}px)`;
-        if (first && btn.offsetWidth) {
+        if (first && !group.classList.contains('seg-ready')) {
             void thumb.offsetWidth;   // let the browser draw it there first, then later moves slide
             group.classList.add('seg-ready');
         }
