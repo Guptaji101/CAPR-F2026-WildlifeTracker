@@ -21,6 +21,13 @@ $lat = (float)$_GET['lat'];
 $lng = (float)$_GET['lng'];
 
 $radius = isset($_GET['radius']) ? (float)$_GET['radius'] : 10;
+// The page offers 5 to 100 km; anything else is refused here (16 Nov: a negative radius gave a
+// GBIF error, 99999 km a 40-second search)
+if ($radius < 1 || $radius > 100) {
+    http_response_code(400);
+    echo json_encode(['error' => 'radius must be between 1 and 100 km']);
+    exit;
+}
 // Comma-separated GBIF taxon keys for the selected animal groups; empty = all animals
 $taxa   = array_values(array_filter(array_map('intval', explode(',', $_GET['taxa'] ?? ''))));
 $from   = $_GET['from']  ?? null;
@@ -44,13 +51,14 @@ if ($from && $to && $from > $to) {
     exit;
 }
 
-// The same search in the last hour (same place, radius, groups, dates and limit) is answered
-// from the cache: GBIF needs 2–5 seconds, the cache a few milliseconds. New records reach GBIF
-// slowly, so an hour-old answer is still up to date.
-// ("sightings4": newest records first and fuller place names since 9 Nov, photo credit since 10 Nov;
-// older cached answers are not reused)
-$cacheKey = 'sightings4:' . json_encode([$lat, $lng, $radius, $taxa, $from, $to, $limit]);
-if ($cached = cache_get($cacheKey, 3600)) {
+// The same search in the last 6 hours (same place, radius, groups, dates and limit) is answered
+// from the cache: GBIF needs 2–20 seconds, the cache a few milliseconds. New records reach GBIF
+// slowly (days after the sighting), so a 6-hour-old answer is still up to date. (Was 1 hour
+// until 16 Nov: most visitors then waited for GBIF, because the keep-awake job runs only every
+// few hours.)
+// ("sightings5": cleaner place names since 16 Nov; older cached answers are not reused)
+$cacheKey = 'sightings5:' . json_encode([$lat, $lng, $radius, $taxa, $from, $to, $limit]);
+if ($cached = cache_get($cacheKey, 6 * 3600)) {
     echo json_encode($cached);
     exit;
 }
@@ -74,13 +82,31 @@ function place_name(array $r): ?string
 {
     $text = $r['locality'] ?? $r['verbatimLocality'] ?? $r['municipality'] ?? '';
     $parts = [];
-    foreach ([...explode(',', $text), $r['stateProvince'] ?? ''] as $p) {
-        $p = trim($p);
-        if ($p === '' || in_array(mb_strtolower($p), ['kr', 'korea', 'south korea', 'republic of korea', '대한민국'])) continue;
+    $country = ['kr', 'korea', 'south korea', 'republic of korea', 'korea, republic of', '대한민국'];
+    foreach (explode(',', $text) as $p) {
+        // the country inside a part is left out too ("대한민국 부산광역시 해운대구", "… 부산광역시 대한민국")
+        $p = trim(preg_replace('/^(대한민국|south korea|republic of korea)\s+|\s+(대한민국|south korea)$/iu', '', trim($p)));
+        if ($p === '' || in_array(mb_strtolower($p), $country)) continue;
+        // Codes are no place names for people (16 Nov): map codes ("427X+HJ", Google plus codes)
+        // and region codes ("KR-PU")
+        if (preg_match('/^[23456789CFGHJMPQRVWX]{4,8}\+[23456789CFGHJMPQRVWX]{0,3}$/i', $p)
+            || preg_match('/^KR-[A-Z0-9]{1,3}$/i', $p)) continue;
         $parts[mb_strtolower($p)] ??= $p;
+    }
+    // GBIF's province is added only when the place does not name a city or province yet: GBIF
+    // sometimes files a record under the wrong one ("Jung-gu, Busan" + Incheon; both cities have
+    // a Jung-gu)
+    $province = trim($r['stateProvince'] ?? '');
+    if ($province !== '' && !in_array(mb_strtolower($province), $country) && !preg_match('/' . KOREA_PROVINCES . '/iu', implode(' ', $parts))) {
+        $parts[mb_strtolower($province)] ??= $province;
     }
     return $parts ? implode(', ', $parts) : null;
 }
+
+// The cities and provinces of South Korea, in English and Korean (for place_name above)
+const KOREA_PROVINCES = 'seoul|busan|daegu|incheon|gwangju|daejeon|ulsan|sejong|gyeonggi|gangwon|chungcheong|chungbuk|'
+    . 'chungnam|jeolla|jeonbuk|jeonnam|gyeongsang|gyeongbuk|gyeongnam|jeju|'
+    . '서울|부산|대구|인천|광주|대전|울산|세종|경기|강원|충청|충북|충남|전라|전북|전남|경상|경북|경남|제주';
 
 $results = array_map(fn($r) => [
     'key'            => $r['key'] ?? null,

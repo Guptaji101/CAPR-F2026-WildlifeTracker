@@ -8,9 +8,11 @@
 // Application State & Configuration
 // =============================================================================
 const state = {
-    currentLat: 35.1796,  // Default: Busan
-    currentLng: 129.0756,
-    currentLocationName: 'Busan, South Korea',
+    // Default: Ulsan (16 Nov; was Busan). The same point the "Ulsan" quick location finds
+    // (api/geocode.php), so both use the same cached search
+    currentLat: 35.5391697,
+    currentLng: 129.3119136,
+    currentLocationName: 'Ulsan, South Korea',
     radiusKm: 10,
     groups: new Set(),    // selected animal groups (filled from GROUPS below)
     limit: 75,
@@ -44,7 +46,7 @@ const GROUPS = {
 Object.keys(GROUPS).forEach(g => state.groups.add(g));
 
 // The last search (place and radius) is remembered for this browser tab, so coming back to the
-// Map page from the Encyclopedia or the header shows the same place instead of starting at Busan.
+// Map page from the Encyclopedia or the header shows the same place instead of starting at Ulsan.
 const SAVED_SEARCH = 'wildtrack.lastSearch';
 function saveSearch() {
     try {
@@ -52,7 +54,7 @@ function saveSearch() {
             lat: state.currentLat, lng: state.currentLng, name: state.currentLocationName,
             radiusKm: state.radiusKm, input: $('location-input').value,
         }));
-    } catch { /* storage blocked (for example a private window): the page then starts at Busan */ }
+    } catch { /* storage blocked (for example a private window): the page then starts at Ulsan */ }
 }
 const savedSearch = (() => {
     try { return JSON.parse(sessionStorage.getItem(SAVED_SEARCH)); } catch { return null; }
@@ -254,7 +256,7 @@ function scheduleSearch(delay = 300) {
 
 function updateSearchSummary() {
     const typed = $('location-input').value.trim();
-    const place = (typed || state.currentLocationName || 'Busan').split(',')[0];
+    const place = (typed || state.currentLocationName || 'Ulsan').split(',')[0];
     const allGroups = state.groups.size === Object.keys(GROUPS).length;
     const what = state.speciesFilter ? `only ${state.speciesFilter.query ? `"${state.speciesFilter.query}"` : state.speciesFilter.name}`
         : allGroups ? 'all animals'
@@ -509,40 +511,9 @@ async function findAnimal() {
     showNoAnimal(query, found);
 }
 
-// A word of a name starts with the keyword ("boar" fits "Wild boar"); plurals count too
-// ("snakes" fits "snake"). Korean has no spaces between parts of a name, so a Korean keyword may
-// be anywhere in the name ("노루" fits "보노루").
-const HANGUL = /[ㄱ-ㆎ가-힣]/;
-function keywordRegex(query, wholeWord = false) {
-    const q = query.trim().toLowerCase();
-    const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    if (HANGUL.test(q)) return new RegExp(esc(q));
-    const forms = [...new Set([q, q.replace(/es$/, ''), q.replace(/s$/, '')])].filter(f => f.length >= 2);
-    // wholeWord: the keyword is a whole word of the name ("bat" in "Blue bat star", not in "Bath")
-    const end = wholeWord ? `(e?s)?($|[\\s\\-'/)])` : '';
-    return new RegExp(`(^|[\\s\\-'/(])(${forms.map(esc).join('|')})${end}`);
-}
-const animalNames = a => [a.n, a.s, ...(a.ko || [])].filter(Boolean);
-// The names people use: English and Korean (the scientific name only if there is no English one)
-const commonNames = a => [a.n || a.s, ...(a.ko || [])].filter(Boolean);
-
-// Every animal of the list that the keyword fits, best-known first (the list's order).
-// Everyday names come first: "hen" finds the Hen Harrier, not also two beetles whose scientific
-// name starts with "Hen…" (Henosepilachna). Only if no everyday name fits are scientific names
-// searched, so "Circus cyaneus" still works.
-function keywordMatches(text) {
-    const q = text.trim();
-    if (!animalList || (q.length < 2 && !HANGUL.test(q))) return [];
-    const re = keywordRegex(q);
-    const fits = names => a => names(a).some(n => re.test(n.toLowerCase()));
-    const common = animalList.filter(fits(commonNames));
-    if (!common.length) return animalList.filter(fits(animalNames));
-    // A whole word wins over the start of a longer word: "bat" finds the Blue bat star, not also
-    // "Bath White" or "Batillaria"; "pige" (no whole word) still finds the pigeons
-    const whole = keywordRegex(q, true);
-    const wholeMatches = common.filter(a => commonNames(a).some(n => whole.test(n.toLowerCase())));
-    return wholeMatches.length ? wholeMatches : common;
-}
+// The search rules (keyword, everyday names first, whole words, similar names) are in
+// js/animal-search.js, shared with the Encyclopedia. Here: the same rules on this page's list.
+const keywordMatches = text => findByKeyword(animalList, text);
 
 // A whole kind of animal for the keyword from the server ("bat": all bats, Chiroptera), added to
 // the animals found in the list. Many kinds (bats, owls…) have no species among the 2000
@@ -559,7 +530,7 @@ async function addKindFromServer(query) {
     }
     const f = state.speciesFilter;
     if (animalId !== state.animalId || !f || f.query !== query) return;   // a newer search since
-    if (!found || !found.group || !keywordRegex(query, true).test(found.name.toLowerCase())) return;
+    if (!isKindFor(found, query)) return;   // only a real kind ("Bat", Chiroptera), see animal-search.js
     if (f.animals.some(a => a.key === found.key)) return;
     showKeyword(query, [found, ...f.animals]);
 }
@@ -569,54 +540,14 @@ function fitsKeyword(found, query) {
     return [found.name, found.scientificName].some(n => n && re.test(n.toLowerCase()));
 }
 
-// Similar names for a keyword that found nothing: the keyword inside a name ("oar" in "boar"),
-// or a word that differs by a letter or two ("bore" -> "boar"). Plus the server's best guess.
+// Similar names for a keyword that found nothing (similarNames in animal-search.js), in the shape
+// of the suggestion list. Plus the server's best guess.
 function similarAnimals(query, hint) {
-    const q = query.trim().toLowerCase();
-    // Letters that may differ. A Korean syllable is a big part of a word ("치킨" is not "치리"), so
-    // Korean allows one change only from 3 syllables on ("고랴니" -> 고라니)
-    const allowed = HANGUL.test(q) ? (q.length >= 3 ? 1 : 0) : q.length <= 4 ? 1 : 2;
-    const scored = [];
-    for (const a of animalList || []) {
-        let best = Infinity, same = 0;
-        for (const name of commonNames(a)) {   // everyday names only, as in keywordMatches()
-            const low = name.toLowerCase();
-            // inside a word of an English or Korean name ("oar" in "boar"; "tivi" is not
-            // "Peridea lativitta", which has no English name)
-            if (q.length >= 3 && low.includes(q) && name !== a.s) { best = 0; break; }
-            // the whole name ("wild bore" -> "wild boar"), then each of its words ("bore" -> "boar")
-            for (const w of [low, ...low.split(/[\s\-'/()]+/)]) {
-                // skip bits shorter than 2 letters ("치" of "치 리"): too short to be a similar word
-                if (w.length < 2 || Math.abs(w.length - q.length) > allowed) continue;
-                const d = editDistance(q, w);
-                let p = 0;
-                while (p < q.length && q[p] === w[p]) p++;   // letters the same from the start
-                if (d < best || (d === best && p > same)) { best = d; same = p; }
-            }
-        }
-        if (best <= allowed) scored.push({ a, best, same });
-    }
-    // Closest first; for the same distance, the name that starts most like the keyword ("magpy":
-    // Magpie before Map). The sort is stable, so best-known first after that.
-    scored.sort((x, y) => x.best - y.best || y.same - x.same);
-    const items = scored.slice(0, 6).map(({ a }) => ({ ...listAnimal(a), sci: a.n ? a.s : '', records: a.r }));
+    const items = similarNames(animalList, query).map(a => ({ ...listAnimal(a), sci: a.n ? a.s : '', records: a.r }));
     if (hint && !items.some(i => i.key === hint.key)) {
         items.unshift({ key: hint.key, keys: hint.keys, name: hint.name, cls: hint.cls, sci: hint.scientificName || '' });
     }
     return items.slice(0, 6);
-}
-
-// How many letters must change to turn one word into the other (Levenshtein distance)
-function editDistance(a, b) {
-    let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
-    for (let i = 1; i <= a.length; i++) {
-        const cur = [i];
-        for (let j = 1; j <= b.length; j++) {
-            cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
-        }
-        prev = cur;
-    }
-    return prev[b.length];
 }
 
 // Show every animal the keyword fits. The keyword stays in the box as the user typed it, and the
@@ -767,7 +698,9 @@ function renderSuggestions(items, typed = '', title = '') {
     box.innerHTML = (title ? `<div class="suggest-title">${escapeHtml(title)}</div>` : '') + items.map((a, i) => {
         // Group icon from the class; some fish only have "Chordata" in GBIF, so they get a plain paw
         const icon = a.cls && a.cls !== 'Chordata' ? groupIconHtml(groupOf({ taxonGroup: a.cls }), 16) : '<i class="fa-solid fa-paw"></i>';
-        const where = a.records ? `${a.records.toLocaleString()} records in Korea` : 'not recorded in Korea';
+        // The server's guess has no record count: say nothing rather than "not recorded" (a whole
+        // family like "Old World sparrow" is recorded in Korea, just not counted here)
+        const where = a.records ? `${a.records.toLocaleString()} records in Korea` : a.records === 0 ? 'not recorded in Korea' : 'from GBIF';
         const keys = (a.keys || [a.key]).join(',');
         return `<button type="button" role="option" id="suggest-${i}" data-key="${a.key}" data-keys="${keys}" data-name="${escapeHtml(a.name)}" data-cls="${escapeHtml(a.cls || '')}"
                 aria-label="${escapeHtml([a.name, a.ko, a.sci].filter(Boolean).join(', '))}">
@@ -1370,9 +1303,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     $('page-prev').addEventListener('click', () => changePage(-1));
     $('page-next').addEventListener('click', () => changePage(1));
+    // A click anywhere on a row opens its Species Profile (16 Nov), not only "View": on smaller
+    // screens the View column is hidden or scrolled away (the View button stays for the keyboard)
     $('sightings-body').addEventListener('click', (e) => {
-        const btn = e.target.closest('.btn-view');
-        if (btn) selectSighting(parseInt(btn.dataset.index), { reveal: true });
+        const row = e.target.closest('tr[data-index]');
+        if (row) selectSighting(parseInt(row.dataset.index), { reveal: true });
     });
 
     $('profile-img').addEventListener('click', openProfilePhotos);
@@ -1392,7 +1327,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Escape') $('profile-close').click();
     });
 
-    // Auto-load the default location (Busan)
+    // Auto-load the default location (Ulsan)
     updateRadiusCircle();
     loadSightings();
 });

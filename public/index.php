@@ -64,7 +64,7 @@ $page = 'map';
                     <div class="animal-suggest" id="location-suggest" role="listbox" aria-label="Place suggestions" hidden></div>
                 </div>
                 <h3 class="side-subtitle"><i class="fa-solid fa-crosshairs"></i> Search Radius</h3>
-                <div class="chips radius-chips">
+                <div class="chips radius-chips" role="group" aria-label="Search radius">
                     <button class="chip" data-radius="5">5 km</button>
                     <button class="chip active" data-radius="10">10 km</button>
                     <button class="chip" data-radius="25">25 km</button>
@@ -74,10 +74,10 @@ $page = 'map';
 
                 <h3 class="side-subtitle"><i class="fa-solid fa-location-dot"></i> Quick Locations</h3>
                 <div class="chips">
-                    <button class="chip active" data-place="Busan">Busan</button>
+                    <button class="chip" data-place="Busan">Busan</button>
                     <button class="chip" data-place="Seoul">Seoul</button>
                     <button class="chip" data-place="Jeju">Jeju Island</button>
-                    <button class="chip" data-place="Ulsan">Ulsan</button>
+                    <button class="chip active" data-place="Ulsan">Ulsan</button>
                     <button class="chip" data-place="Hallasan">Hallasan</button>
                     <button class="chip" data-place="Seoraksan">Seoraksan</button>
                     <button class="chip" data-place="Suncheon Bay">Suncheon Bay</button>
@@ -85,7 +85,7 @@ $page = 'map';
 
                 <!-- One tap, like the radius (was a folded "Filters" dropdown) -->
                 <h3 class="side-subtitle"><i class="fa-solid fa-list-ol"></i> Number of Records</h3>
-                <div class="chips radius-chips">
+                <div class="chips radius-chips" role="group" aria-label="Number of records">
                     <button class="chip" data-limit="30">30</button>
                     <button class="chip active" data-limit="75">75</button>
                     <button class="chip" data-limit="150">150</button>
@@ -121,9 +121,9 @@ $page = 'map';
             <section class="side-section">
                 <h3 class="side-title"><i class="fa-regular fa-calendar-days"></i> Observation Date</h3>
                 <div class="date-range">
-                    <input type="date" id="date-from" title="From date">
+                    <input type="date" id="date-from" title="From date" aria-label="Observation date from">
                     <i class="fa-solid fa-arrow-right"></i>
-                    <input type="date" id="date-to" title="To date">
+                    <input type="date" id="date-to" title="To date" aria-label="Observation date to">
                 </div>
             </section>
 
@@ -151,7 +151,7 @@ $page = 'map';
             <section class="card map-card" id="map-section">
                 <div id="map"></div>
 
-                <div class="basemap-tabs">
+                <div class="basemap-tabs" role="group" aria-label="Map style">
                     <button class="active" data-layer="map" title="Street map (OpenStreetMap)">Street</button>
                     <button data-layer="satellite">Satellite</button>
                     <button data-layer="topo">Topographic</button>
@@ -247,6 +247,7 @@ $page = 'map';
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script src="js/tilt3d.js?v=<?= filemtime(__DIR__ . '/js/tilt3d.js') ?>"></script>
     <script src="js/photo-viewer.js?v=<?= filemtime(__DIR__ . '/js/photo-viewer.js') ?>"></script>
+    <script src="js/animal-search.js?v=<?= filemtime(__DIR__ . '/js/animal-search.js') ?>"></script>
     <script src="js/app.js?v=<?= filemtime(__DIR__ . '/js/app.js') ?>"></script>
     <script src="js/segmented.js?v=<?= filemtime(__DIR__ . '/js/segmented.js') ?>"></script>
 </body>

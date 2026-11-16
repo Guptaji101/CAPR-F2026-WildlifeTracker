@@ -20,9 +20,19 @@ function makeSegmented(group) {
     const active = () => buttons.find(b => b.classList.contains('active'));
     const place = (btn) => {
         group.classList.toggle('no-active', !btn);   // the slider can pick a number with no button
+        // Screen readers hear which option is chosen ("10 km, pressed"), not only see the green
+        buttons.forEach(b => b.setAttribute('aria-pressed', String(b.classList.contains('active'))));
         if (!btn) return;
+        // Not placed yet (page load, or the row was hidden, as in the folded phone filters): the
+        // thumb appears in place at once instead of growing in from the left (16 Nov)
+        const first = !thumb.offsetWidth;
+        if (first) group.classList.remove('seg-ready');
         thumb.style.width = `${btn.offsetWidth}px`;
         thumb.style.transform = `translateX(${btn.offsetLeft - thumb.offsetLeft}px)`;
+        if (first && btn.offsetWidth) {
+            void thumb.offsetWidth;   // let the browser draw it there first, then later moves slide
+            group.classList.add('seg-ready');
+        }
     };
     // The button nearest to the pointer, so sliding past the ends keeps the first or last option
     const at = (x) => buttons.reduce((best, b) => {
@@ -89,8 +99,7 @@ function makeSegmented(group) {
     new MutationObserver(() => { if (!dragging) place(active()); })
         .observe(group, { subtree: true, attributes: true, attributeFilter: ['class'] });
     new ResizeObserver(() => place(active())).observe(group);
-    group.classList.add('seg-ready');   // from now on the thumb slides (not on the first placement)
-    place(active());
+    place(active());   // the first placement does not slide (see place)
 }
 
 document.querySelectorAll('.basemap-tabs, .radius-chips').forEach(makeSegmented);

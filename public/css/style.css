@@ -385,6 +385,14 @@ table.sightings { width: 100%; border-collapse: collapse; }
 }
 .sightings tr.selected td { background: var(--green-50); }
 .sightings tbody tr:hover td { background: #fafcfb; }
+/* A whole row opens its Species Profile (16 Nov) */
+.sightings tbody tr[data-index] { cursor: pointer; }
+/* The table fits without sideways scrolling (16 Nov): Coordinates are left out below 1600 px wide
+   (they are in the Species Profile); columns: 1 #, 2 Photo, 3 Species, 4 Group, 5 Date, 6 Location,
+   7 Coordinates, 8 Action */
+@media (max-width: 1600px) {
+    .sightings thead th:nth-child(7), .sightings tr[data-index] td:nth-child(7) { display: none; }
+}
 
 .thumb {
     width: 42px;
@@ -698,4 +706,8 @@ dialog .btn-primary { margin-top: 6px; }
     .brand-name { font-size: 21px; }
     .top-nav a, .top-nav button { font-size: 0; padding: 9px 11px; gap: 0; }
     .top-nav i { font-size: 17px; }
+    /* Sightings table on a phone: Photo, Species, Group and Date; a tap on the row opens the rest */
+    .sightings thead th:is(:nth-child(1), :nth-child(6), :nth-child(8)),
+    .sightings tr[data-index] td:is(:nth-child(1), :nth-child(6), :nth-child(8)) { display: none; }
+    .sp-name, .sp-sci { max-width: 140px; }
 }

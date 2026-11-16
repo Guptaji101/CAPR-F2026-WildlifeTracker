@@ -12,7 +12,8 @@
  *   3. All animals of that name recorded in South Korea ("magpie"): first from
  *      data/korea-animals.json, else from GBIF's common names.
  *
- * Answers {"found": {key, keys, name, scientificName, group, cls, path}}, or 404 {"error"}.
+ * Answers {"found": {key, keys, name, scientificName, group, byName, cls, path}}, or
+ * {"found": null, "error"} when no animal has that name (200 since 16 Nov; was 404).
  * keys = the GBIF taxon keys to show on the map (one for a species), group = true for a whole kind, cls = its class ("Mammalia") and path = [phylum, class, order] keys, which
  * tell the pages which animal group to tick or open.
  */
@@ -34,7 +35,8 @@ if ($q === '' || mb_strlen($q) > 80) {
 
 // A name looked up in the last 7 days is answered from the cache (no GBIF or Wikipedia request)
 // ("animal5:" since 4 Nov, so answers saved with the old "Did you mean" lists are not reused)
-$cacheKey = 'animal5:' . mb_strtolower($q);
+// animal6 (16 Nov): answers carry byName, so cached answers without it are not used
+$cacheKey = 'animal6:' . mb_strtolower($q);
 if ($cached = cache_get($cacheKey, 7 * 86400)) {
     echo json_encode($cached);
     exit;
@@ -55,12 +57,15 @@ function animal_species(int $key): ?array {
 }
 
 // Sends the animal (a species, or a whole kind when there are several keys or $group is true),
-// with the class and [phylum, class, order] of its first key so the pages know its animal group
-function send_found(array $keys, string $name, ?string $scientificName, bool $group = false): void {
+// with the class and [phylum, class, order] of its first key so the pages know its animal group.
+// $byName = true: not one kind, but the animals whose name has the typed word ("pige" -> the
+// pigeons), named after the word; the pages then keep their own list instead (16 Nov).
+function send_found(array $keys, string $name, ?string $scientificName, bool $group = false, bool $byName = false): void {
     $sp = gbif_get(GBIF_API . "/species/{$keys[0]}") ?: [];
     send(['found' => [
         'key' => $keys[0], 'keys' => $keys, 'name' => $name, 'scientificName' => $scientificName,
         'group' => $group || count($keys) > 1,
+        'byName' => $byName,
         'cls' => gbif_class($sp) ?? $sp['phylum'] ?? $sp['canonicalName'] ?? null,   // a phylum itself ("Annelida") has neither
         'path' => array_values(array_filter([$sp['phylumKey'] ?? null, $sp['classKey'] ?? null, $sp['orderKey'] ?? null])),
     ]]);
@@ -156,7 +161,7 @@ if ($wiki && ($sp = gbif_get(GBIF_API . "/species/{$wiki['key']}"))
 function send_all(array $animals, string $q): void {
     $animals = array_values(array_filter($animals, fn($a) => $a['class'] === $animals[0]['class']));
     if (count($animals) === 1) send_found([(int)$animals[0]['key']], $animals[0]['name'], $animals[0]['scientificName']);
-    send_found(array_map(fn($a) => (int)$a['key'], array_slice($animals, 0, 50)), mb_convert_case($q, MB_CASE_TITLE), null, true);
+    send_found(array_map(fn($a) => (int)$a['key'], array_slice($animals, 0, 50)), mb_convert_case($q, MB_CASE_TITLE), null, true, true);
 }
 
 // --- 3a. All animals of that name recorded in South Korea --------------------------
@@ -207,5 +212,6 @@ if ($candidates) {
     if ($candidates) send_all($candidates, $q);
 }
 
-http_response_code(404);
-echo json_encode(['error' => "No animal called \"$q\" was found. Check the spelling or try the scientific name."]);
+// "Not found" is a normal answer, not an error (16 Nov): the pages offer similar names, and the
+// browser no longer logs a red "404" for every unknown word
+echo json_encode(['found' => null, 'error' => "No animal called \"$q\" was found. Check the spelling or try the scientific name."]);

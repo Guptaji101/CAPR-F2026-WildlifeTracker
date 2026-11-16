@@ -244,18 +244,19 @@ function groupOfAnimal(a) {
 }
 const groupButton = key => document.querySelector(`.tree-item[data-key="${key}"]`);
 
-// The 8 best-known animals (most records first; the list is in that order) whose English or
-// scientific name has a word starting with the typed text, or whose Korean name contains it
-// ("고라니": water deer; 11 Nov); only one group if `group` is given
-const HANGUL = /[ㄱ-ㆎ가-힣]/;
+// The 8 best-known animals (most records first; the list is in that order) that the typed text
+// fits, with the same rules as the Map page (findByKeyword in animal-search.js: everyday names
+// first, whole words before parts of words, Korean names: "고라니" = water deer); only one group
+// if `group` is given
 function matchAnimals(text, group = null) {
-    const q = text.trim().toLowerCase();
-    const korean = HANGUL.test(q);
-    if ((q.length < 2 && !korean) || !animalList) return [];
-    const esc = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const wordStart = new RegExp(korean ? esc : `(^|[\\s\\-'/(])${esc}`);
-    return animalList
-        .filter(a => [a.n, a.s, ...(a.ko || [])].some(n => n && wordStart.test(n.toLowerCase())))
+    return inGroup(findByKeyword(animalList, text), group);
+}
+// Similar names when nothing fits (typos: "sparow" -> sparrows), the same as on the Map page
+function similarAnimals(text, group = null) {
+    return inGroup(similarNames(animalList, text, 50), group);
+}
+function inGroup(animals, group) {
+    return animals
         .map(a => ({ ...a, g: groupOfAnimal(a) }))
         // In a group: only that group. At the top: all animals, also the few without a group in the
         // tree (millipedes, barnacles…): their card opens without changing the group.
@@ -280,12 +281,14 @@ function renderList(inputId, boxId, animals, typed, { message = '' } = {}) {
             const btn = groupButton(a.g);
             const icon = btn ? `<span class="group-icon" style="background:${btn.dataset.color};width:22px;height:22px;font-size:11px">${btn.querySelector('.tree-icon').innerHTML}</span>` : '<i class="fa-solid fa-paw"></i>';
             const name = a.n || a.s;
+            // a Korean search shows the Korean name it found ("Chinese Water Deer · 고라니")
+            const ko = HANGUL.test(typed) ? (a.ko || []).find(n => n.includes(typed.trim())) : '';
             const where = [btn?.dataset.name, a.r ? `${fmt(a.r)} records in Korea` : ''].filter(Boolean).join(' · ');
             return `<button type="button" role="option" id="${boxId}-${i}" data-key="${a.k}" data-group="${a.g || ''}" data-records="${a.r || ''}"
                     aria-label="${escapeHtml([name, btn?.dataset.name].filter(Boolean).join(', '))}">
                 ${icon}
                 <span class="suggest-text">
-                    <span class="suggest-main">${boldMatch(name, typed)}</span>
+                    <span class="suggest-main">${boldMatch(name, typed)}${ko ? ` · ${boldMatch(ko, typed)}` : ''}</span>
                     <span class="suggest-sub">${a.n ? `<i>${boldMatch(a.s, typed)}</i> · ` : ''}${escapeHtml(where)}</span>
                 </span>
             </button>`;
@@ -329,20 +332,39 @@ async function searchAll() {
     const groupBtn = groupByWord(typed);
     if (groupBtn) { hideList('ency-search-input', 'ency-suggest'); return groupBtn.click(); }
 
+    // The animals of the list that fit the word stay in the list (to click) while the server is
+    // asked for a whole kind ("bat": all bats, which the list does not have) or a name it knows
     const id = ++searchId;
-    renderList('ency-search-input', 'ency-suggest', [], typed, { message: '<i class="fa-solid fa-spinner fa-spin"></i> Looking up this name…' });
+    const matches = matchAnimals(typed);
+    const said = `"${escapeHtml(typed)}"`;
+    renderList('ency-search-input', 'ency-suggest', matches, typed,
+        { message: `<i class="fa-solid fa-spinner fa-spin"></i> Looking for all kinds of ${said}…` });
     let data;
     try { data = await getJson(`api/animal.php?q=${encodeURIComponent(typed)}`); }
     catch (e) { data = { error: e.message }; }
     if (id !== searchId) return;   // the user searched again meanwhile
 
-    const known = key => animalList.find(a => a.k === key);
-    if (data.found?.group) return showKind(data.found);
-    if (data.found) {
-        const a = known(data.found.key);
-        return openAnimal(data.found.key, a ? groupOfAnimal(a) : groupOfAnimal({ t: data.found.path }), a?.r);
+    const found = data.found;
+    // A whole kind that the word names ("bat", "deer", "snakes"): its cards
+    if (isKindFor(found, typed)) return showKind(found);
+    // Animals of the list that fit the word: the user picks one (the keyword is not swapped for another name)
+    if (matches.length === 1) return openAnimal(matches[0].k, matches[0].g, matches[0].r);   // "hen": Hen Harrier
+    if (matches.length) {
+        return renderList('ency-search-input', 'ency-suggest', matches, typed, { message: `Animals called ${said}: pick one` });
     }
-    renderList('ency-search-input', 'ency-suggest', [], typed, { message: escapeHtml(data.error || `No animal called "${typed}" was found.`) });
+    // A name the server knows that fits the word ("tiger" -> Tiger, "Pica pica")
+    const re = keywordRegex(typed);
+    if (found && [found.name, found.scientificName].some(n => n && re.test(n.toLowerCase()))) {
+        if (found.group) return showKind(found);   // several animals of that name ("snake")
+        const a = animalList.find(x => x.k === found.key);
+        return openAnimal(found.key, a ? groupOfAnimal(a) : groupOfAnimal({ t: found.path }), a?.r);
+    }
+    // Nothing fits: similar names, as on the Map page ("sparow" -> sparrows)
+    const similar = similarAnimals(typed).slice(0, 6);
+    renderList('ency-search-input', 'ency-suggest', similar, '', {
+        message: similar.length ? `No animal called ${said} was found. Did you mean…`
+            : `No animal called ${said} was found. Check the spelling, or try the scientific name.`,
+    });
 }
 
 // A whole group by its name or a word of it ("reptiles", "Insect", "shrimps" -> Crabs & shrimps):
@@ -377,8 +399,10 @@ async function searchGroup() {
     const hit = exact || matches[0];
     if (hit) return openAnimal(hit.k, hit.g, hit.r);
     const groupName = groupButton(state.group).dataset.name.toLowerCase();
-    renderList('group-search-input', 'group-suggest', [], typed, {
-        message: `No ${escapeHtml(groupName)} called "${escapeHtml(typed)}" among the 2000 animals recorded most in South Korea. Try <b>Search all animals</b> at the top.`,
+    const similar = similarAnimals(typed, state.group).slice(0, 6);   // typos: "sparow" -> sparrows
+    renderList('group-search-input', 'group-suggest', similar, '', {
+        message: `No ${escapeHtml(groupName)} called "${escapeHtml(typed)}" among the 2000 animals recorded most in South Korea. `
+            + (similar.length ? 'Did you mean…' : 'Try <b>Search all animals</b> at the top.'),
     });
 }
 
