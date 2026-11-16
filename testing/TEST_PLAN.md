@@ -11,13 +11,13 @@ results in the testing report (Week 12)
 
 | Area | Requirements | Test cases |
 |---|---|---|
-| Place search, Quick Locations, Locate Me, place suggestions | FR-01, FR-11 | TC-01 – TC-10 |
-| Map, base maps, legend | FR-02, FR-08 | TC-11 – TC-14 |
+| Place search, Quick Locations, Locate Me, place suggestions | FR-01, FR-11 | TC-01 – TC-10, TC-93 |
+| Map, base maps, legend | FR-02, FR-08 | TC-11 – TC-14, TC-88 |
 | Sightings: pins, table, filters, Search button | FR-03 – FR-06 | TC-15 – TC-26, TC-78 – TC-79 |
-| Species Profile and GBIF link | FR-07, FR-09 | TC-27 – TC-31, TC-75 – TC-76, TC-80 |
-| Messages and loading states | FR-10 | TC-32 – TC-36 |
-| Find an Animal | FR-13 | TC-37 – TC-43, TC-69 – TC-72, TC-77 |
-| Animal Encyclopedia and its searches | FR-12 | TC-44 – TC-55, TC-73 – TC-74 |
+| Species Profile and GBIF link | FR-07, FR-09 | TC-27 – TC-31, TC-75 – TC-76, TC-80, TC-89 – TC-90 |
+| Messages and loading states | FR-10 | TC-32 – TC-36, TC-87 |
+| Find an Animal | FR-13 | TC-37 – TC-43, TC-69 – TC-72, TC-77, TC-81 – TC-86 |
+| Animal Encyclopedia and its searches | FR-12 | TC-44 – TC-55, TC-73 – TC-74, TC-91 – TC-92 |
 | Non-functional requirements | NFR-01 – NFR-08 | TC-56 – TC-68 |
 | Usability test with users | NFR-05 | Section 6 |
 
@@ -51,7 +51,7 @@ open a species) · *Medium* = it works but wrongly or confusingly · *Low* = cos
 
 ## 4. Functional test cases
 
-Unless a step says otherwise, start on the Map page, with the default search (Busan, 10 km).
+Unless a step says otherwise, start on the Map page, with the default search (Ulsan, 10 km; Busan before 16 Nov).
 
 ### 4.1 Place search (FR-01, FR-11)
 
@@ -64,6 +64,7 @@ Unless a step says otherwise, start on the Map page, with the default search (Bu
 | TC-05 | Place suggestions | Type `Jiri` slowly | Within about 2 s a list of places in Korea appears under the box (e.g. Jirisan National Park), each with an icon and its area; typed letters in bold | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost |
 | TC-06 | Pick a place suggestion | Type `Seor`, choose "Seoraksan National Park" with ↓ and Enter | Map moves there; message "Found: Seoraksan National Park, …"; sightings load | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost |
 | TC-07 | Close the suggestions | Type `Hall`, press Esc | The list closes; the typed text stays | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost |
+| TC-93 | Place suggestions without Photon | In Search Location type `jiri`, then `haeun`; pick one with ↓ and Enter | A list of places in Korea appears (Jirisan National Park; Haeundae, Busan), from the built-in list of 438 places when Photon cannot be reached; picking one moves the map and shows "Found: …" | Pass | Paudel Amrit | 2026-11-16 | Live site after 0a68be0/11331b2 (Ctrl+F5), Chrome; jiri and haeun both listed; picking a place moved the map. Added 16 Nov |
 | TC-08 | Quick Location | Click the chip **Jeju Island** | Chip is highlighted; map moves to Jeju; sightings load | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost |
 | TC-09 | Locate Me (allowed) | Click **Locate Me**, allow location access | Box shows "Current Location (GPS)"; a blue dot marks your position; sightings around you load | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost |
 | TC-10 | Locate Me (refused) | Click **Locate Me**, block location access | Message "Could not retrieve current location: …"; map unchanged | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost; location blocked in Site settings |
@@ -76,6 +77,7 @@ Unless a step says otherwise, start on the Map page, with the default search (Bu
 | TC-12 | Base maps | Click **Satellite**, **Topographic**, then **Street** | The background changes each time; pins stay | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost |
 | TC-13 | Recenter | Drag the map away, click the crosshair button | Map returns to the searched place | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost |
 | TC-14 | Legend | Compare pin colors and icons with the Animal Groups legend | Every pin's color and icon matches a group in the legend | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost |
+| TC-88 | Legend on/off | Click **Birds** in the Animal Groups legend on the map, then click it again | Birds turn grey and bird pins disappear; the second click brings them back | Pass | Paudel Amrit | 2026-11-16 | Live site after 0a68be0/11331b2 (Ctrl+F5), Chrome; Birds off and on. Added 16 Nov |
 
 ### 4.3 Sightings and filters (FR-03 – FR-06)
 
@@ -85,16 +87,16 @@ Unless a step says otherwise, start on the Map page, with the default search (Bu
 | TC-16 | Table paging | Click the › and ‹ arrows above the table | Next / previous 10 rows; counter updates | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost |
 | TC-17 | Change radius | Click **25 km** | Circle and label change to 25 km at once; summary says "Changes not applied yet"; button turns amber "Apply filters & search"; **no** new search yet | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost |
 | TC-18 | Apply filters | After TC-17, click **Apply filters & search** | Sightings within 25 km load; summary says "Showing … · 25 km …"; button back to "Search sightings" | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost |
-| TC-19 | One group | Untick all groups except **Birds**, click the Search button | Only bird pins and rows | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost |
-| TC-20 | Fish filter | Search Ulsan, tick only **Fish**, click the Search button | Fish appear (pins with the fish icon), not "No fauna records" | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost |
-| TC-21 | No group | Untick all six groups, click the Search button | Message "Select at least one animal group"; map and table empty | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost |
+| TC-19 | One group | Untick all groups except **Birds**, click the Search button | Only bird pins and rows | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost. Re-test 2026-11-16 (Paudel Amrit), Live site after 0a68be0/11331b2 (Ctrl+F5), Chrome: Pass |
+| TC-20 | Fish filter | Search Ulsan, tick only **Fish**, click the Search button | Fish appear (pins with the fish icon), not "No fauna records" | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost. Re-test 2026-11-16 (Paudel Amrit), Live site after 0a68be0/11331b2 (Ctrl+F5), Chrome: Pass |
+| TC-21 | No group | Untick all six groups, click the Search button | Message "Select at least one animal group"; map and table empty | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost. Re-test 2026-11-16 (Paudel Amrit), Live site after 0a68be0/11331b2 (Ctrl+F5), Chrome: Pass |
 | TC-22 | Date range | Set From = 2025-01-01, To = 2025-12-31, click the Search button | Every row's date is in 2025 | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost |
 | TC-23 | Only a To date | Clear From, set To = 2020-12-31, search | All dates are on or before 2020-12-31 | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost |
 | TC-24 | Wrong date order | From = 2025-06-01, To = 2025-01-01, search | Message 'The "From" date must be on or before the "To" date'; no search | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost |
 | TC-25 | Number of records | Under **Number of Records** click **150**, then **Search sightings** | Table shows "… of 150" (if the area has that many); above the table "Showing 150 of N records in this area" when the area has more | Pass | Paudel Amrit | 2026-11-04 | Re-test: Live site (wildtrack-lq88.onrender.com), Chrome; Busan 10 km: "Showing 150 of 22068 records". First run Pass on 2026-10-27 with the old Filters dropdown |
 | TC-26 | Number of records visible | On a short window or a laptop screen, look at the sidebar | Locate Me, Search Location, Search Radius, Quick Locations and Number of Records are at the top, none covered by the Search button | Pass | Paudel Amrit | 2026-11-04 | Re-test: Live site (wildtrack-lq88.onrender.com), Chrome; order correct; in a short window the sidebar scrolls and nothing is covered by the Search button. First run Pass on 2026-10-27 |
-| TC-78 | Newest sightings first | Open the Map page (Busan, 10 km, all groups), look at the Date column; then set From = 2024-01-01, To = 2024-12-31 and search | The first row has a recent date (within the last weeks); dates go down from row to row; "Showing 75 of N records" with N about 22,000. With the 2024 dates: all rows in 2024, newest first | Pass | Paudel Amrit | 2026-11-10 | Live site (wildtrack-lq88.onrender.com), Chrome; Busan 10 km: first row 2026-10-27, dates go down row by row; "Showing 75 of 22,068 records". 2024 dates: all rows in 2024, newest first; Added 9 Nov |
-| TC-79 | Number of records slider | Under the record buttons move the slider to **450**, click **Apply filters & search**; then click **75**; then move the slider to **1000** in Busan with 25 km and search | Slider label and summary say 450; no button is highlighted; 450 records load (within 40 s). Clicking 75 moves the slider back to 75. At 1000: 1000 records load and the note says that 1000 is the most one search can show | Pass | Paudel Amrit | 2026-11-10 | Live site (wildtrack-lq88.onrender.com), Chrome; slider 450: 450 records in about 4 s, no button highlighted; clicking 75 moved the slider back to 75; Busan 25 km at 1000: "Showing 1000 of 96,847 records" with the 1000-limit note; Added 9 Nov |
+| TC-78 | Newest sightings first | Open the Map page, click **Busan** (10 km, all groups), look at the Date column; then set From = 2024-01-01, To = 2024-12-31 and search | The first row has a recent date (within the last weeks); dates go down from row to row; "Showing 75 of N records" with N about 22,000. With the 2024 dates: all rows in 2024, newest first | Pass | Paudel Amrit | 2026-11-10 | Live site (wildtrack-lq88.onrender.com), Chrome; Busan 10 km: first row 2026-10-27, dates go down row by row; "Showing 75 of 22,068 records". 2024 dates: all rows in 2024, newest first; Added 9 Nov. Re-test 2026-11-16 (Paudel Amrit), Live site after 0a68be0/11331b2 (Ctrl+F5), Chrome: Pass; Busan 10 km: first row recent, newest first, "Showing 75 of 22,080 records"; 2024 dates: all in 2024 |
+| TC-79 | Number of records slider | Under the record buttons move the slider to **450**, click **Apply filters & search**; then click **75**; then click **Busan** and **25 km**, move the slider to **1000** and search | Slider label and summary say 450; no button is highlighted; 450 records load (within 40 s). Clicking 75 moves the slider back to 75. At 1000: 1000 records load and the note says that 1000 is the most one search can show | Pass | Paudel Amrit | 2026-11-10 | Live site (wildtrack-lq88.onrender.com), Chrome; slider 450: 450 records in about 4 s, no button highlighted; clicking 75 moved the slider back to 75; Busan 25 km at 1000: "Showing 1000 of 96,847 records" with the 1000-limit note; Added 9 Nov |
 
 ### 4.4 Species Profile (FR-07, FR-09)
 
@@ -107,7 +109,9 @@ Unless a step says otherwise, start on the Map page, with the default search (Bu
 | TC-31 | Close profile | Click X in the Species Profile (or press Esc) | Selection cleared; "Select a sighting…" shown | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost |
 | TC-75 | Photo viewer | Select a sighting, click its photo (or **More photos**); use the arrows and the → key; press Esc | Photo opens large with up to 12 more photos below, each with photographer and licence; arrows change the photo; Esc closes only the viewer (profile stays); the profile also shows the IUCN status | Pass (re-test) | Shubham | 2026-11-10 | First run: Fail. Live site, Chrome (Windows): opens large with 13 photos; the arrow button and the → key change the photo; Esc closes only the viewer; the profile stays and shows "Least Concern" (Black-tailed Gull; no IUCN line for unassessed animals such as Asian Comma). Fail: photo 1 (the sighting's own photo) shows no photographer or licence, photos 2–13 do – bug #17. Fixed in 9c471a0; re-test: Pass, 2026-11-10 (Asian Comma: photo 1 shows "Photo 1 of 13 · Photo: Katia (CC BY-NC-ND) · GBIF record"). Added 31 Oct (usability test) |
 | TC-76 | Photo viewer in the Encyclopedia | Open a card, click its photo | The viewer opens over the card with more photos; closing it leaves the card open | Pass | Shubham | 2026-11-10 | Live site, Chrome (Windows): Chinese Water Deer card, clicked its photo: the viewer opened over the card with 13 photos ("Photo: Wikimedia Commons"); Esc closed the viewer and the card stayed open. Added 31 Oct |
-| TC-80 | Place and record date in the profile | Open the Map page, select sightings in the first table rows | Location column and Species Profile show a place such as "Choryang-dong, Busan" where the record has one (only the country, in grey, where it has none); the profile shows **Record Last Updated** with a date | Pass | Paudel Amrit | 2026-11-10 | Live site (wildtrack-lq88.onrender.com), Chrome; Busan 10 km: places such as "Choryang-dong, Busan" and "Dong-gu, Busan"; row 1 shows only the country in grey; profile of row 3: "Choryang-dong, Busan, Korea, Republic of", Record Last Updated 2026-10-15. Note: some places are shown as recorded in GBIF, in Korean script ("대한민국 부산광역시 …") or unusual spelling ("GwanganHaebyeunr…"); Added 9 Nov |
+| TC-80 | Place and record date in the profile | Open the Map page, click **Busan**, select sightings in the first table rows | Location column and Species Profile show a place such as "Choryang-dong, Busan" where the record has one (only the country, in grey, where it has none); the profile shows **Record Last Updated** with a date | Pass | Paudel Amrit | 2026-11-10 | Live site (wildtrack-lq88.onrender.com), Chrome; Busan 10 km: places such as "Choryang-dong, Busan" and "Dong-gu, Busan"; row 1 shows only the country in grey; profile of row 3: "Choryang-dong, Busan, Korea, Republic of", Record Last Updated 2026-10-15. Note: some places are shown as recorded in GBIF, in Korean script ("대한민국 부산광역시 …") or unusual spelling ("GwanganHaebyeunr…"); Added 9 Nov |
+| TC-89 | Copy coordinates | Select a sighting, click **Copy** next to the coordinates in the Species Profile, paste with Ctrl+V | The coordinates (e.g. "35.1851, 129.1752") are pasted | Pass | Paudel Amrit | 2026-11-16 | Live site after 0a68be0/11331b2 (Ctrl+F5), Chrome; Pasted in Notepad. Added 16 Nov |
+| TC-90 | Click a table row | Click anywhere on a table row (not the View button) | The Species Profile opens for that sighting | Pass | Paudel Amrit | 2026-11-16 | Live site after 0a68be0/11331b2 (Ctrl+F5), Chrome; Tiger Keelback row opened its profile. Added 16 Nov |
 
 ### 4.5 Messages and loading (FR-10)
 
@@ -118,23 +122,30 @@ Unless a step says otherwise, start on the Map page, with the default search (Bu
 | TC-34 | Loading message | Search **100 km** with **Max records 300** | Spinner with "Querying GBIF biodiversity records…"; after 5 s "GBIF is slow right now — still loading…" if still loading | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost; Seoul 100 km / 300; "GBIF is slow" message shown |
 | TC-35 | Quick changes | Click 100, 50, 25 and 5 km and the Search button quickly in a row | The final map shows the **last** choice (5 km); no mix of older results | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost |
 | TC-36 | GBIF unreachable (local only) | In `config/config.php` set GBIF `base_url` to `https://example.invalid`, search, then undo the change | Sample data shown with "GBIF is unreachable — showing sample data (filters not applied)" | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost; base_url changed and restored |
+| TC-87 | Buttons when nothing is found | Haeundae, 5 km, all groups: type `bear`, press Enter; click **Search 10 km** | Message "No sightings of "bear" within 5 km of …"; buttons such as **Search 10 km** and **Show all animals** (and **Clear dates** when dates are set); the button widens the radius and searches again | Pass | Paudel Amrit | 2026-11-16 | Live site after 0a68be0/11331b2 (Ctrl+F5), Chrome; Buttons Search 10 km and Show all animals; Search 10 km changed the radius and searched again. Note: when Mammals was switched off by an earlier search, "bear" showed "Select at least one animal group" instead. Added 16 Nov |
 
 ### 4.6 Find an Animal (FR-13)
 
 | ID | Test | Steps | Expected result | Result | Tester | Date | Notes |
 |---|---|---|---|---|---|---|---|
-| TC-37 | Suggestions | Type `mag` in Find an Animal | Up to 6 animals; Oriental Magpie and Eurasian Magpie near the top; letters in bold; records in Korea shown | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost |
-| TC-38 | Pick a suggestion | Choose Oriental Magpie | Bar "Showing only Oriental Magpie"; only magpie pins | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost |
-| TC-39 | Common name | Type `water deer`, press Enter | Only water deer sightings; bar "Showing only …" | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost |
-| TC-40 | Scientific name | Type `Pica pica`, press Enter | Only that species is shown | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost |
-| TC-41 | Not recorded nearby | Type `tiger`, press Enter | Message "No Tiger sightings within … km of …. Try a larger radius, or show all animals." | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost |
-| TC-42 | Unknown name | Type `xyzzy`, press Enter | Message 'No animal called "xyzzy" was found. Check the spelling or try the scientific name.' (since 31 Oct the map is also emptied, see TC-72) | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost |
-| TC-43 | Show all animals | After TC-38, click **Show all animals** | Bar disappears; all animals shown again | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost |
-| TC-69 | A kind of animal | Ulsan, 100 km: type `deer`, press Enter (no suggestion picked) | Bar "Showing only Deer (all kinds)"; water deer, roe deer and sika deer pins; only **Mammals** ticked | Pass | Paudel Amrit | 2026-11-04 | Live site (wildtrack-lq88.onrender.com), Chrome; Ulsan 100 km: water deer, roe deer and sika deer; only Mammals ticked; Added 31 Oct (usability test) |
-| TC-70 | Snakes, also half typed | Type `snake`, press Enter; then `sna`, press Enter | Both: "Snakes (all kinds)" with several snake species; only **Reptiles** ticked | Pass | Paudel Amrit | 2026-11-04 | Live site (wildtrack-lq88.onrender.com), Chrome; `snake` and `sna` both give "Snakes (all kinds)"; Added 31 Oct |
-| TC-71 | A whole group | Type `reptiles`, press Enter | No bar; only **Reptiles** ticked; reptile pins of several species | Pass | Paudel Amrit | 2026-11-04 | Live site (wildtrack-lq88.onrender.com), Chrome; Added 31 Oct |
-| TC-72 | Failed search empties the map | After TC-69, type `xyzzy`, press Enter | Map and table empty; big red message "No animal called …"; no suggestion list; all groups ticked again | Pass | Paudel Amrit | 2026-11-04 | Live site (wildtrack-lq88.onrender.com), Chrome; Added 31 Oct |
-| TC-77 | A name of several animals | Type `magpie`, press Enter; then type `mag` | After Enter: "Magpie (all kinds)", magpie pins, only **Birds** ticked, no list. While typing `mag`: suggestions appear again | Pass | Paudel Amrit | 2026-11-04 | Live site (wildtrack-lq88.onrender.com), Chrome; suggestions appear again while typing `mag`; Added 4 Nov (usability test) |
+| TC-37 | Suggestions | Type `mag` in Find an Animal | Up to 6 animals; Oriental Magpie and Eurasian Magpie near the top; letters in bold; records in Korea shown | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost. Re-test 2026-11-16 (Paudel Amrit), Live site after 0a68be0/11331b2 (Ctrl+F5), Chrome: Pass |
+| TC-38 | Pick a suggestion | Choose Oriental Magpie | Bar "Showing only Oriental Magpie"; only magpie pins | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost. Re-test 2026-11-16 (Paudel Amrit), Live site after 0a68be0/11331b2 (Ctrl+F5), Chrome: Pass |
+| TC-39 | Common name | Type `water deer`, press Enter | Only water deer sightings; bar "Showing only …" | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost. Re-test 2026-11-16 (Paudel Amrit), Live site after 0a68be0/11331b2 (Ctrl+F5), Chrome: Pass |
+| TC-40 | Scientific name | Type `Pica pica`, press Enter | Only that species is shown | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost. Re-test 2026-11-16 (Paudel Amrit), Live site after 0a68be0/11331b2 (Ctrl+F5), Chrome: Pass |
+| TC-41 | Not recorded nearby | Type `tiger`, press Enter | Message "No Tiger sightings within … km of …. Try a larger radius, or show all animals." | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost. Re-test 2026-11-16 (Paudel Amrit), Live site after 0a68be0/11331b2 (Ctrl+F5), Chrome: behaviour changed by design (keyword search, 0a68be0): "tiger" now shows Tiger Keelback, Tiger Shrike and Asian Tiger Mosquito instead of the "No Tiger sightings" message; expected result to be updated |
+| TC-42 | Unknown name | Type `xyzzy`, press Enter | Message 'No animal called "xyzzy" was found. Check the spelling or try the scientific name.' (since 31 Oct the map is also emptied, see TC-72) | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost. Re-test 2026-11-16 (Paudel Amrit), Live site after 0a68be0/11331b2 (Ctrl+F5), Chrome: Pass |
+| TC-43 | Show all animals | After TC-38, click **Show all animals** | Bar disappears; all animals shown again | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost. Re-test 2026-11-16 (Paudel Amrit), Live site after 0a68be0/11331b2 (Ctrl+F5), Chrome: Pass |
+| TC-69 | A kind of animal | Ulsan, 100 km: type `deer`, press Enter (no suggestion picked) | Bar "Showing only Deer (all kinds)"; water deer, roe deer and sika deer pins; only **Mammals** ticked | Pass | Paudel Amrit | 2026-11-04 | Live site (wildtrack-lq88.onrender.com), Chrome; Ulsan 100 km: water deer, roe deer and sika deer; only Mammals ticked; Added 31 Oct (usability test). Re-test 2026-11-16 (Paudel Amrit), Live site after 0a68be0/11331b2 (Ctrl+F5), Chrome: Pass |
+| TC-70 | Snakes, also half typed | Type `snake`, press Enter; then `sna`, press Enter | Both: "Snakes (all kinds)" with several snake species; only **Reptiles** ticked | Pass | Paudel Amrit | 2026-11-04 | Live site (wildtrack-lq88.onrender.com), Chrome; `snake` and `sna` both give "Snakes (all kinds)"; Added 31 Oct. Re-test 2026-11-16 (Paudel Amrit), Live site after 0a68be0/11331b2 (Ctrl+F5), Chrome: Pass |
+| TC-71 | A whole group | Type `reptiles`, press Enter | No bar; only **Reptiles** ticked; reptile pins of several species | Pass | Paudel Amrit | 2026-11-04 | Live site (wildtrack-lq88.onrender.com), Chrome; Added 31 Oct. Re-test 2026-11-16 (Paudel Amrit), Live site after 0a68be0/11331b2 (Ctrl+F5), Chrome: Pass |
+| TC-72 | Failed search empties the map | After TC-69, type `xyzzy`, press Enter | Map and table empty; big red message "No animal called …"; no suggestion list; all groups ticked again | Pass | Paudel Amrit | 2026-11-04 | Live site (wildtrack-lq88.onrender.com), Chrome; Added 31 Oct. Re-test 2026-11-16 (Paudel Amrit), Live site after 0a68be0/11331b2 (Ctrl+F5), Chrome: Pass |
+| TC-77 | A name of several animals | Type `magpie`, press Enter; then type `mag` | After Enter: "Magpie (all kinds)", magpie pins, only **Birds** ticked, no list. While typing `mag`: suggestions appear again | Pass | Paudel Amrit | 2026-11-04 | Live site (wildtrack-lq88.onrender.com), Chrome; suggestions appear again while typing `mag`; Added 4 Nov (usability test). Re-test 2026-11-16 (Paudel Amrit), Live site after 0a68be0/11331b2 (Ctrl+F5), Chrome: Pass |
+| TC-81 | Everyday words | Type `cat`, `pig`, `wild hen`, `bat`, `pige`, `tiger`, each + Enter | pig → Wild Boar; wild hen → Red Junglefowl; bat → Bat (all kinds) + Blue Bat Star; pige → pigeons (rock, hill, Japanese wood-pigeon), the word stays in the box; tiger → bar names Tiger Keelback, Tiger Shrike, Asian Tiger Mosquito | Pass | Paudel Amrit | 2026-11-16 | Live site after 0a68be0/11331b2 (Ctrl+F5), Chrome; All as expected; bat: 15 sightings, 5 species (Busan 10 km). Added 16 Nov |
+| TC-82 | Korean names | Type `고라니`, press Enter | Water deer sightings | Pass | Paudel Amrit | 2026-11-16 | Live site after 0a68be0/11331b2 (Ctrl+F5), Chrome; Water deer shown. Added 16 Nov |
+| TC-83 | Typos | Type `sparow`, press Enter | No auto-correct; a "Did you mean…" list with sparrows | Pass | Paudel Amrit | 2026-11-16 | Live site after 0a68be0/11331b2 (Ctrl+F5), Chrome; List shown. Found: `bata` (Swahili for duck) shows ducks as "Bata (all kinds)" instead of "Did you mean" (Map and Encyclopedia) → issue #18, open. Added 16 Nov |
+| TC-84 | Not an animal | Type `치킨`, press Enter | Not found, with buttons such as **Show all animals** | Pass | Paudel Amrit | 2026-11-16 | Live site after 0a68be0/11331b2 (Ctrl+F5), Chrome; Not found shown. Added 16 Nov |
+| TC-85 | A group word | Type `birds`, press Enter | The whole Birds group; no "Showing only" bar | Pass | Paudel Amrit | 2026-11-16 | Live site after 0a68be0/11331b2 (Ctrl+F5), Chrome; Birds group shown. Added 16 Nov |
+| TC-86 | Recent searches | Clear the Find an Animal box and click into it | The recent searches appear; clicking one runs it again | Pass | Paudel Amrit | 2026-11-16 | Live site after 0a68be0/11331b2 (Ctrl+F5), Chrome; Recent searches listed. Added 16 Nov |
 
 ### 4.7 Animal Encyclopedia (FR-12)
 
@@ -154,6 +165,8 @@ Unless a step says otherwise, start on the Map page, with the default search (Bu
 | TC-55 | Map → Encyclopedia | On the Map, select a bird, click **Read about it in the Encyclopedia** | Encyclopedia opens Birds with that bird's card | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost |
 | TC-73 | Encyclopedia: a kind of animal | In **Search all animals** type `snakes`, press Enter | Reptiles group opens with the title "Snakes (all kinds)" and snake cards; clicking a group in the tree shows the whole group again | Pass | Shubham | 2026-11-10 | Live site, Chrome (Windows): "snakes" + Enter opened Reptiles with the title "Snakes (all kinds)" and 24 snake cards (Tiger Keelback, Ussuri Mamushi, …); clicking Reptiles in the tree showed the whole group again (lizards, skinks, turtles). Added 31 Oct (usability test) |
 | TC-74 | Encyclopedia: a whole group | In **Search all animals** type `reptiles`, press Enter | The Reptiles group opens | Pass | Shubham | 2026-11-10 | Live site, Chrome (Windows): from Mammals, "reptiles" + Enter opened the Reptiles group (24 cards, Reptiles active in the tree). Added 31 Oct |
+| TC-91 | Encyclopedia: "Animals called …" cards | In **Search all animals** type `cat`, press Enter; then type `leo` in the filter box | Title "Animals called "cat"" with the Cat and Leopard Cat cards, each with its group badge; no group highlighted in the tree; with `leo` only Leopard Cat stays | Pass | Paudel Amrit | 2026-11-16 | Live site after 0a68be0/11331b2 (Ctrl+F5), Chrome; Cat and Leopard Cat (Mammals); filter left only Leopard Cat. Added 16 Nov |
+| TC-92 | Encyclopedia: a full name opens one card | Type `wild boar`, press Enter; then `고라니`, press Enter | Each opens one card directly: Wild Boar; Water Deer | Pass | Paudel Amrit | 2026-11-16 | Live site after 0a68be0/11331b2 (Ctrl+F5), Chrome; Wild Boar (17,279 records in South Korea) and Water Deer opened directly. Added 16 Nov |
 
 ---
 
@@ -169,7 +182,7 @@ Unless a step says otherwise, start on the Map page, with the default search (Bu
 | TC-61 | NFR-03 Security | Open `…/config/config.php` and `…/includes/config.php` on the live site; search the GitHub repository for "password" | Not found / not shown (404); no password or key on GitHub | Pass | Aman | 2026-10-27 | …/config/config.php shows Not Found (404) |
 | TC-62 | NFR-04 Retry | See TC-36 | Sample data shown, not an empty page | Pass | Shubham | 2026-10-28 | Local copy (PHP 8.3), GBIF base_url = https://example.invalid: sightings.php returned 5 sample records with "fallback": true after 3.9 s; config restored |
 | TC-63 | NFR-05 No account | Use every feature without signing in | No login is ever asked for | Pass | Aman | 2026-10-27 | No sign-in asked anywhere (Map, Encyclopedia, all searches) |
-| TC-64 | NFR-06 Phone | On a phone: search a place, open a pin, open the Encyclopedia, search an animal | Map first; "Search & filters" opens the settings; buttons easy to tap; nothing cut off | Pass | Aman | 2026-10-27 | Phone |
+| TC-64 | NFR-06 Phone | On a phone: search a place, open a pin, open the Encyclopedia, search an animal | Map first; "Search & filters" opens the settings; buttons easy to tap; nothing cut off | Pass | Aman | 2026-10-27 | Phone. Re-test 2026-11-16 (Paudel Amrit) after the phone freeze fix (27d5238): Pass on an iPhone 11 Pro (Chrome); map first, Search & filters, place search, profile and Encyclopedia work, no freeze, nothing cut off |
 | TC-65 | NFR-06 Tablet | Same as TC-64 at about 800 px wide | Everything usable | Pass | Aman | 2026-10-27 | Narrow browser window |
 | TC-66 | NFR-06 Keyboard | Use only Tab, Enter, arrow keys and Esc: search a place, pick a suggestion, open a card | Everything reachable; a green outline shows the focus | Pass (re-test) | Aman | 2026-10-27 | First run: Fail (Tab to a suggestion: no highlight, Enter did nothing), bug #13. Fixed in fb5f735; re-test: Pass |
 | TC-67 | NFR-07 Free hosting | Check the Render dashboard plan | Free plan, $0 | Pass | Aman | 2026-10-28 | Render: Hobby plan (free), no card on file; service on the Free instance type |
@@ -190,6 +203,8 @@ Each endpoint opened on the live site (https://wildtrack-lq88.onrender.com/api/�
 | API-07 | `animal.php?q=tiger` | Found, key 5219416 | Pass | Shubham | 2026-10-28 | 200; found: Tiger, Panthera tigris, key 5219416; 3.1 s (first request) |
 | API-08 | `encyclopedia.php?action=top&taxa=359&country=KR` | A total and 24 species | Pass | Shubham | 2026-10-28 | 200; total 196,441 records, 24 species |
 | API-09 | TC-61 re-check (security) | No config file or password exposed | Pass | Shubham | 2026-10-28 | config/config.php, includes/config.php, config/config.example.php and includes/gbif.php all 404 on the live site; repository search for "password": only the empty value in config.example.php and code that reads it |
+| API-10 | `sightings.php?lat=35.5384&lng=129.3114&radius=500&limit=75` | Error 400 (radius too large) | Pass | Paudel Amrit | 2026-11-16 | Live site: 400 (Bad Request). Added 16 Nov |
+| API-11 | `animal.php?q=qwxyz` | "Not found", status 200 | Pass | Paudel Amrit | 2026-11-16 | Live site: status 200; {"found":null,"error":"No animal called \"qwxyz\" was found. Check the spelling or try the scientific name."}. Added 16 Nov |
 
 ---
 
@@ -285,16 +300,18 @@ with the Round 1 fixes. Gupta Aman Kumar opened the website and read out the tas
 
 ---
 
-## 7. Summary (status: 10 Nov 2026, final)
+## 7. Summary (status: 16 Nov 2026)
 
 | | Number |
 |---|---|
-| Test cases in this plan | 89 (TC-01 to TC-80, plus API-01 to API-09) |
-| Test cases run | 89 |
-| Passed | 89 (TC-66 and TC-75 after their re-tests) |
+| Test cases in this plan | 104 (TC-01 to TC-93, plus API-01 to API-11) |
+| Test cases run | 104 |
+| Passed | 104 (TC-66 and TC-75 after their re-tests) |
 | Failed (bug issues opened) | 2 (TC-66 → bug #13, TC-75 → bug #17) |
 | Blocked | 0 |
 | Bugs fixed and re-tested | 2 (#13, #17) |
+| Open issues | 1 (#18: "bata", a Swahili name, finds ducks; found during the re-test of 16 Nov) |
+| Re-tested on 16 Nov after the search update | TC-19 – TC-21, TC-37 – TC-43, TC-64, TC-69 – TC-72, TC-77, TC-78 (TC-41: behaviour changed by design) |
 
 These numbers, the usability results and the most important bugs go into the testing report
 (Week 12).
