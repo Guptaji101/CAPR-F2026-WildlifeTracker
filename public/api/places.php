@@ -11,6 +11,10 @@
  * cache, so a beginning that someone typed before is answered at once and Photon is asked less.
  *
  *   ?q=Seor  →  {"places": [{"name", "area", "kind", "lat", "lng"}, …]}   (at most 6)
+ *
+ * When Photon cannot be reached (16 Nov 2026: it refuses connections from the shared Render
+ * servers), the answer comes from public/data/korea-places.json, a list of about 300 places made
+ * with tools/build-place-list.php, in the same shape. Photon is then not asked again for 10 minutes.
  */
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../../includes/cache.php';
@@ -33,6 +37,12 @@ if ($cached = cache_get($cacheKey, 30 * 86400)) {
     exit;
 }
 
+// Photon failed less than 10 minutes ago: answer from the built-in list at once (no 6 s wait)
+if (cache_get('places:photon-down', 600)) {
+    echo json_encode(['places' => built_in_places($q, $lat, $lng), 'source' => 'list']);
+    exit;
+}
+
 // bbox = South Korea (west, south, east, north); each osm_tag adds a kind of place (OR)
 $url = 'https://photon.komoot.io/api/?' . http_build_query([
     'q' => $q, 'limit' => 15, 'lang' => 'en', 'bbox' => '124.5,33.0,131.0,38.7', ...$near,
@@ -43,6 +53,7 @@ $ch = curl_init($url);
 curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_TIMEOUT        => 6,   // suggestions are only useful if they come quickly
+    CURLOPT_CONNECTTIMEOUT => 3,   // no connection in 3 s: answer from the built-in list instead
     CURLOPT_ENCODING       => '',
     CURLOPT_USERAGENT      => 'CAPR-F2026-WildlifeTracker/1.0 (student project; https://github.com/Guptaji101/CAPR-F2026-WildlifeTracker)',
 ]);
@@ -56,8 +67,9 @@ $data = ($raw !== false && $code === 200) ? json_decode($raw, true) : null;
 if (!$data) {
     // Goes to the server log (Render: Logs tab), so the reason for a failure can be seen.
     // Only the reason is written, not what the visitor typed.
-    error_log("places.php: Photon failed, HTTP $code" . ($error ? ", $error" : ''));
-    echo json_encode(['places' => []]);
+    error_log("places.php: Photon failed, HTTP $code" . ($error ? ", $error" : '') . ' (answered from the built-in list)');
+    cache_put('places:photon-down', ['at' => time()]);
+    echo json_encode(['places' => built_in_places($q, $lat, $lng), 'source' => 'list']);   // not cached: Photon is tried again later
     exit;
 }
 
@@ -99,3 +111,22 @@ foreach ($data['features'] ?? [] as $f) {
 $answer = ['places' => $places];
 cache_put($cacheKey, $answer);
 echo json_encode($answer);
+
+// Places of the built-in list (public/data/korea-places.json) whose name, or a word of it, starts
+// with the typed text ("jiri" -> Jirisan National Park); names that start with it first, then the
+// nearest to the map's centre. At most 6, like Photon's answer.
+function built_in_places(string $q, ?float $lat, ?float $lng): array
+{
+    $list = json_decode(@file_get_contents(__DIR__ . '/../data/korea-places.json') ?: '[]', true) ?: [];
+    $q = mb_strtolower($q);
+    $found = [];
+    foreach ($list as $p) {
+        $name = mb_strtolower($p['name']);
+        $starts = str_starts_with($name, $q);
+        if (!$starts && !preg_match('/[\s\-(]' . preg_quote($q, '/') . '/u', $name)) continue;
+        $far = $lat !== null ? hypot($p['lat'] - $lat, $p['lng'] - $lng) : 0;
+        $found[] = [$starts ? 0 : 1, $far, $p];
+    }
+    usort($found, fn($a, $b) => [$a[0], $a[1]] <=> [$b[0], $b[1]]);
+    return array_map(fn($f) => $f[2], array_slice($found, 0, 6));
+}
