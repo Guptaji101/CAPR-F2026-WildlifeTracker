@@ -229,8 +229,10 @@ async function openSpecies(key, records) {
 // searched in the browser, so suggestions appear while typing without asking the server.
 let animalList = null, animalListLoading = null;
 function loadAnimalList() {
-    animalListLoading ??= fetch(`data/korea-animals.json?v=${document.querySelector('meta[name=animal-list-version]')?.content || ''}`).then(r => r.json())
-        .then(list => { animalList = list; }).catch(() => { animalList = []; });
+    animalListLoading ??= fetch(`data/korea-animals.json?v=${document.querySelector('meta[name=animal-list-version]')?.content || ''}`)        .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+        .then(list => { animalList = list; })
+        // no list (server restarting): use none for now, and try again at the next search
+        .catch(() => { animalList = []; animalListLoading = null; });
     return animalListLoading;
 }
 

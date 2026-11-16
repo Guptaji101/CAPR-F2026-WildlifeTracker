@@ -486,7 +486,11 @@ async function findAnimal() {
     if (group) return showGroup(group);
 
     const matches = keywordMatches(query);
-    if (matches.length) return showKeyword(query, matches.map(listAnimal));
+    if (matches.length) {
+        showKeyword(query, matches.map(listAnimal));
+        addKindFromServer(query);   // "bat": also all bats, which the list does not have
+        return;
+    }
 
     // Not in the list of animals recorded in Korea: ask the server (GBIF names, Wikipedia,
     // Wikidata), but use its answer only if it really fits the keyword, for example a whole kind
@@ -509,12 +513,14 @@ async function findAnimal() {
 // ("snakes" fits "snake"). Korean has no spaces between parts of a name, so a Korean keyword may
 // be anywhere in the name ("노루" fits "보노루").
 const HANGUL = /[ㄱ-ㆎ가-힣]/;
-function keywordRegex(query) {
+function keywordRegex(query, wholeWord = false) {
     const q = query.trim().toLowerCase();
     const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     if (HANGUL.test(q)) return new RegExp(esc(q));
     const forms = [...new Set([q, q.replace(/es$/, ''), q.replace(/s$/, '')])].filter(f => f.length >= 2);
-    return new RegExp(`(^|[\\s\\-'/(])(${forms.map(esc).join('|')})`);
+    // wholeWord: the keyword is a whole word of the name ("bat" in "Blue bat star", not in "Bath")
+    const end = wholeWord ? `(e?s)?($|[\\s\\-'/)])` : '';
+    return new RegExp(`(^|[\\s\\-'/(])(${forms.map(esc).join('|')})${end}`);
 }
 const animalNames = a => [a.n, a.s, ...(a.ko || [])].filter(Boolean);
 // The names people use: English and Korean (the scientific name only if there is no English one)
@@ -530,7 +536,32 @@ function keywordMatches(text) {
     const re = keywordRegex(q);
     const fits = names => a => names(a).some(n => re.test(n.toLowerCase()));
     const common = animalList.filter(fits(commonNames));
-    return common.length ? common : animalList.filter(fits(animalNames));
+    if (!common.length) return animalList.filter(fits(animalNames));
+    // A whole word wins over the start of a longer word: "bat" finds the Blue bat star, not also
+    // "Bath White" or "Batillaria"; "pige" (no whole word) still finds the pigeons
+    const whole = keywordRegex(q, true);
+    const wholeMatches = common.filter(a => commonNames(a).some(n => whole.test(n.toLowerCase())));
+    return wholeMatches.length ? wholeMatches : common;
+}
+
+// A whole kind of animal for the keyword from the server ("bat": all bats, Chiroptera), added to
+// the animals found in the list. Many kinds (bats, owls…) have no species among the 2000
+// best-recorded animals of the list, so the list alone misses them. This runs after the list's
+// result is shown, so the search stays instant; when a kind comes back, the search runs again with it.
+async function addKindFromServer(query) {
+    if (HANGUL.test(query) || query.length < 3) return;
+    const animalId = state.animalId;
+    let found = null;
+    try {
+        found = (await safeJsonFetch(`api/animal.php?q=${encodeURIComponent(query)}`)).found;
+    } catch (err) {
+        return;   // no kind for this word: the list's result stays
+    }
+    const f = state.speciesFilter;
+    if (animalId !== state.animalId || !f || f.query !== query) return;   // a newer search since
+    if (!found || !found.group || !keywordRegex(query, true).test(found.name.toLowerCase())) return;
+    if (f.animals.some(a => a.key === found.key)) return;
+    showKeyword(query, [found, ...f.animals]);
 }
 
 function fitsKeyword(found, query) {
@@ -542,7 +573,9 @@ function fitsKeyword(found, query) {
 // or a word that differs by a letter or two ("bore" -> "boar"). Plus the server's best guess.
 function similarAnimals(query, hint) {
     const q = query.trim().toLowerCase();
-    const allowed = q.length <= 4 ? 1 : 2;
+    // Letters that may differ. A Korean syllable is a big part of a word ("치킨" is not "치리"), so
+    // Korean allows one change only from 3 syllables on ("고랴니" -> 고라니)
+    const allowed = HANGUL.test(q) ? (q.length >= 3 ? 1 : 0) : q.length <= 4 ? 1 : 2;
     const scored = [];
     for (const a of animalList || []) {
         let best = Infinity, same = 0;
@@ -553,7 +586,8 @@ function similarAnimals(query, hint) {
             if (q.length >= 3 && low.includes(q) && name !== a.s) { best = 0; break; }
             // the whole name ("wild bore" -> "wild boar"), then each of its words ("bore" -> "boar")
             for (const w of [low, ...low.split(/[\s\-'/()]+/)]) {
-                if (Math.abs(w.length - q.length) > allowed) continue;
+                // skip bits shorter than 2 letters ("치" of "치 리"): too short to be a similar word
+                if (w.length < 2 || Math.abs(w.length - q.length) > allowed) continue;
                 const d = editDistance(q, w);
                 let p = 0;
                 while (p < q.length && q[p] === w[p]) p++;   // letters the same from the start
@@ -598,7 +632,7 @@ function showKeyword(query, animals) {
     // Tiger Shrike, Asian tiger mosquito); a long list shows the first 3 and "+ N more"
     const names = entries.map(e => e.name);
     const label = `"${query}": ${names.slice(0, 3).join(', ')}${names.length > 3 ? ` + ${names.length - 3} more` : ''}`;
-    state.speciesFilter = { query, entries, name: label, allNames: names.join(', ') };
+    state.speciesFilter = { query, entries, animals, name: label, allNames: names.join(', ') };
     showSpeciesFilter();
     $('animal-input').value = query;
     hideSuggestions();
@@ -691,9 +725,15 @@ let animalListLoading = null;
 function loadAnimalList() {
     // One download, shared by every caller (also when the user types before it has arrived)
     animalListLoading ??= fetch(`data/korea-animals.json?v=${document.querySelector('meta[name=animal-list-version]')?.content || ''}`)
-        .then(res => res.json())
+        .then(res => { if (!res.ok) throw new Error(`HTTP ${res.status}`); return res.json(); })
         .then(list => { animalList = list; })
-        .catch(() => { animalList = []; });   // no list: the box still works with Enter
+        .catch((err) => {
+            // No list (for example the server was restarting): the box still works with Enter, and
+            // the next search tries to download the list again instead of using an empty one all visit
+            console.warn('Animal list not loaded:', err.message);
+            animalList = [];
+            animalListLoading = null;
+        });
     return animalListLoading;
 }
 // An entry of the list in the shape showAnimal() expects
