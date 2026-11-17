@@ -1,0 +1,272 @@
+/* ============================================================================
+   ios.css – iPhone-style look for WildTrack ("liquid glass")
+   Loaded last, after depth3d.css and glass.css. Rounder shapes, pill buttons, very clear
+   glass with bright edges, on/off switches for the animal groups, a round slider knob and
+   phone-style notifications. Layout and features do not change.
+   Updated 17 Nov for the sliding option rows (segmented.css) and the clickable legend.
+   ============================================================================ */
+
+:root {
+    --font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', 'Segoe UI', system-ui, sans-serif;
+    --radius-sm: 12px;
+    --radius:    20px;
+    --ios-green: #34c759;                         /* the green of an "on" switch */
+    --ios-fill:  rgba(118, 118, 128, 0.12);       /* grey fill of search fields and segmented controls */
+    --ios-sep:   rgba(60, 60, 67, 0.12);          /* thin separator lines */
+    --lg:        rgba(255, 255, 255, 0.50);       /* liquid glass */
+    --lg-blur:   blur(30px) saturate(190%);
+    /* bright rim of the glass: light from the top left, softer on the other sides */
+    --lg-rim:    inset 0 1px 0 rgba(255, 255, 255, 0.95), inset 1px 0 0 rgba(255, 255, 255, 0.55),
+                 inset 0 -1px 0 rgba(255, 255, 255, 0.30), inset -1px 0 0 rgba(255, 255, 255, 0.30);
+    --lg-shadow: 0 8px 32px rgba(15, 23, 42, 0.10), 0 1px 3px rgba(15, 23, 42, 0.06);
+}
+
+body {
+    font-family: var(--font);
+    -webkit-font-smoothing: antialiased;
+    letter-spacing: -0.01em;
+    background:
+        radial-gradient(900px 600px at 0% 0%, rgba(52, 199, 89, 0.22), transparent 60%),
+        radial-gradient(800px 600px at 100% 0%, rgba(90, 200, 250, 0.22), transparent 60%),
+        radial-gradient(900px 700px at 60% 110%, rgba(255, 204, 0, 0.16), transparent 60%),
+        linear-gradient(180deg, #eef5f1, #f2f5f8);
+    background-attachment: fixed;
+}
+
+/* ---- Liquid glass panels ---- */
+.topbar, .card, .sp-card, .search-action, .grid-message {
+    background-color: var(--lg);
+    -webkit-backdrop-filter: var(--lg-blur);
+    backdrop-filter: var(--lg-blur);
+    border: 0;
+    box-shadow: var(--lg-rim), var(--lg-shadow);
+}
+.card, .sp-card { border-radius: var(--radius); }
+.table-card, .profile { background-color: rgba(255, 255, 255, 0.70); }
+
+/* The sidebar is clear glass, and each part of it is its own rounded glass "cell", like the Settings app */
+.sidebar { background-color: rgba(255, 255, 255, 0.30); -webkit-backdrop-filter: var(--lg-blur); backdrop-filter: var(--lg-blur); border-right: 0; }
+.side-section {
+    margin: 0 0 10px;
+    padding: 14px 12px;
+    border-bottom: 0;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.55);
+    box-shadow: var(--lg-rim), 0 2px 10px rgba(15, 23, 42, 0.05);
+}
+.search-action { border-radius: 20px 20px 0 0; }
+
+/* ---- Top bar: glass, and the Map / Encyclopedia / About links in one pill ---- */
+.topbar { box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.6), 0 6px 24px rgba(15, 23, 42, 0.06); }
+.top-nav { padding: 3px; border-radius: 999px; background: var(--ios-fill); gap: 2px; }
+.top-nav a { border-radius: 999px; }
+.top-nav a.active {
+    background: #fff;
+    background-image: none;
+    color: var(--ink);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12), 0 3px 1px rgba(0, 0, 0, 0.04);
+}
+
+/* ---- Buttons: pill shape, soft shadow, and they shrink a little when you press (no hard 3D edge) ---- */
+.btn-primary {
+    border-radius: 999px;
+    height: 44px;
+    font-size: 15px;
+    background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0) 60%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 6px 16px rgba(27, 107, 69, 0.30);
+    transition: transform .18s cubic-bezier(.3, .7, .4, 1.4), box-shadow .18s, filter .18s;
+}
+.btn-primary:hover:not(:disabled) {
+    transform: none;
+    filter: brightness(1.06);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 8px 22px rgba(27, 107, 69, 0.36);
+}
+.btn-primary:active:not(:disabled) {
+    transform: scale(0.96);
+    filter: brightness(0.95);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 3px 8px rgba(27, 107, 69, 0.25);
+}
+.apply-btn.pending, .apply-btn.pending:hover { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 6px 18px rgba(217, 119, 6, 0.35); }
+
+.chip, .btn-view, .pager button {
+    border-radius: 999px;
+    border: 0;
+    background-color: rgba(255, 255, 255, 0.75);
+    box-shadow: inset 0 0 0 1px rgba(60, 60, 67, 0.10), 0 1px 2px rgba(0, 0, 0, 0.04);
+    transition: transform .18s cubic-bezier(.3, .7, .4, 1.4), background-color .15s, box-shadow .15s;
+}
+.chip:hover, .btn-view:hover, .pager button:hover:not(:disabled) {
+    transform: none;
+    background-color: #fff;
+    box-shadow: inset 0 0 0 1px rgba(60, 60, 67, 0.12), 0 3px 8px rgba(0, 0, 0, 0.08);
+}
+.chip:active, .btn-view:active, .pager button:active:not(:disabled), .map-controls button:active { transform: scale(0.94); box-shadow: inset 0 0 0 1px rgba(60, 60, 67, 0.12); }
+.chip.active {
+    background-color: var(--green-700);
+    background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0) 60%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 4px 10px rgba(27, 107, 69, 0.28);
+}
+
+.btn-outline, .btn-wiki {
+    border-radius: 999px;
+    background-color: rgba(255, 255, 255, 0.6);
+    transition: transform .18s cubic-bezier(.3, .7, .4, 1.4), background-color .15s;
+}
+.btn-outline:active, .btn-wiki:active { transform: scale(0.96); }
+
+/* ---- Search fields: grey rounded fields without a border ---- */
+.search-box, .date-range input {
+    border: 0;
+    border-radius: 10px;
+    background-color: var(--ios-fill);
+    box-shadow: none;
+}
+.search-box:focus-within, .date-range input:focus {
+    background-color: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 0 0 3px rgba(52, 199, 89, 0.35);
+}
+.animal-suggest { border: 0; border-radius: 14px; box-shadow: var(--lg-rim), 0 12px 32px rgba(15, 23, 42, 0.16); }
+
+/* ---- Animal groups: iPhone on/off switches on the right ---- */
+.group-option { justify-content: flex-start; padding: 4px 0; font-size: 14px; }
+.group-option input[type="checkbox"] {
+    order: 2;
+    margin-left: auto;
+    -webkit-appearance: none;
+    appearance: none;
+    position: relative;
+    flex-shrink: 0;
+    width: 44px;
+    height: 26px;
+    border-radius: 999px;
+    background: #e3e3e8;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.04);
+    transition: background-color .25s ease;
+    cursor: pointer;
+}
+.group-option input[type="checkbox"]::before {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15), 0 3px 1px rgba(0, 0, 0, 0.06);
+    transition: transform .25s cubic-bezier(.3, .7, .4, 1.2);
+}
+.group-option input[type="checkbox"]:checked { background: var(--ios-green); }
+.group-option input[type="checkbox"]:checked::before { transform: translateX(18px); }
+.group-option input[type="checkbox"]:focus-visible { outline: 3px solid rgba(52, 199, 89, 0.5); outline-offset: 2px; }
+
+/* ---- Number of records slider: a thin track and a big round white knob ---- */
+.limit-slider input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 28px;
+    background: transparent;
+}
+.limit-slider input[type="range"]::-webkit-slider-runnable-track { height: 4px; border-radius: 4px; background: rgba(120, 120, 128, 0.25); }
+.limit-slider input[type="range"]::-moz-range-track { height: 4px; border-radius: 4px; background: rgba(120, 120, 128, 0.25); }
+.limit-slider input[type="range"]::-moz-range-progress { height: 4px; border-radius: 4px; background: var(--green-700); }
+.limit-slider input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 26px; height: 26px; margin-top: -11px;
+    border-radius: 50%; border: 0; background: #fff;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15), 0 1px 1px rgba(0, 0, 0, 0.16), 0 0 0 0.5px rgba(0, 0, 0, 0.04);
+}
+.limit-slider input[type="range"]::-moz-range-thumb {
+    width: 26px; height: 26px; border-radius: 50%; border: 0; background: #fff;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15), 0 1px 1px rgba(0, 0, 0, 0.16);
+}
+.limit-slider input[type="range"]:focus-visible { outline: none; }
+.limit-slider input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 4px rgba(52, 199, 89, 0.4), 0 3px 8px rgba(0, 0, 0, 0.15); }
+
+/* ---- Sliding option rows (Aman's segmented.js): iPhone colors, a white thumb on a grey track ----
+   Map style, Search Radius and Number of Records. segmented.css draws the green thumb; here it
+   becomes white with a soft shadow, and the chosen option dark, as on an iPhone. */
+.segmented {
+    background-color: var(--ios-fill);
+    box-shadow: none;
+}
+.segmented > .seg-thumb {
+    background: #fff;
+    background-image: none;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12), 0 3px 1px rgba(0, 0, 0, 0.04), 0 0 0 0.5px rgba(0, 0, 0, 0.04);
+}
+.segmented.dragging > .seg-thumb { box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18), 0 0 0 0.5px rgba(0, 0, 0, 0.05); transform-origin: center; }
+.segmented > button.active, .segmented.dragging > button.seg-over { color: var(--ink); font-weight: 600; }
+.segmented.dragging > button.active:not(.seg-over) { color: var(--text); font-weight: 500; }
+.basemap-tabs.segmented {
+    background-color: rgba(255, 255, 255, 0.45);
+    -webkit-backdrop-filter: blur(10px) saturate(180%);
+    backdrop-filter: blur(10px) saturate(180%);
+    box-shadow: var(--lg-rim), 0 6px 18px rgba(15, 23, 42, 0.14);
+}
+
+/* ---- On the map: glass legend (its entries switch groups on and off) and round glass buttons ---- */
+.map-legend { border: 0; border-radius: 16px; box-shadow: var(--lg-rim), 0 6px 18px rgba(15, 23, 42, 0.14); }
+button.legend-item { border-radius: 10px; }
+button.legend-item:hover { background: rgba(255, 255, 255, 0.6); }
+.map-controls button {
+    width: 38px; height: 38px;
+    border: 0;
+    background-color: rgba(255, 255, 255, 0.55);
+    box-shadow: var(--lg-rim), 0 4px 12px rgba(15, 23, 42, 0.14);
+    transition: transform .18s cubic-bezier(.3, .7, .4, 1.4), background-color .15s;
+}
+.map-controls button:first-child { border-radius: 12px 12px 0 0; }
+.map-controls #zoom-out { border-radius: 0 0 12px 12px; box-shadow: var(--lg-rim), 0 4px 12px rgba(15, 23, 42, 0.14), inset 0 1px 0 var(--ios-sep); }
+.map-controls .solo { border-radius: 50%; margin-top: 12px; }
+.map-card .leaflet-container, .map-card { border-radius: var(--radius); }
+.leaflet-popup-content-wrapper { border-radius: 14px; }
+
+/* ---- Sightings list: thin separators like an iPhone list ---- */
+.sightings th { background: transparent; border-bottom: 1px solid var(--ios-sep); }
+.sightings td { border-bottom: 1px solid var(--ios-sep); }
+.records-note { border-radius: 12px; border: 0; }
+.taxonomy { border-radius: 14px; }
+.profile-photo { border-radius: 16px; }
+
+/* ---- Messages: like an iPhone notification banner ---- */
+.toast {
+    border-radius: 22px;
+    padding: 14px 20px;
+    background-color: rgba(28, 28, 30, 0.78);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    backdrop-filter: blur(24px) saturate(180%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 14px 40px rgba(0, 0, 0, 0.25);
+    animation: ios-banner .45s cubic-bezier(.2, .9, .3, 1.15);
+}
+.toast.error { background-color: rgba(215, 0, 21, 0.85); }
+@keyframes ios-banner { from { opacity: 0; transform: translateY(-24px) scale(.96); } to { opacity: 1; transform: none; } }
+
+/* ---- Windows: big round corners, they spring open like on a phone ---- */
+dialog:not(.photo-viewer) { border: 0; border-radius: 28px; box-shadow: var(--lg-rim), 0 30px 80px rgba(15, 23, 42, 0.30); }
+.photo-viewer { border-radius: 28px; }
+dialog[open] { animation: ios-sheet .42s cubic-bezier(.2, .9, .3, 1.1); }
+@keyframes ios-sheet { from { opacity: 0; transform: translateY(30px) scale(.94); } to { opacity: 1; transform: none; } }
+
+/* ---- Encyclopedia ---- */
+.tree-item { border-radius: 12px; }
+.tree-item.active { background-color: rgba(255, 255, 255, 0.85); box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08); }
+.sp-card .sp-photo, .sp-card img { border-radius: var(--radius) var(--radius) 0 0; }
+
+/* ---- Thin round scrollbars ---- */
+* { scrollbar-width: thin; scrollbar-color: rgba(0, 0, 0, 0.22) transparent; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.2); border-radius: 8px; border: 2px solid transparent; background-clip: padding-box; }
+
+/* ---- Less motion: no springs, the look stays ---- */
+@media (prefers-reduced-motion: reduce) {
+    .toast, dialog[open] { animation: none; }
+    .group-option input[type="checkbox"], .group-option input[type="checkbox"]::before { transition: none; }
+}
+
+/* ---- More contrast: solid panels and clear outlines ---- */
+@media (prefers-contrast: more) {
+    .topbar, .card, .sp-card, .search-action, .side-section, .sidebar { background-color: #fff; -webkit-backdrop-filter: none; backdrop-filter: none; }
+    .side-section, .card { box-shadow: inset 0 0 0 1px #94a3b8; }
+    .group-option input[type="checkbox"] { box-shadow: inset 0 0 0 1px #475569; }
+}

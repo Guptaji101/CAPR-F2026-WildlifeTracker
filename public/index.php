@@ -26,6 +26,7 @@ $page = 'map';
     <link rel="stylesheet" href="css/depth3d.css?v=<?= filemtime(__DIR__ . '/css/depth3d.css') ?>">
     <link rel="stylesheet" href="css/glass.css?v=<?= filemtime(__DIR__ . '/css/glass.css') ?>">
     <link rel="stylesheet" href="css/segmented.css?v=<?= filemtime(__DIR__ . '/css/segmented.css') ?>">
+    <link rel="stylesheet" href="css/ios.css?v=<?= filemtime(__DIR__ . '/css/ios.css') ?>">
 </head>
 <body>
 

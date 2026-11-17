@@ -68,6 +68,7 @@ $tree = [
     <link rel="stylesheet" href="css/encyclopedia.css?v=<?= filemtime(__DIR__ . '/css/encyclopedia.css') ?>">
     <link rel="stylesheet" href="css/depth3d.css?v=<?= filemtime(__DIR__ . '/css/depth3d.css') ?>">
     <link rel="stylesheet" href="css/glass.css?v=<?= filemtime(__DIR__ . '/css/glass.css') ?>">
+    <link rel="stylesheet" href="css/ios.css?v=<?= filemtime(__DIR__ . '/css/ios.css') ?>">
 </head>
 <body>
 
