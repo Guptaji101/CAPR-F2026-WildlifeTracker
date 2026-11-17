@@ -70,11 +70,25 @@ if (savedSearch && Number.isFinite(savedSearch.lat) && Number.isFinite(savedSear
 // (a GBIF species key is also a taxon key, so sightings.php can filter on it like on a group)
 state.speciesFilter = null;
 function showSpeciesFilter() {
-    $('species-filter').hidden = !state.speciesFilter;
-    if (state.speciesFilter) {
-        setText('species-filter-name', state.speciesFilter.name);
-        $('species-filter-name').title = state.speciesFilter.allNames || '';   // the whole list on hover
+    const f = state.speciesFilter;
+    $('species-filter').hidden = !f;
+    if (!f) return;
+    const box = $('species-filter-name');
+    box.title = f.allNames || '';   // the whole list on hover
+    if (!f.entries) { box.textContent = f.name; return; }
+    // A keyword: every animal it found is a button, so the user can show only that one (17 Nov).
+    // Only the animals of the switched-on groups are named; the others are not searched.
+    const shown = f.entries.map((e, i) => ({ ...e, i })).filter(e => !e.group || state.groups.has(e.group));
+    const q = `"${escapeHtml(f.query)}":`;
+    if (f.picked != null && f.entries[f.picked]) {
+        box.innerHTML = `${q} ${escapeHtml(f.entries[f.picked].name)}`
+            + (f.entries.length > 1 ? ` <button type="button" class="filter-pick filter-all" data-pick="all">All ${shown.length} animals</button>` : '');
+        return;
     }
+    const max = f.expanded ? shown.length : 3;
+    box.innerHTML = `${q} ` + shown.slice(0, max).map(e =>
+        `<button type="button" class="filter-pick" data-pick="${e.i}" title="Show only ${escapeHtml(e.name)}">${escapeHtml(e.name)}</button>`).join('')
+        + (shown.length > max ? ` <button type="button" class="filter-pick filter-more" data-pick="more">+ ${shown.length - max} more</button>` : '');
 }
 function clearSpeciesFilter() {
     state.speciesFilter = null;
@@ -217,6 +231,21 @@ function countryName(c) {
     return m ? `${m[2]} ${m[1]}` : c;
 }
 
+// The name a sighting gets in the table, the pins and the profile (17 Nov): the English name of the
+// animal list (the same as the search and the Encyclopedia use), else GBIF's name for the record
+// without Korean, Chinese or Japanese names and without the list of groups some records add
+// ("White-tailed Eagle; Hawks, Eagles, Vultures and allies; Birds; …" -> "White-tailed Eagle").
+// null when nothing is left: fillCommonNames then asks species.php for the English name.
+const CJK = /[\u1100-\u11ff\u3040-\u30ff\u3130-\u318f\u3400-\u9fff\uac00-\ud7a3]/;
+let listNames = null;
+function cleanCommonName(r) {
+    if (animalList?.length && !listNames) listNames = new Map(animalList.filter(a => a.n).map(a => [a.k, a.n]));
+    const fromList = listNames?.get(r.speciesKey);
+    if (fromList) return fromList;
+    const name = (r.commonName || '').split(';')[0].trim();
+    return name && !CJK.test(name) ? name : null;
+}
+
 function plainName(r) {
     if (r.commonName) return toTitleCase(r.commonName);
     if (r.species) return r.species;
@@ -267,7 +296,8 @@ function updateSearchSummary() {
     const typed = $('location-input').value.trim();
     const place = (typed || state.currentLocationName || 'Ulsan').split(',')[0];
     const allGroups = state.groups.size === Object.keys(GROUPS).length;
-    const what = state.speciesFilter ? `only ${state.speciesFilter.query ? `"${state.speciesFilter.query}"` : state.speciesFilter.name}`
+    const f = state.speciesFilter;
+    const what = f ? `only ${f.picked != null && f.entries?.[f.picked] ? f.entries[f.picked].name : f.query ? `"${f.query}"` : f.name}`
         : allGroups ? 'all animals'
         : state.groups.size ? [...state.groups].map(g => GROUPS[g].label).join(', ')
         : 'no group ticked';
@@ -582,8 +612,9 @@ function similarAnimals(query, hint) {
     return items.slice(0, 6);
 }
 
-// Show every animal the keyword fits. The keyword stays in the box as the user typed it, and the
-// groups in which it was found are ticked; unticking one of them leaves its animals out.
+// Show every animal the keyword fits. The keyword stays in the box as the user typed it. The
+// search never changes the group switches (17 Nov): the switches decide where to look, the keyword
+// what to look for. Animals of switched-off groups are left out (see animalFilterKeys).
 function showKeyword(query, animals) {
     state.animalId++;   // an animal lookup still running is now out of date
     const entries = animals.map(a => ({
@@ -595,23 +626,42 @@ function showKeyword(query, animals) {
     // Tiger Shrike, Asian tiger mosquito); a long list shows the first 3 and "+ N more"
     const names = entries.map(e => e.name);
     const label = `"${query}": ${names.slice(0, 3).join(', ')}${names.length > 3 ? ` + ${names.length - 3} more` : ''}`;
-    state.speciesFilter = { query, entries, animals, name: label, allNames: names.join(', ') };
+    state.speciesFilter = { query, entries, animals, name: label, allNames: names.join(', '), picked: null, expanded: false };
     showSpeciesFilter();
     $('animal-input').value = query;
     hideSuggestions();
-    const groups = new Set(entries.map(e => e.group));
-    setGroups(groups.has(null) ? Object.keys(GROUPS) : [...groups]);
     history.replaceState(null, '', location.pathname);
     if (isPhoneLayout()) setFiltersOpen(false);
     loadSightings();
 }
 
-// The taxon keys the sightings search sends for the animal filter: one species, or every animal
-// a keyword fits within the ticked groups (at most 150, best-known first, to keep the address short)
-function animalFilterKeys() {
+// The animals of the filter that are searched: one species, the one name clicked in the bar, or
+// every animal a keyword fits, in each case only within the switched-on groups
+function filterAnimals() {
     const f = state.speciesFilter;
-    if (!f.entries) return f.keys || [f.key];
-    return f.entries.filter(e => !e.group || state.groups.has(e.group)).flatMap(e => e.keys).slice(0, 150);
+    const all = f.entries ? (f.picked != null ? [f.entries[f.picked]] : f.entries) : [{ keys: f.keys || [f.key], group: f.group || null }];
+    return { all, on: all.filter(e => !e.group || state.groups.has(e.group)) };
+}
+// The taxon keys the sightings search sends for the animal filter (at most 150, best-known first,
+// to keep the address short)
+function animalFilterKeys() {
+    return filterAnimals().on.flatMap(e => e.keys).slice(0, 150);
+}
+
+// "No mammals match "black". 15 birds do." when the keyword's animals are all in switched-off groups
+const GROUP_ONE = { mammals: 'mammal', birds: 'bird', reptiles: 'reptile', amphibians: 'amphibian', fish: 'fish', invertebrates: 'invertebrate' };
+function offGroupsMessage() {
+    const f = state.speciesFilter;
+    const what = f.query ? `"${f.query}"` : f.name;
+    const on = Object.keys(GROUPS).filter(g => state.groups.has(g)).map(g => GROUPS[g].label.toLowerCase());
+    const where = on.length === 1 ? on[0] : on.length === 2 ? `${on[0]} or ${on[1]}` : 'animals in the switched-on groups';
+    const counts = {};
+    filterAnimals().all.forEach(e => { if (e.group) counts[e.group] = (counts[e.group] || 0) + 1; });
+    const parts = Object.entries(counts).sort((a, b) => b[1] - a[1])
+        .map(([g, n]) => `${n} ${n === 1 ? GROUP_ONE[g] : GROUPS[g].label.toLowerCase()}`);
+    const others = parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts.at(-1)}` : parts[0];
+    const total = Object.values(counts).reduce((a, b) => a + b, 0);
+    return `No ${where} match ${what}. ${others ? `${others[0].toUpperCase()}${others.slice(1)} ${total === 1 ? 'does' : 'do'}. ` : ''}Search all groups?`;
 }
 
 // The word for one of the six groups ("reptiles", "Bird", "fishes"), or null
@@ -647,7 +697,6 @@ function showNoAnimal(query, hint) {
     state.searchId++;   // a sightings search still running is now out of date
     state.speciesFilter = null;
     showSpeciesFilter();
-    setGroups(Object.keys(GROUPS));   // ticks of an earlier search ("frog" -> Amphibians) are undone
     history.replaceState(null, '', location.pathname);
     state.sightings = [];
     state.total = 0;
@@ -678,13 +727,13 @@ function showAnimal(animal) {
     state.animalId++;   // an animal lookup still running is now out of date
     const keys = animal.keys || [animal.key];
     const name = animal.group ? `${toTitleCase(animal.name)} (all kinds)` : toTitleCase(animal.name);
-    state.speciesFilter = { key: keys[0], keys, name };
+    // The animal's group is remembered (not switched on): if its group is off, the map says so and
+    // offers to search all groups. Some fish have only "Chordata" in GBIF: they are always searched.
+    const group = animal.cls && animal.cls !== 'Chordata' ? groupOf({ taxonGroup: animal.cls }) : null;
+    state.speciesFilter = { key: keys[0], keys, name, group };
     showSpeciesFilter();
     $('animal-input').value = animal.name;
     hideSuggestions();
-    // Only the animal's group is ticked, so the user sees where it belongs ("frog" -> Amphibians).
-    // Some fish have only "Chordata" in GBIF: then the ticks stay as they are.
-    if (animal.cls && animal.cls !== 'Chordata') setGroups([groupOf({ taxonGroup: animal.cls })]);
     // The address keeps the filter, so reloading the page or sharing the link shows the same animal
     history.replaceState(null, '', keys.length === 1 ? `?species=${keys[0]}&name=${encodeURIComponent(name)}` : location.pathname);
     if (isPhoneLayout()) setFiltersOpen(false);
@@ -879,11 +928,11 @@ async function loadSightings() {
     if (state.speciesFilter) {
         const keys = animalFilterKeys();
         if (!keys.length) {
-            // The keyword's animals are all in groups the user has unticked
+            // The animals found are all in groups the user has switched off
             state.searchId++;
             state.sightings = [];
             state.total = 0;
-            const msg = `None of the animals called "${state.speciesFilter.query}" is in the ticked groups. Tick more groups, or show all animals.`;
+            const msg = offGroupsMessage();
             renderAll(msg, true);
             showToast(msg, 'error');
             setLoading(false);
@@ -909,7 +958,10 @@ async function loadSightings() {
         const data = cached || await safeJsonFetch(url);
         if (searchId !== state.searchId) return;   // a newer search has started
         if (!data.fallback) rememberSightings(url, data);
-        state.sightings = (data.results || []).map(r => ({ ...r }));   // a fresh copy each time
+        await loadAnimalList();   // for the clean English names (already loaded after the first search)
+        if (searchId !== state.searchId) return;
+        // a fresh copy each time, with the clean English name
+        state.sightings = (data.results || []).map(r => ({ ...r, commonName: cleanCommonName(r) }));
         state.total = data.fallback ? 0 : (data.total || 0);   // all records of the area (GBIF count)
         state.page = 0;
         const place = ($('location-input').value || state.currentLocationName || 'this place').split(',')[0];
@@ -997,8 +1049,10 @@ function recoveryButtons() {
     const bigger = RADII.find(r => r > state.radiusKm);
     if (bigger) out.push(['radius', `<i class="fa-solid fa-expand"></i> Search ${bigger} km`]);
     if (state.fromDate || state.toDate) out.push(['dates', '<i class="fa-regular fa-calendar-xmark"></i> Clear dates']);
+    const allOn = state.groups.size === Object.keys(GROUPS).length;
+    if (state.speciesFilter && !allOn) out.push(['groups', '<i class="fa-solid fa-check-double"></i> Search all groups']);
     if (state.speciesFilter) out.push(['animals', '<i class="fa-solid fa-paw"></i> Show all animals']);
-    else if (state.groups.size < Object.keys(GROUPS).length) out.push(['groups', '<i class="fa-solid fa-check-double"></i> Tick all groups']);
+    else if (!allOn) out.push(['groups', '<i class="fa-solid fa-check-double"></i> Tick all groups']);
     return out.length ? `<div class="recover-actions">${out.map(([a, label]) =>
         `<button type="button" class="recover-btn" data-recover="${a}">${label}</button>`).join('')}</div>` : '';
 }
@@ -1013,6 +1067,7 @@ function recover(action) {
         $('species-filter-clear').click();
     } else if (action === 'groups') {
         setGroups(Object.keys(GROUPS));
+        showSpeciesFilter();   // the bar names the animals of the newly switched-on groups too
         scheduleSearch(0);
     }
 }
@@ -1106,8 +1161,8 @@ function fillCommonNames(start, end) {
         if (r.commonName || !r.speciesKey || r.nameChecked) return;
         r.nameChecked = true;
         const data = await getSpecies(r.speciesKey);
-        if (!data || !data.vernacularName) return;
-        r.commonName = data.vernacularName;
+        if (!data || !data.vernacularName || CJK.test(data.vernacularName)) return;
+        r.commonName = data.vernacularName.split(';')[0].trim();
         // A new search may have replaced the table while this name was loading: then this row
         // now shows another animal and must not get this name
         if (state.sightings[start + i] !== r) return;
@@ -1349,7 +1404,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     showSpeciesFilter();
     // "Show all animals": no animal filter and every group ticked again
-    $('species-filter-clear').addEventListener('click', () => { clearSpeciesFilter(); setGroups(Object.keys(GROUPS)); loadSightings(); });
+    // "Show all animals": no animal filter; all animals of the switched-on groups (the switches stay)
+    $('species-filter-clear').addEventListener('click', () => { clearSpeciesFilter(); loadSightings(); });
+    // A name in the bar: only that animal; "All N animals" and "+ N more" go back or show every name
+    $('species-filter-name').addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-pick]');
+        const f = state.speciesFilter;
+        if (!btn || !f?.entries) return;
+        if (btn.dataset.pick === 'more') { f.expanded = true; return showSpeciesFilter(); }
+        f.picked = btn.dataset.pick === 'all' ? null : Number(btn.dataset.pick);
+        showSpeciesFilter();
+        loadSightings();
+    });
 
     buildGroupControls();
 
@@ -1372,7 +1438,11 @@ document.addEventListener('DOMContentLoaded', () => {
         await loadAnimalList();   // instant after the first time
         const typed = e.target.value;
         if (typed !== $('animal-input').value) return;   // the user has typed more meanwhile
-        if (!typed.trim()) return showRecentSearches();
+        if (!typed.trim()) {
+            // An emptied box ends the animal search: all animals of the switched-on groups again (17 Nov)
+            if (state.speciesFilter) { clearSpeciesFilter(); scheduleSearch(0); }
+            return showRecentSearches();
+        }
         renderSuggestions(matchAnimals(typed), typed);
     });
     $('animal-input').addEventListener('keydown', onAnimalKey);
@@ -1407,9 +1477,11 @@ document.addEventListener('DOMContentLoaded', () => {
     $('group-list').addEventListener('change', (e) => {
         // A keyword stays: the ticked groups only decide which of its animals are shown.
         // A single species from the Encyclopedia ends when the groups change.
-        if (state.speciesFilter && !state.speciesFilter.entries) clearSpeciesFilter();
+        // (an animal picked from the suggestions stays too: its group decides whether it is shown)
+        if (state.speciesFilter && !state.speciesFilter.entries && !state.speciesFilter.group) clearSpeciesFilter();
         if (e.target.checked) state.groups.add(e.target.value);
         else state.groups.delete(e.target.value);
+        if (state.speciesFilter) showSpeciesFilter();   // the bar names only the switched-on groups' animals
         updateLegend();
         scheduleSearch(600);   // time to tick several groups
     });

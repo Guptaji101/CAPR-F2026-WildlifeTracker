@@ -83,7 +83,9 @@ foreach (array_chunk(array_keys($animals), 25) as $n => $chunk) {
         $ko = [];
         foreach ($names[$j]['results'] ?? [] as $v) {
             $name = trim($v['vernacularName'] ?? '');
-            if ($name !== '' && (($v['language'] ?? '') === 'kor' || preg_match('/\p{Hangul}/u', $name))) $ko[$name] = true;
+            // Only real Korean names, written in Hangul (17 Nov): GBIF also lists Chinese names
+            // (金背鳩) and romanized ones ("Cham Geguri") under Korean
+            if (preg_match('/^[\p{Hangul}\s\-]+$/u', $name)) $ko[$name] = true;
         }
         if ($ko) $animals[$i]['ko'] = array_slice(array_keys($ko), 0, 4);   // a few names are enough
     }
