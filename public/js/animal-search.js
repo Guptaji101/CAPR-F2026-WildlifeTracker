@@ -124,14 +124,18 @@ function similarNames(list, query, max = 6) {
     return scored.slice(0, max).map(({ a }) => a);
 }
 
-// How many letters must change to turn one word into the other (Levenshtein distance)
+// How many letters must change to turn one word into the other (Levenshtein distance); two
+// neighbouring letters typed the wrong way round count as one change ("dere" -> "deer"; 17 Nov)
 function editDistance(a, b) {
+    let before = null;
     let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
     for (let i = 1; i <= a.length; i++) {
         const cur = [i];
         for (let j = 1; j <= b.length; j++) {
             cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+            if (before && i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) cur[j] = Math.min(cur[j], before[j - 2] + 1);
         }
+        before = prev;
         prev = cur;
     }
     return prev[b.length];
@@ -172,4 +176,30 @@ function toTitleCase(name) {
     return name.split(' ').map((w, i) =>
         i > 0 && SMALL_WORDS.has(w.toLowerCase()) ? w.toLowerCase() : w.charAt(0).toUpperCase() + w.slice(1)
     ).join(' ');
+}
+
+// Everyday words for whole kinds of animals that the server knows (api/animal.php: Wikipedia and
+// GBIF groups), for "Did you mean" when a typed word found nothing (#18, 17 Nov: "bata" -> bat).
+// Searching one of them shows the whole kind ("bat": all bats), which the 2000-animal list cannot.
+const KIND_WORDS = ['bat', 'owl', 'deer', 'bear', 'fox', 'wolf', 'frog', 'toad', 'snake', 'lizard',
+    'turtle', 'whale', 'dolphin', 'seal', 'otter', 'squirrel', 'mouse', 'rat', 'rabbit', 'hare', 'mole',
+    'weasel', 'eagle', 'hawk', 'duck', 'goose', 'swan', 'gull', 'heron', 'crane', 'crow', 'sparrow',
+    'pigeon', 'woodpecker', 'butterfly', 'moth', 'dragonfly', 'bee', 'wasp', 'ant', 'beetle', 'spider',
+    'crab', 'shrimp', 'snail', 'slug', 'jellyfish', 'starfish', 'worm', 'fish', 'shark', 'eel'];
+// The kind words one or two letters away from the typed word ("bata" -> bat; "dere" -> deer)
+function similarWords(query) {
+    const q = query.trim().toLowerCase();
+    if (q.length < 3 || HANGUL.test(q) || KIND_WORDS.includes(q)) return [];
+    const allowed = q.length <= 4 ? 1 : 2;
+    return KIND_WORDS.map(w => [w, Math.abs(w.length - q.length) <= allowed ? editDistance(q, w) : 99])
+        .filter(([, d]) => d <= allowed).sort((x, y) => x[1] - y[1]).slice(0, 3).map(([w]) => w);
+}
+// The words as buttons for a suggestion box: a click searches that word (data-recent, the same
+// handling as "Recent searches")
+function wordsHtml(words, idPrefix) {
+    return words.map((w, i) =>
+        `<button type="button" role="option" id="${idPrefix}-w${i}" data-recent="${w}" aria-label="Search ${w}">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <span class="suggest-text"><span class="suggest-main">${w}</span><span class="suggest-sub">all kinds of ${w}s</span></span>
+        </button>`).join('');
 }

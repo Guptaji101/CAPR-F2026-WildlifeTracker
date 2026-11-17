@@ -653,12 +653,23 @@ function showNoAnimal(query, hint) {
     state.total = 0;
     $('animal-input').value = query;
     const similar = similarAnimals(query, hint);
+    const words = similarWords(query);   // kind words: "bata" -> bat (animal-search.js, #18)
     const message = `No animal called "${query}" was found. `
-        + (similar.length ? 'Did you mean one of the names under the box?' : 'Check the spelling, or try the scientific name.');
+        + (similar.length || words.length ? 'Did you mean one of the names under the box?' : 'Check the spelling, or try the scientific name.');
     renderAll(message);
     updateSearchSummary();
     showToast(message, 'error');
-    if (similar.length) renderSuggestions(similar, '', 'Did you mean…');
+    if (!similar.length && !words.length) return;
+    // The kind words first (a click searches the word: "bat" = all bats), then similar animals
+    const box = $('animal-suggest');
+    if (similar.length) {
+        renderSuggestions(similar, '', 'Did you mean…');
+    } else {
+        box.innerHTML = '<div class="suggest-title">Did you mean…</div>';
+        box.hidden = false;
+        $('animal-input').setAttribute('aria-expanded', 'true');
+    }
+    box.querySelector('.suggest-title').insertAdjacentHTML('afterend', wordsHtml(words, 'suggest'));
 }
 
 // Filter the map on one species (the same filter the Encyclopedia's "See … on the map" uses),

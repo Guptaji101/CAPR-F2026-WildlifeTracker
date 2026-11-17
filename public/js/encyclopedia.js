@@ -433,12 +433,15 @@ async function searchAll() {
         const a = animalList.find(x => x.k === found.key);
         return openAnimal(found.key, a ? groupOfAnimal(a) : groupOfAnimal({ t: found.path }), a?.r);
     }
-    // Nothing fits: similar names, as on the Map page ("sparow" -> sparrows)
+    // Nothing fits: similar names, as on the Map page ("sparow" -> sparrows), and kind words
+    // ("bata" -> bat: a click searches all bats; animal-search.js, #18)
     const similar = similarAnimals(typed).slice(0, 6);
+    const words = similarWords(typed);
     renderList('ency-search-input', 'ency-suggest', similar, '', {
-        message: similar.length ? `No animal called ${said} was found. Did you mean…`
+        message: similar.length || words.length ? `No animal called ${said} was found. Did you mean…`
             : `No animal called ${said} was found. Check the spelling, or try the scientific name.`,
     });
+    if (words.length) $('ency-suggest').querySelector('.suggest-message').insertAdjacentHTML('afterend', wordsHtml(words, 'ency-suggest'));
 }
 
 // A whole group by its name or a word of it ("reptiles", "Insect", "shrimps" -> Crabs & shrimps):
