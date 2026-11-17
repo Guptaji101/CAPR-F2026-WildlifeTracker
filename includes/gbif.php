@@ -118,20 +118,9 @@ function gbif_search_nearby(
 
     // Newest records first. GBIF cannot sort by date: it returns records in its own order (near
     // Busan on 9 Nov 2026 the first 300 were from January to May, though records up to November
-    // existed). So ask for the last month first, then the rest of the last year, then older
-    // records, each time only for as many records as are still missing (0 = just the count).
-    // A From/To date chosen by the user limits the windows.
-    $end = $toDate ?: date('Y-m-d');
-    $windows = [];
-    $upper = $end;
-    foreach (['-1 month', '-1 year', null] as $back) {
-        $lower = $back ? date('Y-m-d', strtotime($back, strtotime($end))) : null;
-        $last = $lower === null || ($fromDate && $lower <= $fromDate);
-        if ($fromDate && ($lower === null || $lower < $fromDate)) $lower = $fromDate;
-        $windows[] = ($lower ?? '*') . ',' . $upper;   // "*" leaves the start open
-        if ($last) break;
-        $upper = date('Y-m-d', strtotime('-1 day', strtotime($lower)));
-    }
+    // existed). So ask for the newest dates first, each time only for as many records as are
+    // still missing (0 = just the count). gbif_date_windows() says which dates each request asks.
+    $windows = gbif_date_windows($fromDate, $toDate);
 
     // One deadline for all requests together: at most 40 seconds, as before
     $deadline = microtime(true) + 40;
@@ -167,6 +156,33 @@ function gbif_search_nearby(
     $results = array_values($results);
     usort($results, fn($a, $b) => strcmp($b['eventDate'] ?? '', $a['eventDate'] ?? ''));
     return ['count' => $total, 'results' => array_slice($results, 0, $limit)];
+}
+
+// The date windows of a sightings search, newest first, as GBIF eventDate ranges ("from,to"; "*"
+// leaves the start open). Without From/To dates: the last month, then the rest of the last year,
+// then all older records (the open request at the end also counts records without a date).
+// With a From and/or To date (#20, 17 Nov): windows that double in size going back from the To
+// date (1, 1, 2, 4, 8 … months) until the From date. One big window of 11 months returned the
+// oldest records first, so a search for 2024 showed only January.
+function gbif_date_windows(?string $fromDate, ?string $toDate): array
+{
+    $end = $toDate ?: date('Y-m-d');
+    $steps = ($fromDate || $toDate) ? [1, 1, 2, 4, 8, 16, 32, 64] : [1, 11];
+    $windows = [];
+    $upper = $end;
+    $months = 0;
+    foreach ($steps as $step) {
+        $months += $step;
+        $lower = date('Y-m-d', strtotime("-$months month", strtotime($end)));
+        if ($fromDate && $lower <= $fromDate) {
+            $windows[] = $fromDate . ',' . $upper;   // reached the From date: last window
+            return $windows;
+        }
+        $windows[] = date('Y-m-d', strtotime('+1 day', strtotime($lower))) . ',' . $upper;
+        $upper = $lower;
+    }
+    $windows[] = '*,' . $upper;   // everything older (or, with only a To date, everything before)
+    return $windows;
 }
 
 // One GBIF occurrence search with retries. Returns GBIF's JSON, or ['error' => …] with
