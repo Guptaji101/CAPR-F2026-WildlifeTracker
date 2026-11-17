@@ -58,6 +58,8 @@ foreach (array_chunk($counts, 25) as $n => $chunk) {
         // GBIF sometimes gives several names in one ("Pacific oyster, Japanese oyster, …"):
         // keep the first, starting with a capital letter ("wild boar" -> "Wild boar")
         $name = trim(explode(',', $sp['vernacularName'] ?? '')[0]);
+        // "Gray/Purple Heron" (two similar birds in one name) -> "Gray Heron", the first one (18 Nov)
+        if (preg_match('~^([^/]+)/(\S+)(.*)$~', $name, $m)) $name = str_contains(trim($m[1]), ' ') ? trim($m[1]) : trim($m[1]) . $m[3];
         $animals[] = [
             'k' => (int)$c['name'],                      // GBIF species key
             'n' => $name !== '' ? ucfirst($name) : null, // English name (missing for many insects)

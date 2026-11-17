@@ -171,8 +171,19 @@ function recentHtml(idPrefix) {
 // small ("Bird of Prey"), and names with Korean letters are left as they are. Not for scientific
 // names: those keep their own form (Genus species).
 const SMALL_WORDS = new Set(['of', 'and', 'the', 'in', 'on', 'de', 'la', 'or']);
+// Some GBIF bird names (from eBird) name two similar species at once: "Gray/Purple Heron" for the
+// Grey Heron, "Taiga/Tundra Bean-Goose", "Great Cormorant/European Shag" (18 Nov). The first one
+// is the animal itself: "Gray Heron", "Taiga Bean-Goose", "Great Cormorant".
+function firstOfPair(name) {
+    const m = name.match(/^([^/]+)\/(\S+)(.*)$/);
+    if (!m) return name;
+    const first = m[1].trim();
+    return first.includes(' ') ? first : first + m[3];
+}
+
 function toTitleCase(name, scientific = '') {
     if (!name || HANGUL.test(name)) return name || '';
+    name = firstOfPair(name);
     // Some GBIF "English" names are really the Latin name ("Clogmia albipunctata", "Pryeria
     // sinica"): when the first word is the genus or the second word the species part of the
     // scientific name, keep the name as it is (#19)
