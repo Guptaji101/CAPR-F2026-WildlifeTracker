@@ -184,7 +184,7 @@
 .animal-of-day[hidden] { display: none; }
 .animal-of-day.aod-closing { max-height: 0; opacity: 0; margin-bottom: 0; }
 .aod-track { display: flex; width: 100%; transition: transform .7s cubic-bezier(.3, .7, .2, 1); }
-.aod-slide { flex: 0 0 100%; min-width: 0; display: grid; grid-template-columns: 220px 1fr; gap: 20px; align-items: center; padding: 14px 44px 26px 14px; }
+.aod-slide { flex: 0 0 100%; min-width: 0; display: grid; grid-template-columns: 220px 1fr; gap: 20px; align-items: center; padding: 14px 48px 26px 48px; }
 .aod-slide img, .aod-noimg { width: 100%; height: 150px; object-fit: cover; border-radius: 14px; background: var(--green-50); }
 .aod-tag { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; background: #fef3c7; color: #b45309; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
 .aod-slide h2 { margin: 8px 0 2px; font-size: 22px; }
@@ -199,11 +199,20 @@
 .aod-close { position: absolute; top: 8px; right: 10px; width: 28px; height: 28px; border: 0; border-radius: 50%; background: rgba(255, 255, 255, 0.85);
     color: var(--muted); font-size: 18px; line-height: 1; cursor: pointer; box-shadow: 0 1px 4px rgba(15, 23, 42, 0.12); }
 .aod-close:hover { color: var(--ink); background: #fff; }
+.aod-arrow { position: absolute; top: 50%; transform: translateY(-50%); width: 34px; height: 34px; border: 0; border-radius: 50%;
+    background: rgba(255, 255, 255, 0.9); color: var(--green-900); font-size: 14px; cursor: pointer; z-index: 2;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.18); transition: background .15s, transform .15s; }
+.aod-arrow:hover { background: #fff; transform: translateY(-50%) scale(1.08); }
+.aod-arrow:focus-visible { outline: 2px solid var(--green-700); outline-offset: 2px; }
+.aod-prev { left: 6px; }
+.aod-next { right: 6px; }
+.aod-text { min-width: 0; }
 
 @media (max-width: 640px) {
     .detail-extras { grid-template-columns: 1fr; }
     .korea-map { max-width: 280px; }
     .aod-slide { grid-template-columns: 1fr; padding: 12px 12px 28px; }
+    .aod-arrow { top: 95px; }
     .aod-slide img, .aod-noimg { height: 170px; }
 }
 @media (prefers-reduced-motion: reduce) {

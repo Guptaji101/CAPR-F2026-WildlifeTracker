@@ -429,7 +429,7 @@ $('species-dialog').addEventListener('close', () => {
 // Animals of the day (17 Nov): 5 of the 120 best-known animals with an English name, different
 // ones each day (the same for everyone on that day). They slide past one by one, 4 seconds each,
 // and after 20 seconds the card folds away. Pointing at it (or focusing it) pauses it; a click on
-// an animal opens it; × closes the card. Without motion (prefers-reduced-motion) nothing moves
+// an animal opens it; the arrows and dots move by hand (then it stays open); × closes the card. Without motion (prefers-reduced-motion) nothing moves
 // by itself: the dots show the other animals.
 // -----------------------------------------------------------------------------
 const AOD_COUNT = 5, AOD_SECONDS = 4;
@@ -456,6 +456,8 @@ async function showAnimalOfDay() {
             </article>`;
         }).join('')}</div>
         <div class="aod-dots">${picks.map((_, i) => `<button type="button" aria-label="Animal ${i + 1} of ${AOD_COUNT}"></button>`).join('')}</div>
+        <button type="button" class="aod-arrow aod-prev" aria-label="Previous animal"><i class="fa-solid fa-chevron-left"></i></button>
+        <button type="button" class="aod-arrow aod-next" aria-label="Next animal"><i class="fa-solid fa-chevron-right"></i></button>
         <button type="button" class="aod-close" aria-label="Close the animals of the day">×</button>`;
     box.hidden = false;
 
@@ -488,8 +490,11 @@ async function showAnimalOfDay() {
     box.addEventListener('focusout', () => { paused = false; });
     box.addEventListener('click', e => {
         if (e.target.closest('.aod-close')) return close();
+        // Arrows and dots: the user is browsing, so the card stops moving and stays open
+        const arrow = e.target.closest('.aod-arrow');
+        if (arrow) { clearInterval(timer); return show((index + (arrow.classList.contains('aod-prev') ? -1 : 1) + AOD_COUNT) % AOD_COUNT); }
         const dot = e.target.closest('.aod-dots button');
-        if (dot) return show([...dot.parentElement.children].indexOf(dot));
+        if (dot) { clearInterval(timer); return show([...dot.parentElement.children].indexOf(dot)); }
         const slide = e.target.closest('.aod-slide');
         if (!slide) return;
         const a = picks[Number(slide.dataset.i)];
