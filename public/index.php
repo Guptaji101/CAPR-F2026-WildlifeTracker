@@ -130,25 +130,21 @@ $page = 'map';
 
           </div>
 
-            <!-- Search button: filter changes (radius, groups, dates, max records) are applied only
-                 when it is clicked. It is the footer of the sidebar, under the scrolling settings
-                 (not on top of them), and the summary above it shows what will be searched. -->
-            <div class="search-action">
-                <p class="search-summary" id="search-summary" aria-live="polite"></p>
-                <button class="btn-primary apply-btn" id="apply-btn" type="button">
-                    <i class="fa-solid fa-magnifying-glass"></i> <span id="apply-label">Search sightings</span>
-                </button>
-            </div>
         </aside>
 
         <!-- Centre: map and sightings table -->
         <main class="main">
-            <!-- Shown when the map is filtered on one species (link from the Encyclopedia) -->
-            <div class="species-filter" id="species-filter" hidden>
-                <i class="fa-solid fa-filter"></i> Showing only <b id="species-filter-name"></b>
-                <!-- What this filter found here, e.g. "8 sightings · 1 species" (16 Nov) -->
+            <!-- What the map and the table show, always above the map (17 Nov). Every setting searches
+                 by itself, so the "Search sightings" button at the bottom of the sidebar was removed and
+                 its summary moved here: place · radius · groups · dates · max records, the animals of
+                 an animal search (buttons, to show only one), and what was found. -->
+            <div class="search-status" id="search-status">
+                <span class="status-label"><i class="fa-solid fa-check"></i> Showing</span>
+                <span class="search-summary" id="search-summary" aria-live="polite"></span>
+                <span class="species-filter" id="species-filter" hidden><b id="species-filter-name"></b></span>
+                <!-- What was found here, e.g. "8 sightings · 1 species" (16 Nov) -->
                 <span class="filter-stats" id="filter-stats" aria-live="polite"></span>
-                <button type="button" id="species-filter-clear"><i class="fa-solid fa-xmark"></i> Show all animals</button>
+                <button type="button" id="species-filter-clear" hidden><i class="fa-solid fa-xmark"></i> Show all animals</button>
             </div>
 
             <section class="card map-card" id="map-section">

@@ -533,18 +533,24 @@ table.sightings { width: 100%; border-collapse: collapse; }
 .profile { scroll-margin-top: calc(var(--topbar-h) + 10px); }   /* stays clear of the sticky header when scrolled to */
 .loc-none { color: var(--muted); font-style: italic; }
 
-/* "Showing only Coal Tit" bar above the map (species filter from the Encyclopedia) */
-.species-filter {
-    display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 14px;
+/* What the map shows, always above the map (17 Nov; it replaced the "Search sightings" button):
+   "✓ Showing Ulsan · 100 km · all animals · max 75   75 sightings · 42 species", and during an
+   animal search the animals as buttons and "Show all animals" */
+.search-status {
+    display: flex; align-items: center; gap: 8px 10px; flex-wrap: wrap; padding: 10px 14px;
     background: var(--green-50); border: 1px solid var(--green-100); border-radius: var(--radius);
     font-size: 13.5px; color: var(--green-900);
 }
+.status-label { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; color: var(--green-700); }
+.search-summary { color: var(--text); }
+.species-filter { display: inline-flex; align-items: center; }
 .species-filter[hidden] { display: none; }
-.species-filter button {
+#species-filter-clear {
     margin-left: auto; display: flex; align-items: center; gap: 6px; padding: 6px 12px; cursor: pointer;
     border: 1px solid var(--green-700); border-radius: var(--radius-sm); background: var(--white);
     font: inherit; font-size: 12.5px; font-weight: 600; color: var(--green-700);
 }
+#species-filter-clear[hidden] { display: none; }
 /* The animals a keyword found, as small buttons: click one to show only that animal (17 Nov) */
 #species-filter-name { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 4px 6px; }
 .species-filter .filter-pick {
@@ -556,20 +562,6 @@ table.sightings { width: 100%; border-collapse: collapse; }
 .species-filter .filter-pick:focus-visible { outline: 2px solid var(--green-700); outline-offset: 2px; }
 .species-filter .filter-more, .species-filter .filter-all { border-style: dashed; color: var(--green-700); font-weight: 500; }
 
-/* "Search sightings" button with a summary of the search; stays at the bottom of the sidebar */
-.search-action {
-    flex-shrink: 0; padding: 12px 18px 14px;
-    background: var(--white); border-top: 1px solid var(--line); box-shadow: 0 -6px 12px rgba(15, 23, 42, 0.06);
-}
-.search-summary { margin-bottom: 8px; font-size: 12px; line-height: 1.45; color: var(--text); }
-.search-summary span { display: flex; align-items: center; gap: 5px; font-weight: 600; font-size: 11.5px; }
-.search-summary .shown { color: var(--green-700); }
-.search-summary .changed { color: #b45309; }
-.apply-btn { height: 42px; font-size: 13.5px; }
-.apply-btn.pending { background: #d97706; animation: apply-nudge 1.6s ease-in-out 2; }
-.apply-btn.pending:hover { background: #b45309; }
-@keyframes apply-nudge { 50% { box-shadow: 0 0 0 5px rgba(217, 119, 6, 0.25); } }
-@media (prefers-reduced-motion: reduce) { .apply-btn.pending { animation: none; } }
 
 /* Suggestions under the Find an Animal box: a drop-down that covers the sections below it,
    like a search engine's suggestion list */
@@ -738,10 +730,8 @@ dialog .btn-primary { margin-top: 6px; }
     .filters-open .filters-toggle .toggle-caret { transform: rotate(180deg); }
     .layout:not(.filters-open) > .sidebar { display: none; }
     .layout > .sidebar { border: 1px solid var(--line); border-radius: var(--radius); }
-    /* The whole page scrolls on phones: the Search bar stays at the bottom of the screen while the
-       settings are open, and scrolling further down always shows the setting above it */
+    /* The whole page scrolls on phones */
     .sidebar-scroll { overflow: visible; }
-    .search-action { position: sticky; bottom: 0; z-index: 20; border-radius: 0 0 var(--radius) var(--radius); }
 }
 
 /* Phones: page links show icons only; chips big enough for a finger */

@@ -72,6 +72,8 @@ state.speciesFilter = null;
 function showSpeciesFilter() {
     const f = state.speciesFilter;
     $('species-filter').hidden = !f;
+    $('species-filter-clear').hidden = !f;   // "Show all animals" only during an animal search
+    updateSearchSummary();                   // the summary leaves the animal to the names shown here
     if (!f) return;
     const box = $('species-filter-name');
     box.title = f.allNames || '';   // the whole list on hover
@@ -281,9 +283,9 @@ function updateFiltersSummary() {
 // --- Search button and summary --------------------------------------------------------------
 // Every setting searches at once (11 Nov): radius, number of records, groups and dates. A short
 // pause lets the user tick several groups or click through the options without a search for
-// every click. "Search sightings" stays to search again; the summary above it shows what is
-// shown, for example "Busan · 25 km · Birds, Mammals · max 75".
-state.filtersChanged = false;
+// every click. The bar above the map says what is shown, for example "Showing Ulsan · 25 km ·
+// Birds, Mammals · max 75" (17 Nov: it replaces the "Search sightings" button, which only
+// repeated the last search).
 let searchTimer = null;
 
 function scheduleSearch(delay = 300) {
@@ -292,23 +294,18 @@ function scheduleSearch(delay = 300) {
     searchTimer = setTimeout(loadSightings, delay);
 }
 
+// The summary in the bar above the map: "Ulsan · 100 km · all animals · max 75". During an animal
+// search the animals are named right after it (showSpeciesFilter), so here only the groups are
+// named if some are switched off.
 function updateSearchSummary() {
     const typed = $('location-input').value.trim();
     const place = (typed || state.currentLocationName || 'Ulsan').split(',')[0];
     const allGroups = state.groups.size === Object.keys(GROUPS).length;
-    const f = state.speciesFilter;
-    const what = f ? `only ${f.picked != null && f.entries?.[f.picked] ? f.entries[f.picked].name : f.query ? `"${f.query}"` : f.name}`
-        : allGroups ? 'all animals'
-        : state.groups.size ? [...state.groups].map(g => GROUPS[g].label).join(', ')
-        : 'no group ticked';
-    const dates = state.fromDate || state.toDate ? ` · ${state.fromDate || '…'} to ${state.toDate || 'today'}` : '';
-    const summary = `${escapeHtml(place)} · ${state.radiusKm} km · ${escapeHtml(what)}${escapeHtml(dates)} · max ${state.limit}`;
-
-    $('search-summary').innerHTML = state.filtersChanged
-        ? `<span class="changed"><i class="fa-solid fa-circle-exclamation"></i> Changes not applied yet</span>${summary}`
-        : `<span class="shown"><i class="fa-solid fa-check"></i> Showing</span>${summary}`;
-    $('apply-btn').classList.toggle('pending', state.filtersChanged);
-    setText('apply-label', state.filtersChanged ? 'Apply filters & search' : 'Search sightings');
+    const groups = state.groups.size ? [...state.groups].map(g => GROUPS[g].label).join(', ') : 'no group switched on';
+    const what = state.speciesFilter ? (allGroups ? '' : groups) : allGroups ? 'all animals' : groups;
+    const dates = state.fromDate || state.toDate ? `${state.fromDate || '…'} to ${state.toDate || 'today'}` : '';
+    const parts = [place, `${state.radiusKm} km`, what, dates, `max ${state.limit}`].filter(Boolean);
+    setText('search-summary', parts.join(' · ') + (state.speciesFilter ? ' ·' : ''));
 }
 
 // iNaturalist photos come as "original" size; ask for a smaller version
@@ -919,7 +916,6 @@ async function loadSightings() {
     }
 
     updateFiltersSummary();
-    state.filtersChanged = false;   // every search uses all current filters
     updateSearchSummary();
     saveSearch();
     let url = `api/sightings.php?lat=${state.currentLat}&lng=${state.currentLng}&radius=${state.radiusKm}&limit=${state.limit}`;
@@ -1510,11 +1506,6 @@ document.addEventListener('DOMContentLoaded', () => {
         chip.addEventListener('click', () => setLimit(parseInt(chip.dataset.limit) || 75)));
     $('limit-range').addEventListener('input', (e) => setLimit(parseInt(e.target.value) || 75, false));
     $('limit-range').addEventListener('change', (e) => setLimit(parseInt(e.target.value) || 75));
-
-    $('apply-btn').addEventListener('click', () => {
-        if (isPhoneLayout()) setFiltersOpen(false);   // phones: fold the settings away to show the results
-        loadSightings();
-    });
 
     document.querySelectorAll('.basemap-tabs button').forEach(btn =>
         btn.addEventListener('click', () => switchBaseLayer(btn.dataset.layer, btn)));
