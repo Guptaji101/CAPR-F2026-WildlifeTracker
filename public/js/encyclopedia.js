@@ -269,6 +269,8 @@ async function openSpecies(key, records) {
             <div class="detail-badges" id="detail-badges"><span class="badge muted"><i class="fa-solid fa-spinner fa-spin"></i> Loading facts…</span></div>
             <div class="detail-listen" id="detail-listen"></div>
             <p class="detail-summary">${escapeHtml(summaryText(sp))}</p>
+            <h4>Classification</h4>
+            <p class="detail-taxonomy">${ranks.filter(r => sp?.[r]).map(r => `<span title="${r}">${escapeHtml(sp[r])}</span>`).join(' › ') || 'Not available'}</p>
             <div class="detail-extras">
                 <div class="extra-box">
                     <h4>When to see it</h4>
@@ -279,8 +281,6 @@ async function openSpecies(key, records) {
                     ${koreaMapHtml(key, name)}
                 </div>
             </div>
-            <h4>Classification</h4>
-            <p class="detail-taxonomy">${ranks.filter(r => sp?.[r]).map(r => `<span title="${r}">${escapeHtml(sp[r])}</span>`).join(' › ') || 'Not available'}</p>
             <div class="detail-links">
                 ${sp?.wikiUrl ? `<a class="btn-primary" href="${escapeHtml(sp.wikiUrl)}" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-wikipedia-w"></i> Read more on Wikipedia</a>` : ''}
                 <a class="btn-outline" href="https://www.gbif.org/species/${key}" target="_blank" rel="noopener noreferrer"><i class="fa-solid fa-arrow-up-right-from-square"></i> Explore on GBIF</a>
@@ -426,28 +426,76 @@ $('species-dialog').addEventListener('close', () => {
 });
 
 // -----------------------------------------------------------------------------
-// Animal of the day (17 Nov): one of the 120 best-known animals with an English name, a
-// different one each day (the same for everyone on that day); a click opens it
+// Animals of the day (17 Nov): 5 of the 120 best-known animals with an English name, different
+// ones each day (the same for everyone on that day). They slide past one by one, 4 seconds each,
+// and after 20 seconds the card folds away. Pointing at it (or focusing it) pauses it; a click on
+// an animal opens it; × closes the card. Without motion (prefers-reduced-motion) nothing moves
+// by itself: the dots show the other animals.
 // -----------------------------------------------------------------------------
+const AOD_COUNT = 5, AOD_SECONDS = 4;
 async function showAnimalOfDay() {
     await loadAnimalList();
     const pool = (animalList || []).slice(0, 120).filter(a => a.n);
-    if (!pool.length) return;
+    if (pool.length < AOD_COUNT) return;
     const day = Math.floor(Date.now() / 86400000);
-    const a = pool[day % pool.length];
-    const sp = await getSpecies(a.k);
+    const picks = Array.from({ length: AOD_COUNT }, (_, i) => pool[(day * AOD_COUNT + i) % pool.length]);
+    const species = await Promise.all(picks.map(a => getSpecies(a.k)));
     const box = $('animal-of-day');
-    const name = displayName(sp) || a.n;
     box.innerHTML = `
-        ${sp?.imageUrl ? `<img src="${escapeHtml(sp.imageUrl)}" alt="${escapeHtml(name)}" loading="lazy" onerror="this.remove()">` : ''}
-        <div class="aod-text">
-            <span class="aod-tag"><i class="fa-solid fa-star"></i> Animal of the day</span>
-            <h2><button type="button" class="aod-open">${escapeHtml(name)}</button></h2>
-            <p><i>${escapeHtml(a.s)}</i> · ${fmt(a.r)} records in South Korea${a.ko?.[0] ? ` · ${escapeHtml(a.ko[0])}` : ''}</p>
-            <p class="aod-summary">${escapeHtml(summaryText(sp))}</p>
-        </div>`;
+        <div class="aod-track">${picks.map((a, i) => {
+            const sp = species[i];
+            const name = displayName(sp) || a.n;
+            return `<article class="aod-slide" data-i="${i}" aria-hidden="${i ? 'true' : 'false'}">
+                ${sp?.imageUrl ? `<img src="${escapeHtml(sp.imageUrl)}" alt="${escapeHtml(name)}" loading="lazy" onerror="this.remove()">` : '<span class="aod-noimg"></span>'}
+                <div class="aod-text">
+                    <span class="aod-tag"><i class="fa-solid fa-star"></i> Animals of the day · ${i + 1} of ${AOD_COUNT}</span>
+                    <h2><button type="button" class="aod-open" ${i ? 'tabindex="-1"' : ''}>${escapeHtml(name)}</button></h2>
+                    <p><i>${escapeHtml(a.s)}</i> · ${fmt(a.r)} records in South Korea${a.ko?.[0] ? ` · ${escapeHtml(a.ko[0])}` : ''}</p>
+                    <p class="aod-summary">${escapeHtml(summaryText(sp))}</p>
+                </div>
+            </article>`;
+        }).join('')}</div>
+        <div class="aod-dots">${picks.map((_, i) => `<button type="button" aria-label="Animal ${i + 1} of ${AOD_COUNT}"></button>`).join('')}</div>
+        <button type="button" class="aod-close" aria-label="Close the animals of the day">×</button>`;
     box.hidden = false;
-    box.addEventListener('click', () => openAnimal(a.k, groupOfAnimal(a), a.r));
+
+    let index = 0, timer = null, paused = false;
+    const show = (n) => {
+        index = n;
+        box.querySelector('.aod-track').style.transform = `translateX(-${n * 100}%)`;
+        box.querySelectorAll('.aod-slide').forEach((s, j) => {
+            s.setAttribute('aria-hidden', String(j !== n));
+            s.querySelector('.aod-open').tabIndex = j === n ? 0 : -1;
+        });
+        box.querySelectorAll('.aod-dots button').forEach((d, j) => d.classList.toggle('on', j === n));
+    };
+    const close = () => {
+        clearInterval(timer);
+        box.classList.add('aod-closing');
+        setTimeout(() => { box.hidden = true; box.classList.remove('aod-closing'); }, 600);
+    };
+    // Every 4 seconds the next animal; after the 5th, the card folds away (20 seconds in all)
+    const tick = () => {
+        if (paused) return;
+        if (index + 1 < AOD_COUNT) show(index + 1);
+        else close();
+    };
+    show(0);
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) timer = setInterval(tick, AOD_SECONDS * 1000);
+    box.addEventListener('mouseenter', () => { paused = true; });
+    box.addEventListener('mouseleave', () => { paused = false; });
+    box.addEventListener('focusin', () => { paused = true; });
+    box.addEventListener('focusout', () => { paused = false; });
+    box.addEventListener('click', e => {
+        if (e.target.closest('.aod-close')) return close();
+        const dot = e.target.closest('.aod-dots button');
+        if (dot) return show([...dot.parentElement.children].indexOf(dot));
+        const slide = e.target.closest('.aod-slide');
+        if (!slide) return;
+        const a = picks[Number(slide.dataset.i)];
+        clearInterval(timer);   // the user picked one: it stays
+        openAnimal(a.k, groupOfAnimal(a), a.r);
+    });
 }
 
 // -----------------------------------------------------------------------------
