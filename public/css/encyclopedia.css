@@ -178,24 +178,36 @@
 .korea-tiles span { position: relative; background-size: cover; }
 .korea-tiles img { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .72; }
 
-/* Animal of the day */
-.animal-of-day { display: grid; grid-template-columns: 220px 1fr; gap: 20px; align-items: center; padding: 14px; cursor: pointer; }
+/* Animals of the day: 5 slides in a row, moved by translateX; the card folds away after 20 s */
+.animal-of-day { position: relative; padding: 0; margin-bottom: 18px; overflow: hidden; min-width: 0; max-width: 100%; contain: inline-size; cursor: pointer;
+    max-height: 400px; transition: max-height .6s ease, opacity .5s ease, margin .6s ease, padding .6s ease; }
 .animal-of-day[hidden] { display: none; }
-.animal-of-day img { width: 100%; height: 150px; object-fit: cover; border-radius: 14px; }
+.animal-of-day.aod-closing { max-height: 0; opacity: 0; margin-bottom: 0; }
+.aod-track { display: flex; width: 100%; transition: transform .7s cubic-bezier(.3, .7, .2, 1); }
+.aod-slide { flex: 0 0 100%; min-width: 0; display: grid; grid-template-columns: 220px 1fr; gap: 20px; align-items: center; padding: 14px 44px 26px 14px; }
+.aod-slide img, .aod-noimg { width: 100%; height: 150px; object-fit: cover; border-radius: 14px; background: var(--green-50); }
 .aod-tag { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; background: #fef3c7; color: #b45309; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
-.animal-of-day h2 { margin: 8px 0 2px; font-size: 22px; }
+.aod-slide h2 { margin: 8px 0 2px; font-size: 22px; }
 .aod-open { all: unset; cursor: pointer; color: var(--green-900); }
 .aod-open:focus-visible { outline: 2px solid var(--green-700); outline-offset: 2px; border-radius: 4px; }
-.animal-of-day p { font-size: 13.5px; color: var(--text); }
+.aod-slide p { font-size: 13.5px; color: var(--text); }
 .aod-summary { margin-top: 6px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: var(--muted); }
+.aod-dots { position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); display: flex; gap: 6px; }
+.aod-dots button { width: 8px; height: 8px; padding: 0; border: 0; border-radius: 50%; background: #cbd5e1; cursor: pointer; transition: width .3s, background .3s; }
+.aod-dots button.on { width: 22px; border-radius: 4px; background: var(--green-700); }
+.aod-dots button:focus-visible, .aod-close:focus-visible { outline: 2px solid var(--green-700); outline-offset: 2px; }
+.aod-close { position: absolute; top: 8px; right: 10px; width: 28px; height: 28px; border: 0; border-radius: 50%; background: rgba(255, 255, 255, 0.85);
+    color: var(--muted); font-size: 18px; line-height: 1; cursor: pointer; box-shadow: 0 1px 4px rgba(15, 23, 42, 0.12); }
+.aod-close:hover { color: var(--ink); background: #fff; }
 
 @media (max-width: 640px) {
     .detail-extras { grid-template-columns: 1fr; }
     .korea-map { max-width: 280px; }
-    .animal-of-day { grid-template-columns: 1fr; }
-    .animal-of-day img { height: 170px; }
+    .aod-slide { grid-template-columns: 1fr; padding: 12px 12px 28px; }
+    .aod-slide img, .aod-noimg { height: 170px; }
 }
 @media (prefers-reduced-motion: reduce) {
     .detail-photo img.slide { transition: none; }
     .listen-btn.playing .eq i { animation: none; height: 10px; }
+    .aod-track, .animal-of-day { transition: none; }
 }
