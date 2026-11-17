@@ -3,7 +3,9 @@
 // 1. The user picks a group in the sidebar (all lists are for South Korea).
 // 2. api/encyclopedia.php?action=top lists the group's most-recorded species (GBIF).
 // 3. Each card is filled from api/species.php (taxonomy, photo, Wikipedia summary).
-// 4. Clicking a card opens the detail dialog, with extra facts from action=facts.
+// 4. Clicking a card opens the detail dialog, with extra facts from action=facts, and (17 Nov) a
+//    photo slideshow, a sound ("Listen"), "When to see it" (sightings per month, action=extras)
+//    and "Where in Korea" (GBIF's map of the sightings). The page starts with an "Animal of the day".
 // =============================================================================
 
 const $ = id => document.getElementById(id);
@@ -265,7 +267,18 @@ async function openSpecies(key, records) {
             <h2>${escapeHtml(name)}</h2>
             <p class="sp-sci">${escapeHtml(sp?.scientificName || '')}</p>
             <div class="detail-badges" id="detail-badges"><span class="badge muted"><i class="fa-solid fa-spinner fa-spin"></i> Loading facts…</span></div>
+            <div class="detail-listen" id="detail-listen"></div>
             <p class="detail-summary">${escapeHtml(summaryText(sp))}</p>
+            <div class="detail-extras">
+                <div class="extra-box">
+                    <h4>When to see it</h4>
+                    <div id="detail-months" class="months-chart" aria-live="polite"><span class="badge muted"><i class="fa-solid fa-spinner fa-spin"></i> Loading…</span></div>
+                </div>
+                <div class="extra-box">
+                    <h4>Where in Korea</h4>
+                    ${koreaMapHtml(key, name)}
+                </div>
+            </div>
             <h4>Classification</h4>
             <p class="detail-taxonomy">${ranks.filter(r => sp?.[r]).map(r => `<span title="${r}">${escapeHtml(sp[r])}</span>`).join(' › ') || 'Not available'}</p>
             <div class="detail-links">
@@ -277,6 +290,8 @@ async function openSpecies(key, records) {
     $('species-dialog').showModal();
     $('species-detail').querySelector('.detail-photo').addEventListener('click', () =>
         openPhotoViewer({ url: sp?.imageUrl, title: name, speciesKey: key }));
+    startSlideshow(key, sp?.imageUrl, opened);
+    loadExtras(key, opened);
 
     // Conservation status from GBIF; the record count is the one from the South Korea list
     // (unknown if the species was opened from the Map page and is not in the top 24)
@@ -292,6 +307,142 @@ async function openSpecies(key, records) {
     } catch {
         if (opened === state.openedKey) $('detail-badges').innerHTML = korea;
     }
+}
+
+// -----------------------------------------------------------------------------
+// Animal window extras (17 Nov): slideshow, Listen, When to see it, Where in Korea
+// -----------------------------------------------------------------------------
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const calm = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const extras = { timer: null, audio: null };
+
+// The photo changes every 4 seconds: the animal's main photo first, then photos of sightings in
+// Korea (photos.php, the same as "More photos"). A click still opens the photo viewer. Without
+// motion (prefers-reduced-motion) only the dots change it.
+async function startSlideshow(key, mainUrl, opened) {
+    const box = $('species-detail').querySelector('.detail-photo');
+    let urls = [];
+    try { urls = (await getJson(`api/photos.php?speciesKey=${key}`)).photos.map(p => p.url); } catch { return; }
+    if (opened !== state.openedKey || !box) return;
+    urls = [...new Set([mainUrl, ...urls].filter(Boolean))].slice(0, 6);
+    if (urls.length < 2) return;
+    const first = box.querySelector('img');
+    if (first) first.classList.add('slide', 'on');
+    urls.slice(first ? 1 : 0).forEach(u => {
+        const img = document.createElement('img');
+        img.src = u; img.alt = ''; img.loading = 'lazy'; img.className = 'slide';
+        img.onerror = () => img.remove();
+        box.insertBefore(img, box.querySelector('.photo-expand'));
+    });
+    const dots = document.createElement('div');
+    dots.className = 'slide-dots';
+    dots.innerHTML = urls.map((_, i) => `<button type="button" aria-label="Photo ${i + 1} of ${urls.length}"></button>`).join('');
+    box.append(dots);
+    let i = 0;
+    const show = (n) => {
+        const slides = [...box.querySelectorAll('img.slide')];
+        i = (n + slides.length) % slides.length;
+        slides.forEach((s, j) => s.classList.toggle('on', j === i));
+        dots.querySelectorAll('button').forEach((d, j) => d.classList.toggle('on', j === i));
+    };
+    // A dot shows its photo (the click must not also open the photo viewer)
+    dots.addEventListener('click', e => {
+        const d = e.target.closest('button');
+        if (!d) return;
+        e.stopPropagation();
+        show([...dots.children].indexOf(d));
+    });
+    show(0);
+    clearInterval(extras.timer);
+    if (!calm()) extras.timer = setInterval(() => { if (!box.matches(':hover')) show(i + 1); }, 4000);
+}
+
+// A small map of South Korea with GBIF's dots where the animal was seen: 4 map tiles (zoom 6)
+// from OpenStreetMap with GBIF's map of the sightings on top. Images only, nothing to install.
+function koreaMapHtml(key, name) {
+    const tile = (x, y) => `<span style="background-image:url(https://tile.openstreetmap.org/6/${x}/${y}.png)">
+        <img src="https://api.gbif.org/v2/map/occurrence/density/6/${x}/${y}@1x.png?taxonKey=${key}&country=KR&style=classic.point" alt="" loading="lazy" onerror="this.remove()"></span>`;
+    return `<div class="korea-map" role="img" aria-label="Map of South Korea with the places where ${escapeHtml(name)} was seen">
+            <div class="korea-tiles">${tile(54, 24)}${tile(55, 24)}${tile(54, 25)}${tile(55, 25)}</div>
+        </div>
+        <p class="extra-note">Dots: places where it was seen. Map © OpenStreetMap, data GBIF.</p>`;
+}
+
+// "Listen" and "When to see it" come from api/encyclopedia.php?action=extras
+async function loadExtras(key, opened) {
+    let x = null;
+    try { x = await getJson(`api/encyclopedia.php?action=extras&speciesKey=${key}`); } catch { /* shown below */ }
+    if (opened !== state.openedKey) return;
+    // When to see it: 12 bars, the 3 busiest months dark
+    const months = x?.months || [];
+    const max = Math.max(0, ...months);
+    if (!max) {
+        $('detail-months').innerHTML = '<p class="extra-note">No dated sightings in South Korea yet.</p>';
+    } else {
+        const top = months.map((n, i) => [n, i]).sort((a, b) => b[0] - a[0]).slice(0, 3).map(t => t[1]);
+        const best = [...top].sort((a, b) => a - b).map(i => MONTHS[i]);
+        $('detail-months').innerHTML = `
+            <div class="months-bars">${months.map((n, i) => `<span class="${top.includes(i) ? 'top' : ''}" style="height:${Math.max(4, n / max * 100)}%"
+                title="${MONTHS[i]}: ${fmt(n)} sightings"></span>`).join('')}</div>
+            <div class="months-labels">${MONTHS.map(m => `<span>${m[0]}</span>`).join('')}</div>
+            <p class="extra-note">Seen most in <b>${best.slice(0, -1).join(', ')} and ${best.at(-1)}</b>.</p>`;
+    }
+    // Listen: only when a recording exists
+    const s = x?.sound;
+    if (!s) return;
+    $('detail-listen').innerHTML = `
+        <button type="button" class="listen-btn" aria-pressed="false"><span class="eq" aria-hidden="true"><i></i><i></i><i></i></span> <span class="listen-label">Listen</span></button>
+        <span class="extra-note">Sound: ${escapeHtml(s.credit || 'unknown')}${s.license ? ` (${escapeHtml(s.license)})` : ''}, recorded ${s.korea ? 'in South Korea' : 'outside Korea'} ·
+            <a href="https://www.gbif.org/occurrence/${s.record}" target="_blank" rel="noopener noreferrer">GBIF record</a></span>`;
+    const btn = $('detail-listen').querySelector('.listen-btn');
+    const set = (playing) => {
+        btn.classList.toggle('playing', playing);
+        btn.setAttribute('aria-pressed', String(playing));
+        btn.querySelector('.listen-label').textContent = playing ? 'Stop' : 'Listen';
+    };
+    btn.addEventListener('click', () => {
+        if (!extras.audio || extras.audio.dataset.key !== String(key)) {
+            extras.audio?.pause();
+            extras.audio = new Audio(s.url);
+            extras.audio.dataset.key = key;
+            extras.audio.addEventListener('ended', () => set(false));
+            extras.audio.addEventListener('error', () => { set(false); btn.disabled = true; btn.querySelector('.listen-label').textContent = 'Sound not available'; });
+        }
+        if (extras.audio.paused) { extras.audio.play().catch(() => set(false)); set(true); }
+        else { extras.audio.pause(); set(false); }
+    });
+}
+
+// Closing the window stops the slideshow and the sound
+$('species-dialog').addEventListener('close', () => {
+    clearInterval(extras.timer);
+    extras.audio?.pause();
+    state.openedKey = null;
+});
+
+// -----------------------------------------------------------------------------
+// Animal of the day (17 Nov): one of the 120 best-known animals with an English name, a
+// different one each day (the same for everyone on that day); a click opens it
+// -----------------------------------------------------------------------------
+async function showAnimalOfDay() {
+    await loadAnimalList();
+    const pool = (animalList || []).slice(0, 120).filter(a => a.n);
+    if (!pool.length) return;
+    const day = Math.floor(Date.now() / 86400000);
+    const a = pool[day % pool.length];
+    const sp = await getSpecies(a.k);
+    const box = $('animal-of-day');
+    const name = displayName(sp) || a.n;
+    box.innerHTML = `
+        ${sp?.imageUrl ? `<img src="${escapeHtml(sp.imageUrl)}" alt="${escapeHtml(name)}" loading="lazy" onerror="this.remove()">` : ''}
+        <div class="aod-text">
+            <span class="aod-tag"><i class="fa-solid fa-star"></i> Animal of the day</span>
+            <h2><button type="button" class="aod-open">${escapeHtml(name)}</button></h2>
+            <p><i>${escapeHtml(a.s)}</i> · ${fmt(a.r)} records in South Korea${a.ko?.[0] ? ` · ${escapeHtml(a.ko[0])}` : ''}</p>
+            <p class="aod-summary">${escapeHtml(summaryText(sp))}</p>
+        </div>`;
+    box.hidden = false;
+    box.addEventListener('click', () => openAnimal(a.k, groupOfAnimal(a), a.r));
 }
 
 // -----------------------------------------------------------------------------
@@ -595,6 +746,7 @@ const [hashGroup, hashSpecies] = location.hash.slice(1).split('/');
 state.group = document.querySelector(`.tree-item[data-key="${hashGroup}"]`) ? hashGroup : 'mammals';
 if (Number(hashSpecies) > 0) state.openAfterLoad = Number(hashSpecies);
 loadGroup();
+showAnimalOfDay();
 
 // Links with a query also work (16 Nov): encyclopedia.php?taxonKey=7705930 opens that animal's card
 // (in its group), encyclopedia.php?q=wild%20boar searches the name as if typed at the top. The

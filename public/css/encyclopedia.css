@@ -125,3 +125,70 @@
     .group-intro { padding: 18px; }
     .detail-photo { height: 220px; }
 }
+
+/* =============================================================================
+   Animal window extras and Animal of the day (17 Nov)
+   ============================================================================= */
+/* Slideshow: the photos lie on top of each other and fade */
+.detail-photo img.slide { opacity: 0; transition: opacity 1s ease; }
+.detail-photo img.slide.on { opacity: 1; }
+.slide-dots { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); display: flex; gap: 6px; z-index: 2; }
+.slide-dots button { width: 8px; height: 8px; padding: 0; border: 0; border-radius: 50%; background: rgba(255, 255, 255, 0.55); cursor: pointer; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3); }
+.slide-dots button.on { background: #fff; transform: scale(1.25); }
+.slide-dots button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.detail-photo .photo-expand { z-index: 2; }
+
+/* Listen */
+.detail-listen { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-top: 10px; }
+.detail-listen:empty { display: none; }
+.listen-btn {
+    display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px; cursor: pointer;
+    border: 1px solid var(--green-700); background: var(--white); color: var(--green-700); font: inherit; font-size: 13px; font-weight: 600;
+}
+.listen-btn:hover { background: var(--green-50); }
+.listen-btn.playing { background: var(--green-700); color: var(--white); }
+.listen-btn:disabled { opacity: .55; cursor: default; }
+.listen-btn:focus-visible { outline: 2px solid var(--green-700); outline-offset: 2px; }
+.listen-btn .eq { display: inline-flex; align-items: flex-end; gap: 2px; height: 12px; }
+.listen-btn .eq i { width: 3px; height: 5px; border-radius: 2px; background: currentColor; }
+.listen-btn.playing .eq i { animation: listen-eq .8s ease-in-out infinite; }
+.listen-btn.playing .eq i:nth-child(2) { animation-delay: .2s; }
+.listen-btn.playing .eq i:nth-child(3) { animation-delay: .4s; }
+@keyframes listen-eq { 0%, 100% { height: 4px; } 50% { height: 12px; } }
+
+/* When to see it + Where in Korea, side by side */
+.detail-extras { display: grid; grid-template-columns: 1.25fr 1fr; gap: 16px; margin-top: 4px; }
+.extra-box { min-width: 0; }
+.extra-note { margin-top: 6px; font-size: 12px; line-height: 1.45; color: var(--muted); }
+.extra-note a { color: var(--green-700); }
+.months-bars { display: grid; grid-template-columns: repeat(12, 1fr); gap: 3px; align-items: end; height: 84px; }
+.months-bars span { border-radius: 4px 4px 0 0; background: #a7e3bd; }
+.months-bars span.top { background: var(--green-700); }
+.months-labels { display: grid; grid-template-columns: repeat(12, 1fr); gap: 3px; margin-top: 4px; font-size: 10.5px; text-align: center; color: var(--muted); }
+.korea-map { position: relative; aspect-ratio: 1; border-radius: 14px; overflow: hidden; background: #aad3df; box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.08); }
+/* 4 tiles of 256 px at zoom 6, moved so South Korea sits in the middle */
+.korea-tiles { position: absolute; width: 200%; height: 200%; left: -38%; top: -30%; display: grid; grid-template-columns: 1fr 1fr; }
+.korea-tiles span { position: relative; background-size: cover; }
+.korea-tiles img { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+/* Animal of the day */
+.animal-of-day { display: grid; grid-template-columns: 220px 1fr; gap: 20px; align-items: center; padding: 14px; cursor: pointer; }
+.animal-of-day[hidden] { display: none; }
+.animal-of-day img { width: 100%; height: 150px; object-fit: cover; border-radius: 14px; }
+.aod-tag { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; background: #fef3c7; color: #b45309; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.animal-of-day h2 { margin: 8px 0 2px; font-size: 22px; }
+.aod-open { all: unset; cursor: pointer; color: var(--green-900); }
+.aod-open:focus-visible { outline: 2px solid var(--green-700); outline-offset: 2px; border-radius: 4px; }
+.animal-of-day p { font-size: 13.5px; color: var(--text); }
+.aod-summary { margin-top: 6px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: var(--muted); }
+
+@media (max-width: 640px) {
+    .detail-extras { grid-template-columns: 1fr; }
+    .korea-map { max-width: 280px; }
+    .animal-of-day { grid-template-columns: 1fr; }
+    .animal-of-day img { height: 170px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .detail-photo img.slide { transition: none; }
+    .listen-btn.playing .eq i { animation: none; height: 10px; }
+}

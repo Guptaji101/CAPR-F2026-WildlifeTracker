@@ -5,6 +5,8 @@
  *
  *   ?action=top&taxa=212[,…][&country=KR]   most-recorded species in a group (24 at most)
  *   ?action=facts&speciesKey=2481197         IUCN Red List status (conservation status)
+ *   ?action=extras&speciesKey=2440931        a sound of the animal and its sightings per month in
+ *                                            South Korea, for the animal window (17 Nov)
  */
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../../includes/gbif.php';
@@ -66,4 +68,50 @@ if ($action === 'facts') {
     exit;
 }
 
-fail(400, 'action must be "top" or "facts"');
+if ($action === 'extras') {
+    $speciesKey = (int)($_GET['speciesKey'] ?? 0);
+    if (!$speciesKey) fail(400, 'speciesKey is required');
+
+    // Both change slowly: an answer from the last 7 days is answered from the cache
+    $cacheKey = "extras:$speciesKey";
+    if (!($extras = cache_get($cacheKey, 7 * 86400))) {
+        // "When to see it": sightings per month in South Korea (GBIF counts them, no records sent)
+        $data = gbif_get(GBIF . '/occurrence/search?' . http_build_query(
+            ['taxonKey' => $speciesKey, 'country' => 'KR', 'facet' => 'month', 'facetLimit' => 12, 'limit' => 0]));
+        $months = array_fill(0, 12, 0);
+        foreach ($data['facets'][0]['counts'] ?? [] as $c) {
+            $m = (int)$c['name'];
+            if ($m >= 1 && $m <= 12) $months[$m - 1] = $c['count'];
+        }
+
+        // "Listen": a recording of the animal from GBIF (mostly iNaturalist and xeno-canto),
+        // recorded in South Korea if there is one, else anywhere. Only formats browsers can play.
+        $sound = null;
+        foreach ([['country' => 'KR'], []] as $where) {
+            $found = gbif_get(GBIF . '/occurrence/search?' . http_build_query(
+                ['taxonKey' => $speciesKey, 'mediaType' => 'Sound', 'limit' => 10] + $where));
+            foreach ($found['results'] ?? [] as $r) {
+                foreach ($r['media'] ?? [] as $m) {
+                    $url = $m['identifier'] ?? '';
+                    if (($m['type'] ?? '') !== 'Sound' || !str_starts_with($url, 'http')) continue;
+                    if (!preg_match('~audio/(mpeg|mp3|mp4|x-m4a|wav|x-wav|vnd\.wave|ogg)~', $m['format'] ?? 'audio/mpeg')) continue;
+                    $sound = [
+                        'url'     => $url,
+                        'credit'  => $m['rightsHolder'] ?? $m['creator'] ?? $r['recordedBy'] ?? '',
+                        'license' => short_license($m['license'] ?? null),
+                        'record'  => $r['key'],
+                        'korea'   => !empty($where),
+                    ];
+                    break 3;
+                }
+            }
+        }
+
+        $extras = ['months' => $months, 'sound' => $sound];
+        if ($data) cache_put($cacheKey, $extras);   // GBIF unreachable: ask again next time
+    }
+    echo json_encode($extras);
+    exit;
+}
+
+fail(400, 'action must be "top", "facts" or "extras"');

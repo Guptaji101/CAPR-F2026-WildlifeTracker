@@ -127,6 +127,9 @@ $tree = [
                 </div>
             </section>
 
+            <!-- Animal of the day (17 Nov): one well-known animal of South Korea, a different one each day -->
+            <section class="card animal-of-day" id="animal-of-day" hidden></section>
+
             <section class="card group-intro" id="group-intro">
                 <div class="crumbs" id="crumbs">Animals</div>
                 <div class="intro-head">
