@@ -23,24 +23,25 @@ if (!$speciesKey) {
 }
 
 // New photos reach GBIF slowly: a list from the last day is answered from the cache
-$cacheKey = "photos3:$speciesKey";   // photos2: animal photos first; photos3: no dead animals (17 Nov)
+$cacheKey = "photos4:$speciesKey";   // photos2: animal photos first; photos3: no dead animals; photos4: smaller photos (17 Nov)
 if ($cached = cache_get($cacheKey, 86400)) {
     echo json_encode($cached);
     exit;
 }
 
 $photos = [];
-// Photos taken in South Korea first; if there are too few, photos from anywhere
-foreach ([['country' => 'KR'], []] as $where) {
+// Photos taken in South Korea first; if there are too few, photos from anywhere. Both lists are
+// asked for at the same time (17 Nov), which is about twice as fast as one after the other.
+$lists = gbif_get_many(array_map(fn($where) => GBIF . '/occurrence/search?' . http_build_query(
+    ['taxonKey' => $speciesKey, 'mediaType' => 'StillImage', 'limit' => 40] + $where), [['country' => 'KR'], []]));
+foreach ($lists as $data) {
     if (count($photos) >= MAX_PHOTOS) break;
-    $data = gbif_get(GBIF . '/occurrence/search?' . http_build_query(
-        ['taxonKey' => $speciesKey, 'mediaType' => 'StillImage', 'limit' => 40] + $where));
     foreach ($data['results'] ?? [] as $r) {
         // No photos of dead animals (17 Nov): GBIF marks them "vitality: dead" (in Korea often
         // roadkill water deer), and the slideshow showed them by itself
         if (strtolower($r['vitality'] ?? '') === 'dead') continue;
         $m = $r['media'][0] ?? [];
-        $url = $m['identifier'] ?? '';
+        $url = smaller_photo($m['identifier'] ?? '');
         if (!str_starts_with($url, 'http') || isset($photos[$url])) continue;
         $photos[$url] = [
             'url'     => $url,

@@ -32,6 +32,26 @@ async function getJson(url) {
     return data;
 }
 
+// The photos and the extras of an animal are asked for once per page (17 Nov) and can be asked
+// for early: when the mouse goes over an animal (or a finger touches it), so they are often ready
+// when the window opens. The server keeps them too, so the second visitor gets them at once.
+const earlyCache = new Map();
+function getOnce(url) {
+    if (!earlyCache.has(url)) earlyCache.set(url, getJson(url).catch(e => { earlyCache.delete(url); throw e; }));
+    return earlyCache.get(url);
+}
+const photosUrl = key => `api/photos.php?speciesKey=${key}`;
+const extrasUrl = key => `api/encyclopedia.php?action=extras&speciesKey=${key}`;
+function warmUp(key) {
+    if (!key) return;
+    getOnce(photosUrl(key)).catch(() => {});
+    getOnce(extrasUrl(key)).catch(() => {});
+}
+['pointerenter', 'touchstart', 'focusin'].forEach(type => document.addEventListener(type, e => {
+    const el = e.target.closest?.('[data-key]');
+    if (el) warmUp(Number(el.dataset.key));
+}, { capture: true, passive: true }));
+
 function getSpecies(key) {
     if (!speciesCache.has(key)) {
         speciesCache.set(key, getJson(`api/species.php?speciesKey=${key}`).catch(() => null));
@@ -322,7 +342,7 @@ const extras = { timer: null, audio: null };
 async function startSlideshow(key, mainUrl, opened) {
     const box = $('species-detail').querySelector('.detail-photo');
     let urls = [];
-    try { urls = (await getJson(`api/photos.php?speciesKey=${key}`)).photos.map(p => p.url); } catch { return; }
+    try { urls = (await getOnce(photosUrl(key))).photos.map(p => p.url); } catch { return; }
     if (opened !== state.openedKey || !box) return;
     urls = [...new Set([mainUrl, ...urls].filter(Boolean))].slice(0, 6);
     if (urls.length < 2) return;
@@ -330,7 +350,8 @@ async function startSlideshow(key, mainUrl, opened) {
     if (first) first.classList.add('slide', 'on');
     urls.slice(first ? 1 : 0).forEach(u => {
         const img = document.createElement('img');
-        img.src = u; img.alt = ''; img.loading = 'lazy'; img.className = 'slide';
+        // Loaded at once (not "lazy"), so the next photo is ready when its turn comes (17 Nov)
+        img.src = u; img.alt = ''; img.decoding = 'async'; img.className = 'slide';
         img.onerror = () => img.remove();
         box.insertBefore(img, box.querySelector('.photo-expand'));
     });
@@ -339,9 +360,11 @@ async function startSlideshow(key, mainUrl, opened) {
     dots.innerHTML = urls.map((_, i) => `<button type="button" aria-label="Photo ${i + 1} of ${urls.length}"></button>`).join('');
     box.append(dots);
     let i = 0;
-    const show = (n) => {
+    const show = (n, auto) => {
         const slides = [...box.querySelectorAll('img.slide')];
         i = (n + slides.length) % slides.length;
+        // By itself the slideshow waits for a photo that is still loading instead of showing a blank
+        if (auto && !slides[i].complete) { i = (i - 1 + slides.length) % slides.length; return; }
         slides.forEach((s, j) => s.classList.toggle('on', j === i));
         dots.querySelectorAll('button').forEach((d, j) => d.classList.toggle('on', j === i));
     };
@@ -354,7 +377,7 @@ async function startSlideshow(key, mainUrl, opened) {
     });
     show(0);
     clearInterval(extras.timer);
-    if (!calm()) extras.timer = setInterval(() => { if (!box.matches(':hover')) show(i + 1); }, 4000);
+    if (!calm()) extras.timer = setInterval(() => { if (!box.matches(':hover')) show(i + 1, true); }, 4000);
 }
 
 // A small map of South Korea with red areas where the animal was seen: 4 map tiles (zoom 6) from
@@ -376,7 +399,7 @@ function koreaMapHtml(key, name) {
 // "Listen" and "When to see it" come from api/encyclopedia.php?action=extras
 async function loadExtras(key, opened) {
     let x = null;
-    try { x = await getJson(`api/encyclopedia.php?action=extras&speciesKey=${key}`); } catch { /* shown below */ }
+    try { x = await getOnce(extrasUrl(key)); } catch { /* shown below */ }
     if (opened !== state.openedKey) return;
     // When to see it: 12 bars, the 3 busiest months dark
     const months = x?.months || [];
@@ -400,20 +423,31 @@ async function loadExtras(key, opened) {
         <span class="extra-note">Sound: ${escapeHtml(s.credit || 'unknown')}${s.license ? ` (${escapeHtml(s.license)})` : ''}, recorded ${s.korea ? 'in South Korea' : 'outside Korea'} ·
             <a href="https://www.gbif.org/occurrence/${s.record}" target="_blank" rel="noopener noreferrer">GBIF record</a></span>`;
     const btn = $('detail-listen').querySelector('.listen-btn');
-    const set = (playing) => {
-        btn.classList.toggle('playing', playing);
+    const set = (playing, loading) => {
+        btn.classList.toggle('playing', playing && !loading);
+        btn.classList.toggle('loading', !!loading);
         btn.setAttribute('aria-pressed', String(playing));
-        btn.querySelector('.listen-label').textContent = playing ? 'Stop' : 'Listen';
+        btn.querySelector('.listen-label').textContent = loading ? 'Loading…' : playing ? 'Stop' : 'Listen';
     };
+    // The sound starts loading when the mouse goes over the button, a moment before the click
+    const prepare = () => {
+        if (extras.audio && extras.audio.dataset.key === String(key)) return;
+        extras.audio?.pause();
+        extras.audio = new Audio();
+        extras.audio.preload = 'auto';
+        extras.audio.src = s.url;
+        extras.audio.dataset.key = key;
+        extras.audio.addEventListener('ended', () => set(false));
+        // "Loading…" while the sound is not ready yet (big files), then "Stop"
+        extras.audio.addEventListener('waiting', () => { if (!extras.audio.paused) set(true, true); });
+        extras.audio.addEventListener('playing', () => set(true));
+        extras.audio.addEventListener('error', () => { set(false); btn.disabled = true; btn.querySelector('.listen-label').textContent = 'Sound not available'; });
+    };
+    btn.addEventListener('pointerenter', prepare);
+    btn.addEventListener('focus', prepare);
     btn.addEventListener('click', () => {
-        if (!extras.audio || extras.audio.dataset.key !== String(key)) {
-            extras.audio?.pause();
-            extras.audio = new Audio(s.url);
-            extras.audio.dataset.key = key;
-            extras.audio.addEventListener('ended', () => set(false));
-            extras.audio.addEventListener('error', () => { set(false); btn.disabled = true; btn.querySelector('.listen-label').textContent = 'Sound not available'; });
-        }
-        if (extras.audio.paused) { extras.audio.play().catch(() => set(false)); set(true); }
+        prepare();
+        if (extras.audio.paused) { set(true, extras.audio.readyState < 3); extras.audio.play().catch(() => set(false)); }
         else { extras.audio.pause(); set(false); }
     });
 }
@@ -445,7 +479,7 @@ async function showAnimalOfDay() {
         <div class="aod-track">${picks.map((a, i) => {
             const sp = species[i];
             const name = displayName(sp) || a.n;
-            return `<article class="aod-slide" data-i="${i}" aria-hidden="${i ? 'true' : 'false'}">
+            return `<article class="aod-slide" data-i="${i}" data-key="${a.k}" aria-hidden="${i ? 'true' : 'false'}">
                 ${sp?.imageUrl ? `<img src="${escapeHtml(sp.imageUrl)}" alt="${escapeHtml(name)}" loading="lazy" onerror="this.remove()">` : '<span class="aod-noimg"></span>'}
                 <div class="aod-text">
                     <span class="aod-tag"><i class="fa-solid fa-star"></i> Animals of the day · ${i + 1} of ${AOD_COUNT}</span>
@@ -464,6 +498,7 @@ async function showAnimalOfDay() {
     let index = 0, timer = null, paused = false;
     const show = (n) => {
         index = n;
+        warmUp(picks[n].k);   // its photos and sound are ready if it is clicked
         box.querySelector('.aod-track').style.transform = `translateX(-${n * 100}%)`;
         box.querySelectorAll('.aod-slide').forEach((s, j) => {
             s.setAttribute('aria-hidden', String(j !== n));

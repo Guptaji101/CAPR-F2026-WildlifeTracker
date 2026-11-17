@@ -73,11 +73,18 @@ if ($action === 'extras') {
     if (!$speciesKey) fail(400, 'speciesKey is required');
 
     // Both change slowly: an answer from the last 7 days is answered from the cache
-    $cacheKey = "extras:$speciesKey";
+    $cacheKey = "extras2:$speciesKey";   // extras2: a small sound file first (17 Nov)
     if (!($extras = cache_get($cacheKey, 7 * 86400))) {
-        // "When to see it": sightings per month in South Korea (GBIF counts them, no records sent)
-        $data = gbif_get(GBIF . '/occurrence/search?' . http_build_query(
-            ['taxonKey' => $speciesKey, 'country' => 'KR', 'facet' => 'month', 'facetLimit' => 12, 'limit' => 0]));
+        // The 3 questions to GBIF go out at the same time (17 Nov; one after another took ~4 s)
+        $sound = fn($where) => GBIF . '/occurrence/search?' . http_build_query(
+            ['taxonKey' => $speciesKey, 'mediaType' => 'Sound', 'limit' => 10] + $where);
+        [$data, $soundKR, $soundAll] = gbif_get_many([
+            // "When to see it": sightings per month in South Korea (GBIF counts them, no records sent)
+            GBIF . '/occurrence/search?' . http_build_query(
+                ['taxonKey' => $speciesKey, 'country' => 'KR', 'facet' => 'month', 'facetLimit' => 12, 'limit' => 0]),
+            $sound(['country' => 'KR']),
+            $sound([]),
+        ]);
         $months = array_fill(0, 12, 0);
         foreach ($data['facets'][0]['counts'] ?? [] as $c) {
             $m = (int)$c['name'];
@@ -86,25 +93,32 @@ if ($action === 'extras') {
 
         // "Listen": a recording of the animal from GBIF (mostly iNaturalist and xeno-canto),
         // recorded in South Korea if there is one, else anywhere. Only formats browsers can play.
+        // A small file first (17 Nov): WAV recordings are often 5–20 MB and took long to start,
+        // MP3/M4A/OGG are about ten times smaller. Korea still comes first: a WAV from Korea
+        // beats an MP3 from elsewhere only when no small file from Korea exists.
         $sound = null;
-        foreach ([['country' => 'KR'], []] as $where) {
-            $found = gbif_get(GBIF . '/occurrence/search?' . http_build_query(
-                ['taxonKey' => $speciesKey, 'mediaType' => 'Sound', 'limit' => 10] + $where));
+        $bestRank = 99;
+        foreach ([[$soundKR, true], [$soundAll, false]] as $i => [$found, $korea]) {
             foreach ($found['results'] ?? [] as $r) {
                 foreach ($r['media'] ?? [] as $m) {
                     $url = $m['identifier'] ?? '';
                     if (($m['type'] ?? '') !== 'Sound' || !str_starts_with($url, 'http')) continue;
-                    if (!preg_match('~audio/(mpeg|mp3|mp4|x-m4a|wav|x-wav|vnd\.wave|ogg)~', $m['format'] ?? 'audio/mpeg')) continue;
+                    $format = $m['format'] ?? 'audio/mpeg';
+                    if (!preg_match('~audio/(mpeg|mp3|mp4|x-m4a|wav|x-wav|vnd\.wave|ogg)~', $format)) continue;
+                    $small = !preg_match('~wav|wave~', $format) && !preg_match('~\.wav(\?|$)~i', $url);
+                    $rank = $i * 2 + ($small ? 0 : 1);   // Korea small, Korea WAV, other small, other WAV
+                    if ($rank >= $bestRank) continue;
+                    $bestRank = $rank;
                     $sound = [
                         'url'     => $url,
                         'credit'  => $m['rightsHolder'] ?? $m['creator'] ?? $r['recordedBy'] ?? '',
                         'license' => short_license($m['license'] ?? null),
                         'record'  => $r['key'],
-                        'korea'   => !empty($where),
+                        'korea'   => $korea,
                     ];
-                    break 3;
                 }
             }
+            if ($bestRank === 0) break;
         }
 
         $extras = ['months' => $months, 'sound' => $sound];
