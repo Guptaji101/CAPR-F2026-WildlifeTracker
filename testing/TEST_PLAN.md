@@ -97,7 +97,7 @@ Unless a step says otherwise, start on the Map page, with the default search (Ul
 | TC-24 | Wrong date order | From = 2025-06-01, To = 2025-01-01, search | Message 'The "From" date must be on or before the "To" date'; no search | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost |
 | TC-25 | Number of records | Under **Number of Records** click **150** | The search runs at once; table "… of 150"; above it "Showing 150 of N records in this area" when the area has more | Pass | Paudel Amrit | 2026-11-17 | Re-test after the search update: Live site after b1e9ab8 (Ctrl+F5), Chrome. Expected result updated 17 Nov. Earlier: Pass (Paudel Amrit, 2026-11-04) |
 | TC-26 | Number of records visible | On a short window or a laptop screen, look at the sidebar | Locate Me, Search Location, Search Radius, Quick Locations and Number of Records are at the top, none covered by the Search button | Pass | Paudel Amrit | 2026-11-04 | Re-test: Live site (wildtrack-lq88.onrender.com), Chrome; order correct; in a short window the sidebar scrolls and nothing is covered by the Search button. First run Pass on 2026-10-27 |
-| TC-78 | Newest sightings first | Open the Map page (Ulsan, 10 km, all groups), look at the Date column; then set From = 2024-01-01, To = 2024-12-31 | First row recent, dates going down; "Showing 75 of N records" (N about 11,000). With the 2024 dates: all rows in 2024, newest first (December 2024 at the top) | Fail | Paudel Amrit | 2026-11-17 | Re-test after the search update: Live site after b1e9ab8 (Ctrl+F5), Chrome; Without dates: Pass. With the 2024 dates: "Showing 75 of 555", all rows January 2024 (2024-01-30 to 2024-01-03); with 300 records the first row is 2024-06-24, so July–December 2024 is never shown → bug #20 (Medium). Expected result updated 17 Nov. Earlier: Pass (Paudel Amrit, 2026-11-10) |
+| TC-78 | Newest sightings first | Open the Map page (Ulsan, 10 km, all groups), look at the Date column; then set From = 2024-01-01, To = 2024-12-31 | First row recent, dates going down; "Showing 75 of N records" (N about 11,000). With the 2024 dates: all rows in 2024, newest first (December 2024 at the top) | Pass (re-test) | Paudel Amrit | 2026-11-18 | Re-test after the search update: Live site after b1e9ab8 (Ctrl+F5), Chrome; Without dates: Pass. With the 2024 dates: "Showing 75 of 555", all rows January 2024 (2024-01-30 to 2024-01-03); with 300 records the first row is 2024-06-24, so July–December 2024 is never shown → bug #20 (Medium). Expected result updated 17 Nov. Earlier: Pass (Paudel Amrit, 2026-11-10) Re-test 2026-11-18 (Paudel Amrit), live site after aa68a2a (fixes #20): with the 2024 dates the newest records of 2024 now come first; Pass. |
 | TC-79 | Number of records slider | Under the record buttons move the slider to **450**, click **Apply filters & search**; then click **75**; then click **Busan** and **25 km**, move the slider to **1000** and search | Slider label and summary say 450; no button is highlighted; 450 records load (within 40 s). Clicking 75 moves the slider back to 75. At 1000: 1000 records load and the note says that 1000 is the most one search can show | Pass | Paudel Amrit | 2026-11-10 | Live site (wildtrack-lq88.onrender.com), Chrome; slider 450: 450 records in about 4 s, no button highlighted; clicking 75 moved the slider back to 75; Busan 25 km at 1000: "Showing 1000 of 96,847 records" with the 1000-limit note; Added 9 Nov |
 
 ### 4.4 Species Profile (FR-07, FR-09)
@@ -172,7 +172,7 @@ Unless a step says otherwise, start on the Map page, with the default search (Ul
 | TC-92 | Encyclopedia: a full name opens one card | Type `wild boar`, press Enter; then `고라니`, press Enter | Each opens one card directly: Wild Boar; Water Deer | Pass | Paudel Amrit | 2026-11-16 | Live site after 0a68be0/11331b2 (Ctrl+F5), Chrome; Wild Boar (17,279 records in South Korea) and Water Deer opened directly. Added 16 Nov |
 | TC-98 | Encyclopedia: cards filter while typing | Open **Mammals**, type `squirrel` in "Search mammals…"; then `sqirrel`; then `zebra` | `squirrel` and `sqirrel`: 2 cards (Eurasian Red Squirrel, Siberian Flying Squirrel), note "2 of 24 cards fit…"; `zebra`: no cards, note "No card on this page fits "zebra"…" | Pass | Paudel Amrit | 2026-11-17 | Live site after b1e9ab8 (Ctrl+F5), Chrome; As expected. Added 17 Nov |
 | TC-99 | Encyclopedia links | Open `https://wildtrack-lq88.onrender.com/encyclopedia.php?taxonKey=7705930`; then `…/encyclopedia.php?q=pige` | Wild Boar card opens in Mammals; then **Animals called "pige"** with Rock Pigeon, Hill Pigeon, Japanese Wood-Pigeon | Pass | Paudel Amrit | 2026-11-17 | Live site after b1e9ab8 (Ctrl+F5), Chrome; Both links work. Added 17 Nov |
-| TC-100 | Names in Title Case, country name | Look at the table, Species Profile and Encyclopedia cards (e.g. Seoul, 150 records) | Common names in Title Case ("Wild Boar"); after a hyphen lower case stays ("Black-tailed Gull"); scientific names unchanged (*Sus scrofa*); Locality ends with "South Korea" | Fail | Paudel Amrit | 2026-11-17 | Live site after b1e9ab8 (Ctrl+F5), Chrome; Seoul, 150 records: a Latin name is title-cased, "Clogmia Albipunctata" (Latin line: Clogmia albipunctatus) → bug #19 (Low). Common names and "South Korea" correct. "Oriental Turtle-Dove" / "Japanese Wood-Pigeon" keep the capital after the hyphen as in the source lists (not counted). Added 17 Nov |
+| TC-100 | Names in Title Case, country name | Look at the table, Species Profile and Encyclopedia cards (e.g. Seoul, 150 records) | Common names in Title Case ("Wild Boar"); after a hyphen lower case stays ("Black-tailed Gull"); scientific names unchanged (*Sus scrofa*); Locality ends with "South Korea" | Pass (re-test) | Paudel Amrit | 2026-11-18 | Live site after b1e9ab8 (Ctrl+F5), Chrome; Seoul, 150 records: a Latin name is title-cased, "Clogmia Albipunctata" (Latin line: Clogmia albipunctatus) → bug #19 (Low). Common names and "South Korea" correct. "Oriental Turtle-Dove" / "Japanese Wood-Pigeon" keep the capital after the hyphen as in the source lists (not counted). Added 17 Nov Re-test 2026-11-18 (Paudel Amrit), live site after e89a9bb (fixes #19): Seoul, 150 records: "Clogmia albipunctata" (small a); other names unchanged; Pass. |
 
 ---
 
@@ -309,18 +309,18 @@ with the Round 1 fixes. Gupta Aman Kumar opened the website and read out the tas
 
 ---
 
-## 7. Summary (status: 17 Nov 2026)
+## 7. Summary (status: 18 Nov 2026)
 
 | | Number |
 |---|---|
 | Test cases in this plan | 113 (TC-01 to TC-100, plus API-01 to API-13) |
 | Test cases run | 113 |
-| Passed | 111 (TC-66 and TC-75 after their re-tests) |
-| Failed (bug open) | 2 (TC-78 → bug #20, TC-100 → bug #19) |
+| Passed | 113 (TC-66, TC-75, TC-78 and TC-100 after their re-tests) |
+| Failed on the first run (bug issues opened) | 4 (TC-66 → #13, TC-75 → #17, TC-78 → #20, TC-100 → #19) |
 | Blocked | 0 |
-| Bug issues opened | 5 (#13, #17, #18, #19, #20) |
-| Bugs fixed and re-tested | 3 (#13, #17, #18) |
-| Open issues | 2 (#19 Low, #20 Medium) |
+| Bug issues opened | 5 (#13, #17, #18, #19, #20; #18 found during the re-test of TC-83) |
+| Bugs fixed and re-tested | 5 (all) |
+| Open issues | 0 |
 | Re-tested after the search update (16–17 Nov) | TC-15, TC-17 – TC-21, TC-25, TC-28, TC-37 – TC-43, TC-52, TC-64, TC-69 – TC-72, TC-77, TC-78, TC-83 |
 
 These numbers, the usability results and the most important bugs go into the testing report
