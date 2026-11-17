@@ -23,7 +23,7 @@ if (!$speciesKey) {
 }
 
 // New photos reach GBIF slowly: a list from the last day is answered from the cache
-$cacheKey = "photos:$speciesKey";
+$cacheKey = "photos2:$speciesKey";   // photos2: animal photos first (17 Nov)
 if ($cached = cache_get($cacheKey, 86400)) {
     echo json_encode($cached);
     exit;
@@ -44,11 +44,19 @@ foreach ([['country' => 'KR'], []] as $where) {
             'credit'  => $m['rightsHolder'] ?? $m['creator'] ?? $r['recordedBy'] ?? '',
             'license' => short_license($m['license'] ?? null),
             'record'  => $r['key'],
+            // the observer said what the photo shows (adult, female…): almost always the animal itself
+            'animal'  => !empty($r['lifeStage']) || !empty($r['sex']),
         ];
         if (count($photos) >= MAX_PHOTOS) break;
     }
 }
 
-$answer = ['photos' => array_values($photos)];
+// Photos of the animal itself first (17 Nov): some sightings show only droppings or tracks, which
+// looked odd as the first photo of the slideshow. The order is otherwise kept (Korea first).
+$photos = array_values($photos);
+usort($photos, fn($x, $y) => $y['animal'] <=> $x['animal']);
+foreach ($photos as &$p) unset($p['animal']);
+unset($p);
+$answer = ['photos' => $photos];
 if ($photos) cache_put($cacheKey, $answer);   // an empty list (e.g. GBIF unreachable) is asked again next time
 echo json_encode($answer);
