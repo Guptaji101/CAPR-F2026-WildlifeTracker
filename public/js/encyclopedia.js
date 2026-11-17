@@ -357,15 +357,20 @@ async function startSlideshow(key, mainUrl, opened) {
     if (!calm()) extras.timer = setInterval(() => { if (!box.matches(':hover')) show(i + 1); }, 4000);
 }
 
-// A small map of South Korea with GBIF's dots where the animal was seen: 4 map tiles (zoom 6)
-// from OpenStreetMap with GBIF's map of the sightings on top. Images only, nothing to install.
+// A small map of South Korea with red areas where the animal was seen: 4 map tiles (zoom 6) from
+// OpenStreetMap with GBIF's map of the sightings on top, in hexagons (red.poly; single dots were
+// yellow and hard to see, 17 Nov). Images only, nothing to install. A click opens the Map page
+// with this animal, like "See … on the map".
 function koreaMapHtml(key, name) {
     const tile = (x, y) => `<span style="background-image:url(https://tile.openstreetmap.org/6/${x}/${y}.png)">
-        <img src="https://api.gbif.org/v2/map/occurrence/density/6/${x}/${y}@1x.png?taxonKey=${key}&country=KR&style=classic.point" alt="" loading="lazy" onerror="this.remove()"></span>`;
-    return `<div class="korea-map" role="img" aria-label="Map of South Korea with the places where ${escapeHtml(name)} was seen">
-            <div class="korea-tiles">${tile(54, 24)}${tile(55, 24)}${tile(54, 25)}${tile(55, 25)}</div>
-        </div>
-        <p class="extra-note">Dots: places where it was seen. Map © OpenStreetMap, data GBIF.</p>`;
+        <img src="https://api.gbif.org/v2/map/occurrence/density/6/${x}/${y}@1x.png?taxonKey=${key}&country=KR&style=red.poly&bin=hex&hexPerTile=28" alt="" loading="lazy" onerror="this.remove()"></span>`;
+    return `<a class="korea-map" href="index.php?species=${key}&name=${encodeURIComponent(name)}"
+            aria-label="Map of South Korea with the places where ${escapeHtml(name)} was seen. Open it on the Map page"
+            title="See ${escapeHtml(name)} on the Map page">
+            <span class="korea-tiles">${tile(54, 24)}${tile(55, 24)}${tile(54, 25)}${tile(55, 25)}</span>
+            <span class="korea-open"><i class="fa-regular fa-map"></i> Open on the map</span>
+        </a>
+        <p class="extra-note">Red: areas where it was seen. Map © OpenStreetMap, data GBIF.</p>`;
 }
 
 // "Listen" and "When to see it" come from api/encyclopedia.php?action=extras
