@@ -58,7 +58,7 @@ $page = 'map';
                     <div class="search-box">
                         <button type="button" class="search-btn" id="search-btn" aria-label="Search"><i class="fa-solid fa-magnifying-glass"></i></button>
                         <label for="location-input" class="sr-only">Place name</label>
-                        <input type="text" id="location-input" placeholder="Enter a place name (e.g. Busan, Seoul)"
+                        <input type="text" id="location-input" placeholder="Search a place"
                                autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="location-suggest">
                     </div>
                     <!-- Place suggestions while typing (api/places.php), like the animal suggestions below -->
@@ -106,7 +106,7 @@ $page = 'map';
                     <div class="search-box">
                         <button type="button" class="search-btn" id="animal-btn" aria-label="Find animal"><i class="fa-solid fa-magnifying-glass"></i></button>
                         <label for="animal-input" class="sr-only">Animal name</label>
-                        <input type="text" id="animal-input" placeholder="Animal name (e.g. water deer, Pica pica)"
+                        <input type="text" id="animal-input" placeholder="Search an animal"
                                autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="animal-suggest">
                     </div>
                     <!-- Suggestions while typing. It drops down over the sections below, like a search engine's suggestions. -->
@@ -251,5 +251,6 @@ $page = 'map';
     <script src="js/animal-search.js?v=<?= filemtime(__DIR__ . '/js/animal-search.js') ?>"></script>
     <script src="js/app.js?v=<?= filemtime(__DIR__ . '/js/app.js') ?>"></script>
     <script src="js/segmented.js?v=<?= filemtime(__DIR__ . '/js/segmented.js') ?>"></script>
+    <script src="js/search-box.js?v=<?= filemtime(__DIR__ . '/js/search-box.js') ?>"></script>
 </body>
 </html>

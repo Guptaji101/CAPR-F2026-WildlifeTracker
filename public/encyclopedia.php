@@ -120,7 +120,7 @@ $tree = [
                 <div class="suggest-wrap">
                     <div class="search-box">
                         <button type="button" class="search-btn" id="ency-search-btn" aria-label="Search all animals"><i class="fa-solid fa-magnifying-glass"></i></button>
-                        <input type="text" id="ency-search-input" placeholder="Type an animal name, e.g. magpie, water deer, Pica pica"
+                        <input type="text" id="ency-search-input" placeholder="Search an animal, e.g. magpie, water deer or 고라니"
                                autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="ency-suggest">
                     </div>
                     <div class="animal-suggest" id="ency-suggest" role="listbox" aria-label="Animal suggestions" hidden></div>
@@ -169,5 +169,6 @@ $tree = [
     <script src="js/photo-viewer.js?v=<?= filemtime(__DIR__ . '/js/photo-viewer.js') ?>"></script>
     <script src="js/animal-search.js?v=<?= filemtime(__DIR__ . '/js/animal-search.js') ?>"></script>
     <script src="js/encyclopedia.js?v=<?= filemtime(__DIR__ . '/js/encyclopedia.js') ?>"></script>
+    <script src="js/search-box.js?v=<?= filemtime(__DIR__ . '/js/search-box.js') ?>"></script>
 </body>
 </html>
