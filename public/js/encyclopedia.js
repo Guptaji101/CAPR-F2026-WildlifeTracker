@@ -193,7 +193,7 @@ function filterCards() {
 // English name if known, in Title Case like on the Map page ("Eurasian Red Squirrel";
 // toTitleCase in animal-search.js); else the scientific name as it is
 function displayName(sp) {
-    if (sp?.vernacularName) return toTitleCase(sp.vernacularName);
+    if (sp?.vernacularName) return toTitleCase(sp.vernacularName, sp.scientificName || sp.species);
     return sp?.species || 'Unnamed species';
 }
 

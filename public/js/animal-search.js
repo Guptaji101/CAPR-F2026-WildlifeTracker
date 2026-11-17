@@ -171,8 +171,14 @@ function recentHtml(idPrefix) {
 // small ("Bird of Prey"), and names with Korean letters are left as they are. Not for scientific
 // names: those keep their own form (Genus species).
 const SMALL_WORDS = new Set(['of', 'and', 'the', 'in', 'on', 'de', 'la', 'or']);
-function toTitleCase(name) {
+function toTitleCase(name, scientific = '') {
     if (!name || HANGUL.test(name)) return name || '';
+    // Some GBIF "English" names are really the Latin name ("Clogmia albipunctata", "Pryeria
+    // sinica"): when the first word is the genus or the second word the species part of the
+    // scientific name, keep the name as it is (#19)
+    const sci = scientific.trim().toLowerCase().split(/\s+/);
+    const words = name.trim().toLowerCase().split(/\s+/);
+    if (sci[0] && (words[0] === sci[0] || (words.length === 2 && words[1] === sci[1]))) return name;
     return name.split(' ').map((w, i) =>
         i > 0 && SMALL_WORDS.has(w.toLowerCase()) ? w.toLowerCase() : w.charAt(0).toUpperCase() + w.slice(1)
     ).join(' ');

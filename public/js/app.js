@@ -249,7 +249,7 @@ function cleanCommonName(r) {
 }
 
 function plainName(r) {
-    if (r.commonName) return toTitleCase(r.commonName);
+    if (r.commonName) return toTitleCase(r.commonName, r.scientificName || r.species);
     if (r.species) return r.species;
     const genus = (r.scientificName || '').split(' ')[0];
     return genus ? `${genus} sp.` : 'Unknown animal';
@@ -1163,7 +1163,7 @@ function fillCommonNames(start, end) {
         // now shows another animal and must not get this name
         if (state.sightings[start + i] !== r) return;
         const cell = document.querySelector(`#sightings-body tr[data-index="${start + i}"] .sp-name`);
-        if (cell) cell.innerText = toTitleCase(r.commonName);
+        if (cell) cell.innerText = toTitleCase(r.commonName, r.scientificName || r.species);
     });
 }
 
@@ -1275,7 +1275,7 @@ async function showProfile(record) {
     // The user may have selected another sighting while this request was running
     if (state.sightings[state.selected] !== record) return;
 
-    if (speciesData.vernacularName) setText('profile-name', toTitleCase(speciesData.vernacularName));
+    if (speciesData.vernacularName) setText('profile-name', toTitleCase(speciesData.vernacularName, speciesData.scientificName));
     if (speciesData.scientificName) setText('profile-sci', speciesData.scientificName);
     // Species saved before 19 Oct may have no class (GBIF gives none for most fish); the sighting
     // knows it ("Actinopterygii"), unless it only knows the phylum
