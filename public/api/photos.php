@@ -23,7 +23,7 @@ if (!$speciesKey) {
 }
 
 // New photos reach GBIF slowly: a list from the last day is answered from the cache
-$cacheKey = "photos2:$speciesKey";   // photos2: animal photos first (17 Nov)
+$cacheKey = "photos3:$speciesKey";   // photos2: animal photos first; photos3: no dead animals (17 Nov)
 if ($cached = cache_get($cacheKey, 86400)) {
     echo json_encode($cached);
     exit;
@@ -36,6 +36,9 @@ foreach ([['country' => 'KR'], []] as $where) {
     $data = gbif_get(GBIF . '/occurrence/search?' . http_build_query(
         ['taxonKey' => $speciesKey, 'mediaType' => 'StillImage', 'limit' => 40] + $where));
     foreach ($data['results'] ?? [] as $r) {
+        // No photos of dead animals (17 Nov): GBIF marks them "vitality: dead" (in Korea often
+        // roadkill water deer), and the slideshow showed them by itself
+        if (strtolower($r['vitality'] ?? '') === 'dead') continue;
         $m = $r['media'][0] ?? [];
         $url = $m['identifier'] ?? '';
         if (!str_starts_with($url, 'http') || isset($photos[$url])) continue;
@@ -44,8 +47,9 @@ foreach ([['country' => 'KR'], []] as $where) {
             'credit'  => $m['rightsHolder'] ?? $m['creator'] ?? $r['recordedBy'] ?? '',
             'license' => short_license($m['license'] ?? null),
             'record'  => $r['key'],
-            // the observer said what the photo shows (adult, female…): almost always the animal itself
-            'animal'  => !empty($r['lifeStage']) || !empty($r['sex']),
+            // the observer said the animal was alive, or what it shows (adult, female…): almost always
+            // the animal itself, not droppings or tracks
+            'animal'  => strtolower($r['vitality'] ?? '') === 'alive' || !empty($r['lifeStage']) || !empty($r['sex']),
         ];
         if (count($photos) >= MAX_PHOTOS) break;
     }
