@@ -293,6 +293,41 @@ function gbif_get(string $url, ?int &$status = null): ?array {
     return json_decode($raw, true);
 }
 
+// Several GBIF requests at the same time (17 Nov): photos.php and the "extras" (Listen, When to see
+// it) asked GBIF 2–3 times one after another, which took about 4 seconds the first time an animal
+// was opened. Sent together they take as long as the slowest one. Answers come back with the same
+// keys as $urls; a request that fails gives null, like gbif_get.
+function gbif_get_many(array $urls): array {
+    $mh = curl_multi_init();
+    $handles = [];
+    foreach ($urls as $k => $url) {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, gbif_curl_options(15));
+        curl_multi_add_handle($mh, $ch);
+        $handles[$k] = $ch;
+    }
+    do {
+        $status = curl_multi_exec($mh, $running);
+        if ($running) curl_multi_select($mh);
+    } while ($running && $status === CURLM_OK);
+    $answers = [];
+    foreach ($handles as $k => $ch) {
+        $raw = curl_multi_getcontent($ch);
+        $answers[$k] = curl_getinfo($ch, CURLINFO_HTTP_CODE) === 200 && $raw ? json_decode($raw, true) : null;
+        curl_multi_remove_handle($mh, $ch);
+        curl_close($ch);
+    }
+    curl_multi_close($mh);
+    return $answers;
+}
+
+// iNaturalist photos (most photos on GBIF) are linked as the full-size original, often 1–5 MB. The
+// same photo also exists as "large" (1024 px), several times smaller and big enough for the window
+// and the photo viewer (17 Nov: the slideshow was slow to load).
+function smaller_photo(string $url): string {
+    return preg_replace('~^(https://inaturalist-open-data\.s3\.amazonaws\.com/photos/\d+/)original\.~', '$1large.', $url);
+}
+
 // "http://creativecommons.org/licenses/by-nc/4.0/" -> "CC BY-NC"; public domain -> "CC0"
 function short_license(?string $url): string {
     if (!$url) return '';

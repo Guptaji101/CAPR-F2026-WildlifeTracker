@@ -147,6 +147,8 @@
 }
 .listen-btn:hover { background: var(--green-50); }
 .listen-btn.playing { background: var(--green-700); color: var(--white); }
+.listen-btn.loading { background: var(--green-50); cursor: progress; }
+.listen-btn.loading .eq { opacity: .5; }
 .listen-btn:disabled { opacity: .55; cursor: default; }
 .listen-btn:focus-visible { outline: 2px solid var(--green-700); outline-offset: 2px; }
 .listen-btn .eq { display: inline-flex; align-items: flex-end; gap: 2px; height: 12px; }
