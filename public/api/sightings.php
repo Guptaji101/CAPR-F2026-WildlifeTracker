@@ -56,9 +56,9 @@ if ($from && $to && $from > $to) {
 // slowly (days after the sighting), so a 6-hour-old answer is still up to date. (Was 1 hour
 // until 16 Nov: most visitors then waited for GBIF, because the keep-awake job runs only every
 // few hours.)
-// ("sightings6": cleaner place names and no records with flagged coordinates since 16 Nov;
-// older cached answers are not reused)
-$cacheKey = 'sightings6:' . json_encode([$lat, $lng, $radius, $taxa, $from, $to, $limit]);
+// ("sightings7": cleaner place names and no records with flagged coordinates since 16 Nov, no
+// eBird location numbers since 17 Nov; older cached answers are not reused)
+$cacheKey = 'sightings7:' . json_encode([$lat, $lng, $radius, $taxa, $from, $to, $limit]);
 if ($cached = cache_get($cacheKey, 6 * 3600)) {
     echo json_encode($cached);
     exit;
@@ -88,10 +88,10 @@ function place_name(array $r): ?string
         // the country inside a part is left out too ("대한민국 부산광역시 해운대구", "… 부산광역시 대한민국")
         $p = trim(preg_replace('/^(대한민국|south korea|republic of korea)\s+|\s+(대한민국|south korea)$/iu', '', trim($p)));
         if ($p === '' || in_array(mb_strtolower($p), $country)) continue;
-        // Codes are no place names for people (16 Nov): map codes ("427X+HJ", Google plus codes)
-        // and region codes ("KR-PU")
+        // Codes are no place names for people (16 Nov): map codes ("427X+HJ", Google plus codes),
+        // region codes ("KR-PU") and eBird location numbers ("L43808010", 17 Nov)
         if (preg_match('/^[23456789CFGHJMPQRVWX]{4,8}\+[23456789CFGHJMPQRVWX]{0,3}$/i', $p)
-            || preg_match('/^KR-[A-Z0-9]{1,3}$/i', $p)) continue;
+            || preg_match('/^KR-[A-Z0-9]{1,3}$/i', $p) || preg_match('/^L\d{5,}$/', $p)) continue;
         $parts[mb_strtolower($p)] ??= $p;
     }
     // GBIF's province is added only when the place does not name a city or province yet: GBIF

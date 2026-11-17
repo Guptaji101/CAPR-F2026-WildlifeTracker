@@ -104,7 +104,10 @@ function similarNames(list, query, max = 6) {
             // "Peridea lativitta", which has no English name)
             if (q.length >= 3 && low.includes(q) && name !== a.s) { best = 0; break; }
             // the whole name ("wild bore" -> "wild boar"), then each of its words ("bore" -> "boar")
-            for (const w of [low, ...low.split(/[\s\-'/()]+/)]) {
+            // (for an animal with only a scientific name, only the whole name and the genus: "bata"
+            // is not "Atractomorpha lata"; 17 Nov)
+            const words = name === a.s ? [low, low.split(' ')[0]] : [low, ...low.split(/[\s\-'/()]+/)];
+            for (const w of words) {
                 // skip bits shorter than 2 letters ("치" of "치 리"): too short to be a similar word
                 if (w.length < 2 || Math.abs(w.length - q.length) > allowed) continue;
                 const d = editDistance(q, w);

@@ -35,8 +35,9 @@ if ($q === '' || mb_strlen($q) > 80) {
 
 // A name looked up in the last 7 days is answered from the cache (no GBIF or Wikipedia request)
 // ("animal5:" since 4 Nov, so answers saved with the old "Did you mean" lists are not reused)
-// animal6 (16 Nov): answers carry byName, so cached answers without it are not used
-$cacheKey = 'animal6:' . mb_strtolower($q);
+// animal6 (16 Nov): answers carry byName; animal7 (17 Nov): no matches through names in other
+// languages (#18). Cached answers of older versions are not used.
+$cacheKey = 'animal7:' . mb_strtolower($q);
 if ($cached = cache_get($cacheKey, 7 * 86400)) {
     echo json_encode($cached);
     exit;
@@ -188,6 +189,11 @@ $search = gbif_get(GBIF_API . '/species/search?' . http_build_query([
 $candidates = [];
 foreach ($search['results'] ?? [] as $r) {
     $english = array_values(array_filter($r['vernacularNames'] ?? [], fn($v) => ($v['language'] ?? '') === 'eng'));
+    // GBIF searches common names in every language: "bata" (Swahili for duck) found the ducks (#18,
+    // 17 Nov). Only animals whose English or scientific name has a word starting with the typed
+    // text are kept, like everywhere else on the site (English, Korean and scientific names).
+    $names = [...array_column($english, 'vernacularName'), $r['canonicalName'] ?? ''];
+    if (!array_filter($names, fn($n) => preg_match($wordStart, mb_strtolower($n)))) continue;
     $candidates[$r['key']] = [
         'key'            => $r['key'],
         'name'           => $english[0]['vernacularName'] ?? $r['canonicalName'],
