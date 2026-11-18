@@ -23,7 +23,7 @@ if (!$speciesKey) {
 }
 
 // New photos reach GBIF slowly: a list from the last day is answered from the cache
-$cacheKey = "photos5:$speciesKey";   // photos2: animal photos first; photos3: no dead animals; photos4: smaller photos (17 Nov); photos5: no droppings, marked photos first (#25)
+$cacheKey = "photos6:$speciesKey";   // photos2: animal photos first; photos3: no dead animals; photos4: smaller photos (17 Nov); photos5/6: no droppings or museum specimens, marked photos first (#25)
 if ($cached = cache_get($cacheKey, 86400)) {
     echo json_encode($cached);
     exit;
@@ -39,6 +39,9 @@ foreach ($lists as $data) {
         // No photos of dead animals (17 Nov): GBIF marks them "vitality: dead" (in Korea often
         // roadkill water deer), and the slideshow showed them by itself
         if (strtolower($r['vitality'] ?? '') === 'dead') continue;
+        // Only photos of sightings (#25, 19 Nov): museum specimens (PRESERVED_SPECIMEN) are dead
+        // animals, and some museums show a scan of their catalogue book as the photo
+        if (!in_array($r['basisOfRecord'] ?? '', ['HUMAN_OBSERVATION', 'MACHINE_OBSERVATION', 'OBSERVATION'], true)) continue;
         // No photos of droppings, hair or tracks either (#25, 19 Nov): iNaturalist marks them
         // "evidenceOfPresence" in dynamicProperties; only "organism" is the animal itself
         $evidence = strtolower(json_decode($r['dynamicProperties'] ?? '', true)['evidenceOfPresence'] ?? '');
