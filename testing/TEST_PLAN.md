@@ -110,7 +110,7 @@ Unless a step says otherwise, start on the Map page, with the default search (Ul
 | ID | Test | Steps | Expected result | Result | Tester | Date | Notes |
 |---|---|---|---|---|---|---|---|
 | TC-27 | Select a pin | Click any pin | Pin gets bigger; table row highlighted; Species Profile shows photo, group, names, taxonomy, date, locality, coordinates | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost |
-| TC-28 | View button | Click **View** in a table row; then click anywhere on another row | Both open the Species Profile and the map zooms to the sighting | Pass | Paudel Amrit | 2026-11-17 | Re-test after the search update: Live site, 17 Nov version (b1e9ab8), fully reloaded, Chrome; Note (Low): when two sightings are at the same spot, another pin can cover the selected one. Expected result updated 17 Nov. Earlier: Pass (Paudel Amrit, 2026-10-27) |
+| TC-28 | View button | Click **View** in a table row; then click anywhere on another row | Both open the Species Profile and the map zooms to the sighting | Pass | Paudel Amrit | 2026-11-17 | Re-test after the search update: Live site, 17 Nov version (b1e9ab8), fully reloaded, Chrome; Note (Low): when two sightings are at the same spot, another pin can cover the selected one; fixed 19 Nov (96f0ce8: the selected pin comes to the front), checked on the live site 19 Nov (Paudel Amrit): Pass. Expected result updated 17 Nov. Earlier: Pass (Paudel Amrit, 2026-10-27) |
 | TC-29 | Fish group | Search Ulsan, select a fish (e.g. Chinese minnow) | Badge says **Fish** (not Invertebrates); Class "Actinopterygii" | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost; Ulsan, fish badge + Class Actinopterygii |
 | TC-30 | GBIF link | Click **Explore on GBIF Network** | GBIF page of the species opens in a new tab; WildTrack stays open | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost |
 | TC-31 | Close profile | Click X in the Species Profile (or press Esc) | Selection cleared; "Select a sighting…" shown | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost |
@@ -211,6 +211,8 @@ Unless a step says otherwise, start on the Map page, with the default search (Ul
 ### 5.1 API endpoint checks (issue #3)
 
 Each endpoint opened on the live site (https://wildtrack-lq88.onrender.com/api/…); the time is the response time measured in the browser.
+
+Since 19 Nov the checks API-01 – API-14 also run by themselves: `php tools/api-test.php` (or with a localhost address as argument) prints Pass or Fail for each, and GitHub Actions ("API checks", `.github/workflows/api-test.yml`) runs it on the live site every day at 9:00 KST and by hand. First runs on 19 Nov (Paudel Amrit): all pass.
 
 | ID | Endpoint | Expected result | Result | Tester | Date | Notes |
 |---|---|---|---|---|---|---|
@@ -337,6 +339,7 @@ with the Round 1 fixes. Gupta Aman Kumar opened the website and read out the tas
 | Bug issues opened | 10 (#13, #17, #18, #19, #20, #21, #22, #23, #24, #25; #18 found during the re-test of TC-83, #21 – #23 found by Singh Shubham Kumar on the live site, #24 found while checking the fix for #20, #25 found by Paudel Amrit in TC-108) |
 | Bugs fixed and re-tested | 10 (all); #13, #17 – #20 by their test cases, #21 – #24 by TC-101 – TC-104 and API-14 (Pass, 18 Nov), #25 by TC-108 and TC-110 (Pass, 19 Nov) |
 | Open issues | 0 |
+| Automatic API checks (19 Nov) | API-01 – API-14 run by `tools/api-test.php` and daily on GitHub Actions; first runs 19 Nov: all pass |
 | Re-tested after the search update (16–17 Nov) | TC-15, TC-17 – TC-21, TC-25, TC-28, TC-37 – TC-43, TC-52, TC-64, TC-69 – TC-72, TC-77, TC-78, TC-83 |
 
 These numbers, the usability results and the most important bugs go into the testing report
