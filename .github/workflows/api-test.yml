@@ -1,0 +1,17 @@
+# Runs the API endpoint checks API-01 – API-14 (tools/api-test.php) against the live site:
+# by hand (Actions tab → "API checks" → Run workflow) and every day at 9:00 Korea time.
+# Not on every push: Render needs a few minutes to deploy, so a push would test the old version.
+name: API checks
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *'   # 00:00 UTC = 09:00 KST
+
+jobs:
+  api-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run API-01 – API-14 on the live site
+        run: php tools/api-test.php https://wildtrack-lq88.onrender.com
