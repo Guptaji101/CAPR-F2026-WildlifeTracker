@@ -17,7 +17,7 @@ results in the testing report (Week 12)
 | Species Profile and GBIF link | FR-07, FR-09 | TC-27 – TC-31, TC-75 – TC-76, TC-80, TC-89 – TC-90, TC-96, TC-100 |
 | Messages and loading states | FR-10 | TC-32 – TC-36, TC-87 |
 | Find an Animal | FR-13 | TC-37 – TC-43, TC-69 – TC-72, TC-77, TC-81 – TC-86, TC-101, TC-109 |
-| Animal Encyclopedia and its searches | FR-12 | TC-44 – TC-55, TC-73 – TC-74, TC-91 – TC-92, TC-98 – TC-99, TC-102, TC-105 – TC-108 |
+| Animal Encyclopedia and its searches | FR-12 | TC-44 – TC-55, TC-73 – TC-74, TC-91 – TC-92, TC-98 – TC-99, TC-102, TC-105 – TC-108, TC-110 |
 | Non-functional requirements | NFR-01 – NFR-08 | TC-56 – TC-68, TC-97 |
 | Usability test with users | NFR-05 | Section 6 |
 
@@ -184,7 +184,8 @@ Unless a step says otherwise, start on the Map page, with the default search (Ul
 | TC-105 | Animals of the day | Open the Encyclopedia and wait 5 seconds; click the → arrow and a dot; point at the card; click × | A card "Animals of the day · 1 of 5" with photo, names, records and the start of the description; the next animal comes every 4 seconds; arrows and dots change the animal; pointing at the card stops the change; × closes the card (a click on the card opens the animal) | Pass | Gupta Aman Kumar | 2026-11-18 | Live site, 18 Nov version (2c9fed5), fully reloaded; run 4:00–4:20 PM, no errors. Added 18 Nov |
 | TC-106 | Listen | Open **Chinese Water Deer**; click **Listen**; click **Stop** | The button says "Loading…", then the sound plays and the button says "Stop", with the recorder and licence ("recorded in South Korea" where possible); Stop (or closing the dialog) ends the sound | Pass | Gupta Aman Kumar | 2026-11-18 | Live site, 18 Nov version (2c9fed5), fully reloaded; run 4:00–4:20 PM, no errors. Added 18 Nov |
 | TC-107 | When to see it, where in Korea | Open **Chinese Water Deer**; look at "When to see it" and "Where in Korea"; click **Open on the map** | Twelve month bars (J to D) and "Seen most in April, May and June"; a map of South Korea with red areas; the Map page opens showing only this animal | Pass | Gupta Aman Kumar | 2026-11-18 | Live site, 18 Nov version (2c9fed5), fully reloaded; run 4:00–4:20 PM, no errors. Added 18 Nov |
-| TC-108 | Photo slideshow | Open **Chinese Water Deer**; wait 10 seconds; click a dot under the photo | Up to 6 photos change by themselves; the dot shows that photo; no photo that GBIF marks as a dead animal is shown | Pass | Gupta Aman Kumar | 2026-11-18 | Live site, 18 Nov version (2c9fed5), fully reloaded; run 4:00–4:20 PM, no errors. Added 18 Nov |
+| TC-108 | Photo slideshow | Open **Chinese Water Deer**; wait 10 seconds; click a dot under the photo; click the photo and go through all photos in the viewer | Up to 6 photos change by themselves; the dot shows that photo; no photo of a dead animal or of droppings, in the slideshow or the viewer | Pass (re-test) | Paudel Amrit | 2026-11-19 | Live site. 18 Nov run (Gupta Aman Kumar): slideshow pass. 19 Nov (Paudel Amrit): **Fail** in the viewer: photo 4 of 13 a dead deer (GBIF does not mark it dead) and a photo of droppings → bug #25; fixed 1f4a94d; re-test Pass 19 Nov, 12 photos, all of the living deer. Added 18 Nov |
+| TC-110 | Only photos of sightings | Open **Harvest Mouse**; click the photo and go through all photos in the viewer | Only photos of the animal; no scanned museum catalogue page (museum specimens are skipped) | Pass | Paudel Amrit | 2026-11-19 | Live site. First seen 19 Nov during the re-test of #25: photo 5 of 13 was a catalogue book page (a PRESERVED_SPECIMEN record); fixed ec657c6 (refs #25); re-test Pass 19 Nov. Added 19 Nov |
 
 ---
 
@@ -322,18 +323,19 @@ with the Round 1 fixes. Gupta Aman Kumar opened the website and read out the tas
 
 ---
 
-## 7. Summary (status: 18 Nov 2026)
+## 7. Summary (status: 19 Nov 2026)
 
 | | Number |
 |---|---|
-| Test cases in this plan | 123 (TC-01 to TC-109, plus API-01 to API-14) |
-| Test cases run | 123 |
-| Passed | 123 (TC-66, TC-75, TC-78 and TC-100 after their re-tests) |
+| Test cases in this plan | 124 (TC-01 to TC-110, plus API-01 to API-14) |
+| Test cases run | 124 |
+| Passed | 124 (TC-66, TC-75, TC-78, TC-100 and TC-108 after their re-tests) |
 | Run on 18 Nov (Gupta Aman Kumar, live site) | 11: TC-18 (rewritten: no Search button since 17 Nov), TC-101 – TC-109 and API-14 (added 18 Nov); all pass |
-| Failed on the first run (bug issues opened) | 4 (TC-66 → #13, TC-75 → #17, TC-78 → #20, TC-100 → #19) |
+| Run on 18–19 Nov (Paudel Amrit, live site) | The same 11 again; TC-108 failed in the photo viewer (→ #25) and passed after the fix; TC-110 added and passed (19 Nov) |
+| Failed on the first run (bug issues opened) | 5 (TC-66 → #13, TC-75 → #17, TC-78 → #20, TC-100 → #19, TC-108 → #25) |
 | Blocked | 0 |
-| Bug issues opened | 9 (#13, #17, #18, #19, #20, #21, #22, #23, #24; #18 found during the re-test of TC-83, #21 – #23 found by Singh Shubham Kumar on the live site, #24 found while checking the fix for #20) |
-| Bugs fixed and re-tested | 9 (all); #13, #17 – #20 by their test cases, #21 – #24 by TC-101 – TC-104 and API-14 (Pass, 18 Nov) |
+| Bug issues opened | 10 (#13, #17, #18, #19, #20, #21, #22, #23, #24, #25; #18 found during the re-test of TC-83, #21 – #23 found by Singh Shubham Kumar on the live site, #24 found while checking the fix for #20, #25 found by Paudel Amrit in TC-108) |
+| Bugs fixed and re-tested | 10 (all); #13, #17 – #20 by their test cases, #21 – #24 by TC-101 – TC-104 and API-14 (Pass, 18 Nov), #25 by TC-108 and TC-110 (Pass, 19 Nov) |
 | Open issues | 0 |
 | Re-tested after the search update (16–17 Nov) | TC-15, TC-17 – TC-21, TC-25, TC-28, TC-37 – TC-43, TC-52, TC-64, TC-69 – TC-72, TC-77, TC-78, TC-83 |
 
