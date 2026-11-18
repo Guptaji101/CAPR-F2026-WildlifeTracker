@@ -193,6 +193,10 @@ function filterCards() {
 // English name if known, in Title Case like on the Map page ("Eurasian Red Squirrel";
 // toTitleCase in animal-search.js); else the scientific name as it is
 function displayName(sp) {
+    // Without an English name the Wikipedia page title is used; for an animal that is the only one
+    // in its genus that title is the genus ("Hemicentrotus" for Hemicentrotus pulcherrimus), which
+    // is not its name: then the scientific name is shown (18 Nov)
+    if (sp?.vernacularName && sp.vernacularName === sp.genus && sp.species) return sp.species;
     if (sp?.vernacularName) return toTitleCase(sp.vernacularName, sp.scientificName || sp.species);
     return sp?.species || 'Unnamed species';
 }

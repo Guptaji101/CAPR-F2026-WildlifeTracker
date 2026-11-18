@@ -1111,6 +1111,8 @@ function renderTable(emptyMessage, recover = false) {
     if (!note.hidden) note.textContent = `Showing ${total} of ${state.total.toLocaleString()} records in this area. `
         + (state.limit >= 1000
             ? '1000 is the most one search can show: tick fewer animal groups or choose a smaller radius.'
+            // With one animal picked, all records are that animal: "other animals" made no sense (18 Nov)
+            : state.speciesFilter ? 'Choose more records to see more of them.'
             : 'To see other animals, tick fewer animal groups or choose more records.');
     $('page-prev').disabled = state.page === 0;
     $('page-next').disabled = end >= total;
