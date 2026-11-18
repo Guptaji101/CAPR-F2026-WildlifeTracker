@@ -75,6 +75,3 @@ Dockerfile         how the online server is built (Render)
 
 ## Changes
 Every change is in the [commit history](https://github.com/Guptaji101/CAPR-F2026-WildlifeTracker/commits/main), with a short explanation in each commit message.
-
-## AI Assistance
-we have used claude for code suggestions, debugging and testing. The team reviewed, tested and committed every change, and can explain how each part works.
