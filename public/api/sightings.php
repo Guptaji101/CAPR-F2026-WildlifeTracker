@@ -57,8 +57,9 @@ if ($from && $to && $from > $to) {
 // until 16 Nov: most visitors then waited for GBIF, because the keep-awake job runs only every
 // few hours.)
 // ("sightings7": cleaner place names and no records with flagged coordinates since 16 Nov, no
-// eBird location numbers since 17 Nov; older cached answers are not reused)
-$cacheKey = 'sightings7:' . json_encode([$lat, $lng, $radius, $taxa, $from, $to, $limit]);
+// eBird location numbers since 17 Nov; "sightings8": right totals with an old From date
+// since 18 Nov; older cached answers are not reused)
+$cacheKey = 'sightings8:' . json_encode([$lat, $lng, $radius, $taxa, $from, $to, $limit]);
 if ($cached = cache_get($cacheKey, 6 * 3600)) {
     echo json_encode($cached);
     exit;

@@ -133,6 +133,10 @@ function gbif_search_nearby(
         // extra records to cover those repeats; they are removed below.
         $open = !$fromDate && !$toDate && $i === count($windows) - 1;
         $missing = $limit - count($results);
+        // With From/To dates, once enough records have arrived the older windows are only counted:
+        // one request counts all of them together instead of one each (18 Nov; a long range has 9)
+        $rest = $missing <= 0 && ($fromDate || $toDate) && $i < count($windows) - 1;
+        if ($rest) $range = explode(',', end($windows))[0] . ',' . explode(',', $range)[1];
         $url = $cfg['base_url'] . '/occurrence/search?' . $query . ($open ? '' : '&eventDate=' . urlencode($range));
         $want = $open ? ($missing > 0 ? $limit : 0) : $missing;
         $json = gbif_occurrence_records($url, $want, $deadline);
@@ -150,6 +154,7 @@ function gbif_search_nearby(
         // The open request counts every record, the windows only their own part
         $total = $open ? ($json['count'] ?? 0) : $total + ($json['count'] ?? 0);
         foreach ($json['results'] ?? [] as $r) $results[$r['key'] ?? count($results)] ??= $r;   // no repeats
+        if ($rest) break;
     }
     // Within a window GBIF's order is not by date either, so sort the whole list (records
     // without a date go last) and keep the number of records asked for
@@ -181,7 +186,9 @@ function gbif_date_windows(?string $fromDate, ?string $toDate): array
         $windows[] = date('Y-m-d', strtotime('+1 day', strtotime($lower))) . ',' . $upper;
         $upper = $lower;
     }
-    $windows[] = '*,' . $upper;   // everything older (or, with only a To date, everything before)
+    // Everything older, but not before the From date: a From date more than 10 years back was
+    // ignored here, so its total also counted older records (18 Nov)
+    $windows[] = ($fromDate ?: '*') . ',' . $upper;
     return $windows;
 }
 
