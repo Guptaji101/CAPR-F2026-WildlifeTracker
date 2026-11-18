@@ -1198,11 +1198,14 @@ function selectSighting(index, { fly = true, reveal = false } = {}) {
     // Highlight the pin
     if (state.selected !== null && state.markers[state.selected]) {
         state.markers[state.selected].getElement()?.querySelector('.pin')?.classList.remove('selected');
+        state.markers[state.selected].setZIndexOffset(0);
     }
     state.selected = index;
     const marker = state.markers[index];
     if (marker) {
         marker.getElement()?.querySelector('.pin')?.classList.add('selected');
+        // The selected pin comes to the front, so a pin at the same spot cannot cover it (TC-28, 19 Nov)
+        marker.setZIndexOffset(1000);
         if (fly) {
             map.flyTo([record.lat, record.lng], 14, { duration: 0.8 });
             marker.openTooltip();
@@ -1533,6 +1536,7 @@ document.addEventListener('DOMContentLoaded', () => {
     $('profile-close').addEventListener('click', () => {
         if (state.selected !== null && state.markers[state.selected]) {
             state.markers[state.selected].getElement()?.querySelector('.pin')?.classList.remove('selected');
+            state.markers[state.selected].setZIndexOffset(0);
         }
         state.selected = null;
         clearProfile();
