@@ -23,13 +23,14 @@ if (!$speciesKey) {
 }
 
 // New photos reach GBIF slowly: a list from the last day is answered from the cache
-$cacheKey = "photos6:$speciesKey";   // photos2: animal photos first; photos3: no dead animals; photos4: smaller photos (17 Nov); photos5/6: no droppings or museum specimens, marked photos first (#25)
+$cacheKey = "photos7:$speciesKey";   // photos2: animal photos first; photos3: no dead animals; photos4: smaller photos (17 Nov); photos5/6: no droppings or museum specimens, marked photos first (#25); photos7: museum photos when there is no other photo (20 Nov)
 if ($cached = cache_get($cacheKey, 86400)) {
     echo json_encode($cached);
     exit;
 }
 
 $photos = [];
+$museum = [];   // photos of museum specimens and samples: only used when there is no other photo
 // Photos taken in South Korea first; if there are too few, photos from anywhere. Both lists are
 // asked for at the same time (17 Nov), which is about twice as fast as one after the other.
 $lists = gbif_get_many(array_map(fn($where) => GBIF . '/occurrence/search?' . http_build_query(
@@ -39,17 +40,20 @@ foreach ($lists as $data) {
         // No photos of dead animals (17 Nov): GBIF marks them "vitality: dead" (in Korea often
         // roadkill water deer), and the slideshow showed them by itself
         if (strtolower($r['vitality'] ?? '') === 'dead') continue;
-        // Only photos of sightings (#25, 19 Nov): museum specimens (PRESERVED_SPECIMEN) are dead
-        // animals, and some museums show a scan of their catalogue book as the photo
-        if (!in_array($r['basisOfRecord'] ?? '', ['HUMAN_OBSERVATION', 'MACHINE_OBSERVATION', 'OBSERVATION'], true)) continue;
+        // Photos of sightings first (#25, 19 Nov): museum specimens (PRESERVED_SPECIMEN) are dead
+        // animals, and some museums show a scan of their catalogue book as the photo. They are kept
+        // apart and only used when an animal has no sighting photo at all (20 Nov): some small sea
+        // animals (copepods, sea worms) are only photographed in collections.
+        $sighting = in_array($r['basisOfRecord'] ?? '', ['HUMAN_OBSERVATION', 'MACHINE_OBSERVATION', 'OBSERVATION'], true);
         // No photos of droppings, hair or tracks either (#25, 19 Nov): iNaturalist marks them
         // "evidenceOfPresence" in dynamicProperties; only "organism" is the animal itself
         $evidence = strtolower(json_decode($r['dynamicProperties'] ?? '', true)['evidenceOfPresence'] ?? '');
         if ($evidence !== '' && $evidence !== 'organism') continue;
         $m = $r['media'][0] ?? [];
         $url = smaller_photo($m['identifier'] ?? '');
-        if (!str_starts_with($url, 'http') || isset($photos[$url])) continue;
-        $photos[$url] = [
+        if (!str_starts_with($url, 'http') || isset($photos[$url]) || isset($museum[$url])) continue;
+        if ($sighting) $list = &$photos; else $list = &$museum;
+        $list[$url] = [
             'url'     => $url,
             'credit'  => $m['rightsHolder'] ?? $m['creator'] ?? $r['recordedBy'] ?? '',
             'license' => short_license($m['license'] ?? null),
@@ -60,8 +64,11 @@ foreach ($lists as $data) {
             'animal'  => strtolower($r['vitality'] ?? '') === 'alive' || $evidence === 'organism'
                          || !empty($r['lifeStage']) || !empty($r['sex']),
         ];
+        unset($list);
     }
 }
+// No sighting photo at all: the museum photos instead (better than an empty slideshow)
+if (!$photos) $photos = $museum;
 
 // Marked photos of the living animal first, then the others, and at most 12 (#25: the 12 were
 // taken before sorting, so unmarked photos, e.g. a dead deer, came into the slideshow). The order
