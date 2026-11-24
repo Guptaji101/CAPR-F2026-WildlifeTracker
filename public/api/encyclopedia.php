@@ -73,17 +73,20 @@ if ($action === 'extras') {
     if (!$speciesKey) fail(400, 'speciesKey is required');
 
     // Both change slowly: an answer from the last 7 days is answered from the cache
-    $cacheKey = "extras2:$speciesKey";   // extras2: a small sound file first (17 Nov)
+    $cacheKey = "extras3:$speciesKey";   // extras2: a small sound file first (17 Nov); extras3: "located" (24 Nov)
     if (!($extras = cache_get($cacheKey, 7 * 86400))) {
-        // The 3 questions to GBIF go out at the same time (17 Nov; one after another took ~4 s)
+        // The 4 questions to GBIF go out at the same time (17 Nov; one after another took ~4 s)
         $sound = fn($where) => GBIF . '/occurrence/search?' . http_build_query(
             ['taxonKey' => $speciesKey, 'mediaType' => 'Sound', 'limit' => 10] + $where);
-        [$data, $soundKR, $soundAll] = gbif_get_many([
+        [$data, $soundKR, $soundAll, $map] = gbif_get_many([
             // "When to see it": sightings per month in South Korea (GBIF counts them, no records sent)
             GBIF . '/occurrence/search?' . http_build_query(
                 ['taxonKey' => $speciesKey, 'country' => 'KR', 'facet' => 'month', 'facetLimit' => 12, 'limit' => 0]),
             $sound(['country' => 'KR']),
             $sound([]),
+            // "located": sightings in South Korea the map can show (0 for the minke whale)
+            GBIF . '/occurrence/search?' . http_build_query(['taxonKey' => $speciesKey, 'country' => 'KR',
+                'hasCoordinate' => 'true', 'hasGeospatialIssue' => 'false', 'limit' => 0]),
         ]);
         $months = array_fill(0, 12, 0);
         foreach ($data['facets'][0]['counts'] ?? [] as $c) {
@@ -121,8 +124,8 @@ if ($action === 'extras') {
             if ($bestRank === 0) break;
         }
 
-        $extras = ['months' => $months, 'sound' => $sound];
-        if ($data) cache_put($cacheKey, $extras);   // GBIF unreachable: ask again next time
+        $extras = ['months' => $months, 'sound' => $sound, 'located' => $map['count'] ?? null];   // null: not known
+        if ($data && $map) cache_put($cacheKey, $extras);   // GBIF unreachable: ask again next time
     }
     echo json_encode($extras);
     exit;

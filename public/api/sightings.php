@@ -59,13 +59,20 @@ if ($from && $to && $from > $to) {
 // ("sightings7": cleaner place names and no records with flagged coordinates since 16 Nov, no
 // eBird location numbers since 17 Nov; "sightings8": right totals with an old From date
 // since 18 Nov; older cached answers are not reused)
-$cacheKey = 'sightings8:' . json_encode([$lat, $lng, $radius, $taxa, $from, $to, $limit]);
+// nearest=1 (24 Nov, an animal search): if nothing is found inside the radius, the answer also says
+// where the nearest sighting of that animal is, or null when no sighting in South Korea has a location
+$nearest  = !empty($_GET['nearest']) && $taxa;
+// korea=1 ("See … on the map" in the Encyclopedia): the animal in all of South Korea, whatever the
+// place and radius. Only for an animal search (taxa).
+$allKorea = !empty($_GET['korea']) && $taxa;
+$cacheKey = 'sightings8:' . json_encode([...($allKorea ? ['KR'] : [$lat, $lng, $radius]), $taxa, $from, $to, $limit])
+    . ($nearest ? ':nearest2' : '');
 if ($cached = cache_get($cacheKey, 6 * 3600)) {
     echo json_encode($cached);
     exit;
 }
 
-$data = gbif_search_nearby($lat, $lng, $radius, $taxa, $from, $to, $limit);
+$data = gbif_search_nearby($lat, $lng, $radius, $taxa, $from, $to, $limit, $allKorea);
 
 // NFR-04: when GBIF is unreachable, gbif.php returns sample data flagged as a
 // fallback. Pass it on so the map isn't empty; report any other error as-is.
@@ -136,6 +143,17 @@ if (!empty($data['fallback'])) {
     $response['fallback'] = true;
     $response['reason']   = $data['error'];
 } else {
-    cache_put($cacheKey, $response);   // sample data is never cached: the next search tries GBIF again
+    $complete = true;
+    if ($nearest && !$results) {
+        $r = gbif_nearest_sighting($lat, $lng, $taxa, $from, $to);
+        if ($r !== false) {
+            $response['nearest'] = $r ? [
+                'lat' => $r['decimalLatitude'], 'lng' => $r['decimalLongitude'],
+                'place' => place_name($r), 'km' => (int)round($r['distanceKm']), 'date' => $r['eventDate'] ?? null,
+            ] : null;
+        }
+        $complete = $r !== false;   // GBIF did not answer: ask again next time
+    }
+    if ($complete) cache_put($cacheKey, $response);   // sample data is never cached: the next search tries GBIF again
 }
 echo json_encode($response);

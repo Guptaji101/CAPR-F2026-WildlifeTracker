@@ -209,10 +209,11 @@ function summaryText(sp) {
     return `${where ? `A member of ${where}. ` : ''}There is no English Wikipedia article about this species yet.`;
 }
 
-// Link to the Map page showing only this species. The Map remembers the last searched place,
-// so the user sees this species' sightings around that place (for example Gwacheon).
+// Link to the Map page showing only this species, in all of South Korea (24 Nov; it was searched
+// around the last place, where a rare animal has no sightings)
+const mapUrl = (key, name) => `index.php?species=${key}&name=${encodeURIComponent(name)}&area=korea`;
 function mapLink(key, name) {
-    return `<a class="btn-outline" href="index.php?species=${key}&name=${encodeURIComponent(name)}"><i class="fa-regular fa-map"></i> See ${escapeHtml(name)} on the map</a>`;
+    return `<a class="btn-outline" href="${mapUrl(key, name)}"><i class="fa-regular fa-map"></i> See ${escapeHtml(name)} on the map</a>`;
 }
 
 // Phones: the group tree is folded away behind the "Animal group" button
@@ -302,13 +303,13 @@ async function openSpecies(key, records) {
                 </div>
                 <div class="extra-box">
                     <h4>Where in Korea</h4>
-                    ${koreaMapHtml(key, name)}
+                    <div id="detail-where">${koreaMapHtml(key, name)}</div>
                 </div>
             </div>
             <div class="detail-links">
                 ${sp?.wikiUrl ? `<a class="btn-primary" href="${escapeHtml(sp.wikiUrl)}" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-wikipedia-w"></i> Read more on Wikipedia</a>` : ''}
                 <a class="btn-outline" href="https://www.gbif.org/species/${key}" target="_blank" rel="noopener noreferrer"><i class="fa-solid fa-arrow-up-right-from-square"></i> Explore on GBIF</a>
-                ${mapLink(key, name)}
+                <span id="detail-map-link">${mapLink(key, name)}</span>
             </div>
         </div>`;
     $('species-dialog').showModal();
@@ -391,7 +392,7 @@ async function startSlideshow(key, mainUrl, opened) {
 function koreaMapHtml(key, name) {
     const tile = (x, y) => `<span style="background-image:url(https://tile.openstreetmap.org/6/${x}/${y}.png)">
         <img src="https://api.gbif.org/v2/map/occurrence/density/6/${x}/${y}@1x.png?taxonKey=${key}&country=KR&style=red.poly&bin=hex&hexPerTile=28" alt="" loading="lazy" onerror="this.remove()"></span>`;
-    return `<a class="korea-map" href="index.php?species=${key}&name=${encodeURIComponent(name)}"
+    return `<a class="korea-map" href="${mapUrl(key, name)}"
             aria-label="Map of South Korea with the places where ${escapeHtml(name)} was seen. Open it on the Map page"
             title="See ${escapeHtml(name)} on the Map page">
             <span class="korea-tiles">${tile(54, 24)}${tile(55, 24)}${tile(54, 25)}${tile(55, 25)}</span>
@@ -405,6 +406,11 @@ async function loadExtras(key, opened) {
     let x = null;
     try { x = await getOnce(extrasUrl(key)); } catch { /* shown below */ }
     if (opened !== state.openedKey) return;
+    // No sighting with a location in South Korea: no link to an empty map (24 Nov, minke whale)
+    if (x?.located === 0) {
+        $('detail-where').innerHTML = '<p class="extra-note">No sighting in South Korea has a location, so the map cannot show this animal.</p>';
+        $('detail-map-link').remove();
+    }
     // When to see it: 12 bars, the 3 busiest months dark
     const months = x?.months || [];
     const max = Math.max(0, ...months);

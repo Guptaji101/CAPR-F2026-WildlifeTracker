@@ -52,11 +52,15 @@ function saveSearch() {
     try {
         sessionStorage.setItem(SAVED_SEARCH, JSON.stringify({
             lat: state.currentLat, lng: state.currentLng, name: state.currentLocationName,
-            radiusKm: state.radiusKm, input: $('location-input').value,
+            radiusKm: state.radiusKm, input: $('location-input').value || state.currentLocationName.split(',')[0],
         }));
     } catch { /* storage blocked (for example a private window): the page then starts at Ulsan */ }
 }
+// A reload (F5, Ctrl+F5) starts fresh at Ulsan (24 Nov): the remembered place seemed stuck.
+// Not in the all-of-South-Korea view, which never touches the remembered place
 const savedSearch = (() => {
+    if (performance.getEntriesByType?.('navigation')[0]?.type === 'reload'
+            && !location.search.includes('area=korea')) return null;
     try { return JSON.parse(sessionStorage.getItem(SAVED_SEARCH)); } catch { return null; }
 })();
 if (savedSearch && Number.isFinite(savedSearch.lat) && Number.isFinite(savedSearch.lng)) {
@@ -69,8 +73,36 @@ if (savedSearch && Number.isFinite(savedSearch.lat) && Number.isFinite(savedSear
 // Optional filter on one species, from the Encyclopedia: index.php?species=2486736&name=Coal%20Tit
 // (a GBIF species key is also a taxon key, so sightings.php can filter on it like on a group)
 state.speciesFilter = null;
+// "See … on the map" in the Encyclopedia (…&area=korea) shows the animal in all of South Korea: no
+// place, no radius. The remembered place is not used and not changed (24 Nov). Another place, radius
+// or animal, or "Show all animals", ends it: the map is back at the remembered place.
+state.koreaView = false;
+const KOREA_BOUNDS = [[33.0, 124.6], [38.7, 131.0]];   // Jeju to Gangwon-do, with Ulleungdo
+function leaveKorea() {
+    if (!state.koreaView) return;
+    state.koreaView = false;
+    if (state.speciesFilter) {
+        state.speciesFilter.korea = false;
+        history.replaceState(null, '', location.href.replace('&area=korea', ''));
+    }
+    if (!$('location-input').value) showPlace(savedSearch?.input || '', savedSearch?.input || 'Ulsan');
+    showRadius();
+    updateRadiusCircle();
+    fitRadius();
+}
+// The place and the radius in the sidebar (box, Quick Location chip, radius chip)
+function showPlace(text, chip) {
+    $('location-input').value = text;
+    document.querySelectorAll('.chip[data-place]').forEach(c => c.classList.toggle('active', c.dataset.place === chip));
+}
+function showRadius() {
+    document.querySelectorAll('.chip[data-radius]').forEach(c =>
+        c.classList.toggle('active', !state.koreaView && Number(c.dataset.radius) === state.radiusKm));
+}
+
 function showSpeciesFilter() {
     const f = state.speciesFilter;
+    if (!f?.korea) leaveKorea();
     $('species-filter').hidden = !f;
     $('species-filter-clear').hidden = !f;   // "Show all animals" only during an animal search
     updateSearchSummary();                   // the summary leaves the animal to the names shown here
@@ -277,7 +309,7 @@ function updateFiltersSummary() {
     // The name the user typed or tapped ("Seoul"), not the geocoder's official name ("서울특별시")
     const typed = $('location-input').value.trim();
     const place = (typed || state.currentLocationName || '').split(',')[0].slice(0, 22);
-    setText('filters-summary', `${place} · ${state.radiusKm} km`);
+    setText('filters-summary', state.koreaView ? 'All of South Korea' : `${place} · ${state.radiusKm} km`);
 }
 
 // --- Search button and summary --------------------------------------------------------------
@@ -304,7 +336,7 @@ function updateSearchSummary() {
     const groups = state.groups.size ? [...state.groups].map(g => GROUPS[g].label).join(', ') : 'no group switched on';
     const what = state.speciesFilter ? (allGroups ? '' : groups) : allGroups ? 'all animals' : groups;
     const dates = state.fromDate || state.toDate ? `${state.fromDate || '…'} to ${state.toDate || 'today'}` : '';
-    const parts = [place, `${state.radiusKm} km`, what, dates, `max ${state.limit}`].filter(Boolean);
+    const parts = [...(state.koreaView ? ['All of South Korea'] : [place, `${state.radiusKm} km`]), what, dates, `max ${state.limit}`].filter(Boolean);
     setText('search-summary', parts.join(' · ') + (state.speciesFilter ? ' ·' : ''));
 }
 
@@ -362,8 +394,9 @@ function goToPlace(lat, lng, name) {
     state.currentLng = lng;
     state.currentLocationName = name;
 
-    map.flyTo([lat, lng], 12, { duration: 1.2 });
+    leaveKorea();
     updateRadiusCircle();
+    fitRadius(1.2);
     // Say which place was found: inside Korea, "Tokyo" finds a shop called "Tokyo Milk Cheese Factory"
     showToast(`Found: ${name.replace(/, South Korea$/, '')}`);
     if (isPhoneLayout()) setFiltersOpen(false);
@@ -455,6 +488,24 @@ function quickSelect(place, elem) {
     goToPlace(...known);
 }
 
+// Move to the nearest sighting of the searched animal (state.nearest, from sightings.php)
+function goToNearest(message) {
+    const n = state.nearest;
+    if (!n) return;
+    state.nearest = null;
+    state.placeId++;                     // a place lookup still running is now out of date
+    cancelPlaceSuggestions();
+    state.currentLat = n.lat;
+    state.currentLng = n.lng;
+    state.currentLocationName = n.place || 'the nearest sighting';
+    $('location-input').value = state.currentLocationName.split(',')[0];
+    document.querySelectorAll('.chip[data-place]').forEach(btn => btn.classList.remove('active'));
+    updateRadiusCircle();
+    fitRadius(1.2);
+    showToast(message);
+    return loadSightings();
+}
+
 function useCurrentLocation() {
     if (!navigator.geolocation) {
         showToast('Geolocation is not supported by your browser', 'error');
@@ -472,8 +523,9 @@ function useCurrentLocation() {
             if (input) input.value = 'Current Location (GPS)';
             document.querySelectorAll('.chip[data-place]').forEach(btn => btn.classList.remove('active'));
 
-            map.flyTo([state.currentLat, state.currentLng], 13, { duration: 1.2 });
+            leaveKorea();
             updateRadiusCircle();
+            fitRadius(1.2);
             showLiveLocation(position);
             followLiveLocation();
             showToast('GPS coordinates acquired! Fetching local fauna...');
@@ -863,6 +915,7 @@ function closeWhenFocusLeaves(inputId, boxId, close) {
 function updateRadiusCircle() {
     if (state.radiusCircle) map.removeLayer(state.radiusCircle);
     if (state.radiusLabel) map.removeLayer(state.radiusLabel);
+    if (state.koreaView) return;   // all of South Korea: no circle
 
     state.radiusCircle = L.circle([state.currentLat, state.currentLng], {
         radius: state.radiusKm * 1000,
@@ -890,8 +943,23 @@ function switchBaseLayer(name, button) {
     document.querySelectorAll('.basemap-tabs button').forEach(b => b.classList.toggle('active', b === button));
 }
 
+// Show the whole search circle, whatever the radius (24 Nov: the zoom was always the same, so with
+// 100 km the circle and most pins were outside the picture)
+// In the all-of-South-Korea view: all pins of the animal (or the whole country while it loads).
+function fitRadius(duration = 0.8) {
+    let area = L.latLng(state.currentLat, state.currentLng).toBounds(state.radiusKm * 2000);
+    let options = { padding: [6, 6] };
+    if (state.koreaView) {
+        const pins = state.sightings.filter(r => r.lat && r.lng).map(r => [r.lat, r.lng]);
+        area = L.latLngBounds(pins.length ? pins : KOREA_BOUNDS);
+        options = { padding: [40, 40], maxZoom: 10 };   // a single pin: keep the area around it in view
+    }
+    if (duration) map.flyToBounds(area, { ...options, duration });
+    else map.fitBounds(area, { ...options, animate: false });
+}
+
 function recenterMap() {
-    map.flyTo([state.currentLat, state.currentLng], 12, { duration: 0.8 });
+    fitRadius();
 }
 
 // =============================================================================
@@ -899,6 +967,8 @@ function recenterMap() {
 // =============================================================================
 async function loadSightings() {
     clearTimeout(searchTimer);   // this search replaces one that was waiting to start
+    state.nearest = null;        // the nearest sighting belongs to the search before
+    state.nowhere = false;
     if (state.currentLat === null || state.currentLng === null) return;
 
     if (state.fromDate && state.toDate && state.fromDate > state.toDate) {
@@ -917,8 +987,10 @@ async function loadSightings() {
 
     updateFiltersSummary();
     updateSearchSummary();
-    saveSearch();
-    let url = `api/sightings.php?lat=${state.currentLat}&lng=${state.currentLng}&radius=${state.radiusKm}&limit=${state.limit}`;
+    if (!state.koreaView) saveSearch();   // "See … on the map" leaves the remembered place as it was
+    const area = state.koreaView ? 'lat=36.35&lng=127.85&korea=1'   // the middle of South Korea
+        : `lat=${state.currentLat}&lng=${state.currentLng}&radius=${state.radiusKm}`;
+    let url = `api/sightings.php?${area}&limit=${state.limit}`;
     // One species (from the Encyclopedia), or the ticked groups. With every group ticked no taxon
     // filter is sent, so all animals are returned.
     if (state.speciesFilter) {
@@ -935,6 +1007,7 @@ async function loadSightings() {
             return;
         }
         url += `&taxa=${keys.join(',')}`;
+        if (!state.koreaView) url += '&nearest=1';   // nothing found: the server names the nearest sighting
     } else if (state.groups.size < Object.keys(GROUPS).length) {
         const keys = [...state.groups].flatMap(g => GROUPS[g].keys);
         url += `&taxa=${keys.join(',')}`;
@@ -963,8 +1036,17 @@ async function loadSightings() {
         const place = ($('location-input').value || state.currentLocationName || 'this place').split(',')[0];
         // The message names what the user searched: their keyword ("boar"), or the animal they picked
         const what = state.speciesFilter?.query ? `"${state.speciesFilter.query}"` : state.speciesFilter?.name;
-        const noAnimal = `No sightings of ${what} within ${state.radiusKm} km of ${place}. Try a larger radius, or show all animals.`;
+        const larger = RADII.some(r => r > state.radiusKm);
+        const none = `No sightings of ${what} within ${state.radiusKm} km of ${place}.`;
+        state.nearest = state.speciesFilter && !state.sightings.length ? data.nearest || null : null;
+        // null: the animal has no sighting with a location in South Korea, so no radius helps (minke whale)
+        state.nowhere = !!state.speciesFilter && !state.sightings.length && (state.koreaView || data.nearest === null);
+        const noAnimal = state.nowhere
+            ? `No sighting of ${what} in South Korea has a location${state.fromDate || state.toDate ? ' in these dates' : ''}, so the map cannot show it.`
+            : `${none} ${state.nearest ? 'The nearest one is ' + state.nearest.km + ' km away.'
+            : larger ? 'Try a larger radius, or show all animals.' : 'Show all animals to see what lives there.'}`;
         renderAll(state.speciesFilter ? noAnimal : undefined, !data.fallback);
+        if (state.koreaView) fitRadius(0);   // show every pin
         // The table is below the map, so a filtered search with no results also shows a message on top
         if (state.speciesFilter && !state.sightings.length && !data.fallback) showToast(noAnimal, 'error');
 
@@ -1043,9 +1125,10 @@ const RADII = [5, 10, 25, 50, 100];
 function recoveryButtons() {
     const out = [];
     const bigger = RADII.find(r => r > state.radiusKm);
-    if (bigger) out.push(['radius', `<i class="fa-solid fa-expand"></i> Search ${bigger} km`]);
+    if (bigger && !state.nowhere) out.push(['radius', `<i class="fa-solid fa-expand"></i> Search ${bigger} km`]);
     if (state.fromDate || state.toDate) out.push(['dates', '<i class="fa-regular fa-calendar-xmark"></i> Clear dates']);
     const allOn = state.groups.size === Object.keys(GROUPS).length;
+    if (state.nearest) out.unshift(['nearest', '<i class="fa-solid fa-location-arrow"></i> Go to the nearest sighting']);
     if (state.speciesFilter && !allOn) out.push(['groups', '<i class="fa-solid fa-check-double"></i> Search all groups']);
     if (state.speciesFilter) out.push(['animals', '<i class="fa-solid fa-paw"></i> Show all animals']);
     else if (!allOn) out.push(['groups', '<i class="fa-solid fa-check-double"></i> Tick all groups']);
@@ -1055,6 +1138,8 @@ function recoveryButtons() {
 function recover(action) {
     if (action === 'radius') {
         document.querySelector(`.chip[data-radius="${RADII.find(r => r > state.radiusKm)}"]`)?.click();
+    } else if (action === 'nearest') {
+        goToNearest(`The nearest sighting, ${state.nearest.km} km away`);
     } else if (action === 'dates') {
         state.fromDate = state.toDate = '';
         $('date-from').value = $('date-to').value = '';
@@ -1108,7 +1193,7 @@ function renderTable(emptyMessage, recover = false) {
     // groups ticked the most-recorded groups (birds, insects) can crowd out the rest
     const note = $('records-note');
     note.hidden = !(total && state.total > total);
-    if (!note.hidden) note.textContent = `Showing ${total} of ${state.total.toLocaleString()} records in this area. `
+    if (!note.hidden) note.textContent = `Showing ${total} of ${state.total.toLocaleString()} records in ${state.koreaView ? 'South Korea' : 'this area'}. `
         + (state.limit >= 1000
             ? '1000 is the most one search can show: tick fewer animal groups or choose a smaller radius.'
             // With one animal picked, all records are that animal: "other animals" made no sense (18 Nov)
@@ -1394,14 +1479,18 @@ function updateLegend() {
 document.addEventListener('DOMContentLoaded', () => {
     // Show the remembered search in the sidebar (search box, Quick Location and radius chips)
     if (savedSearch) {
-        $('location-input').value = savedSearch.input || '';
-        document.querySelectorAll('.chip[data-place]').forEach(c => c.classList.toggle('active', c.dataset.place === savedSearch.input));
-        document.querySelectorAll('.chip[data-radius]').forEach(c => c.classList.toggle('active', Number(c.dataset.radius) === state.radiusKm));
+        showPlace(savedSearch.input || '', savedSearch.input);
+        showRadius();
     }
     const params = new URLSearchParams(location.search);
     if (Number(params.get('species')) > 0) {
         state.speciesFilter = { key: Number(params.get('species')), name: params.get('name') || 'this species' };
         $('animal-input').value = params.get('name') || '';
+        if (params.get('area') === 'korea') {
+            state.koreaView = state.speciesFilter.korea = true;
+            showPlace('', null);
+            showRadius();
+        }
     }
     showSpeciesFilter();
     // "Show all animals": no animal filter and every group ticked again
@@ -1471,7 +1560,9 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.chip[data-radius]').forEach(chip => chip.addEventListener('click', () => {
         document.querySelectorAll('.chip[data-radius]').forEach(c => c.classList.toggle('active', c === chip));
         state.radiusKm = parseFloat(chip.dataset.radius) || 10;
+        leaveKorea();
         updateRadiusCircle();
+        fitRadius(0.6);
         scheduleSearch(300);
     }));
 
@@ -1550,5 +1641,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Auto-load the default location (Ulsan)
     updateRadiusCircle();
+    fitRadius(0);
     loadSightings();
 });

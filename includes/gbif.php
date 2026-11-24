@@ -99,14 +99,15 @@ function gbif_curl_options(int $left): array
 function gbif_search_nearby(
     float $lat, float $lng, float $radiusKm = 10,
     array $taxonKeys = [], ?string $fromDate = null,
-    ?string $toDate = null, int $limit = 50
+    ?string $toDate = null, int $limit = 50, bool $allKorea = false
 ): array {
     $cfg = gbif_config();
     $limit = min($limit, GBIF_MAX_RECORDS);
     $safeRadius = min($radiusKm, 100); // GBIF geoDistance accepts up to 100km cleanly
 
-    $query = http_build_query([
-        'geoDistance'   => $lat . ',' . $lng . ',' . $safeRadius . 'km',
+    // The circle around the place, or all of South Korea ("See … on the map", 24 Nov)
+    $area = $allKorea ? ['country' => 'KR'] : ['geoDistance' => $lat . ',' . $lng . ',' . $safeRadius . 'km'];
+    $query = http_build_query($area + [
         'hasCoordinate' => 'true',
         // Records whose coordinates GBIF flagged as wrong (swapped, zero, outside the country) are
         // left out, so no pin lands in the sea or in the wrong place (16 Nov)
@@ -190,6 +191,31 @@ function gbif_date_windows(?string $fromDate, ?string $toDate): array
     // ignored here, so its total also counted older records (18 Nov)
     $windows[] = ($fromDate ?: '*') . ',' . $upper;
     return $windows;
+}
+
+// The sighting of these animals in South Korea that is nearest to a place (24 Nov), for an animal
+// search that finds nothing inside the radius. Rare animals have few records, so the first 300 hold
+// all of them (the musk deer has one); a common animal is found inside the radius anyway.
+// Returns the GBIF record with 'distanceKm', null when there is none, or false when GBIF failed.
+function gbif_nearest_sighting(float $lat, float $lng, array $taxonKeys, ?string $fromDate, ?string $toDate): array|null|false
+{
+    $query = http_build_query(['country' => 'KR', 'hasCoordinate' => 'true', 'hasGeospatialIssue' => 'false',
+        'kingdomKey' => 1, 'limit' => 300]);
+    foreach (gbif_expand_taxa($taxonKeys) as $key) $query .= '&taxonKey=' . (int)$key;
+    if ($fromDate || $toDate) $query .= '&eventDate=' . urlencode(($fromDate ?: '*') . ',' . ($toDate ?: '*'));
+    $data = gbif_get(gbif_config()['base_url'] . '/occurrence/search?' . $query);
+    if ($data === null) return false;
+    $best = null;
+    foreach ($data['results'] ?? [] as $r) {
+        if (!isset($r['decimalLatitude'], $r['decimalLongitude'])) continue;
+        // distance on the globe (haversine formula), in km
+        $dLat = deg2rad($r['decimalLatitude'] - $lat);
+        $dLng = deg2rad($r['decimalLongitude'] - $lng);
+        $a = sin($dLat / 2) ** 2 + cos(deg2rad($lat)) * cos(deg2rad($r['decimalLatitude'])) * sin($dLng / 2) ** 2;
+        $km = 6371 * 2 * asin(min(1, sqrt($a)));
+        if ($best === null || $km < $best['distanceKm']) $best = $r + ['distanceKm' => $km];
+    }
+    return $best;
 }
 
 // One GBIF occurrence search with retries. Returns GBIF's JSON, or ['error' => …] with
