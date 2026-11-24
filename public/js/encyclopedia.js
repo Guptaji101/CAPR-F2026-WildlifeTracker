@@ -411,19 +411,19 @@ async function loadExtras(key, opened) {
         $('detail-where').innerHTML = '<p class="extra-note">No sighting in South Korea has a location, so the map cannot show this animal.</p>';
         $('detail-map-link').remove();
     }
-    // When to see it: 12 bars, the 3 busiest months dark
+    // When to see it: 12 bars, the 3 busiest months dark (fewer if it was seen in fewer months, 24 Nov)
     const months = x?.months || [];
     const max = Math.max(0, ...months);
     if (!max) {
         $('detail-months').innerHTML = '<p class="extra-note">No dated sightings in South Korea yet.</p>';
     } else {
-        const top = months.map((n, i) => [n, i]).sort((a, b) => b[0] - a[0]).slice(0, 3).map(t => t[1]);
+        const top = months.map((n, i) => [n, i]).filter(t => t[0] > 0).sort((a, b) => b[0] - a[0]).slice(0, 3).map(t => t[1]);
         const best = [...top].sort((a, b) => a - b).map(i => MONTHS[i]);
         $('detail-months').innerHTML = `
             <div class="months-bars">${months.map((n, i) => `<span class="${top.includes(i) ? 'top' : ''}" style="height:${Math.max(4, n / max * 100)}%"
                 title="${MONTHS[i]}: ${fmt(n)} sightings"></span>`).join('')}</div>
             <div class="months-labels">${MONTHS.map(m => `<span>${m[0]}</span>`).join('')}</div>
-            <p class="extra-note">Seen most in <b>${best.slice(0, -1).join(', ')} and ${best.at(-1)}</b>.</p>`;
+            <p class="extra-note">Seen most in <b>${best.length > 1 ? `${best.slice(0, -1).join(', ')} and ` : ''}${best.at(-1)}</b>.</p>`;
     }
     // Listen: only when a recording exists
     const s = x?.sound;
