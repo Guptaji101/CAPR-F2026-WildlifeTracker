@@ -17,7 +17,7 @@ results in the testing report (Week 12)
 | Species Profile and GBIF link | FR-07, FR-09 | TC-27 – TC-31, TC-75 – TC-76, TC-80, TC-89 – TC-90, TC-96, TC-100 |
 | Messages and loading states | FR-10 | TC-32 – TC-36, TC-87 |
 | Find an Animal | FR-13 | TC-37 – TC-43, TC-69 – TC-72, TC-77, TC-81 – TC-86, TC-101, TC-109 |
-| Animal Encyclopedia and its searches | FR-12 | TC-44 – TC-55, TC-73 – TC-74, TC-91 – TC-92, TC-98 – TC-99, TC-102, TC-105 – TC-108, TC-110 |
+| Animal Encyclopedia and its searches | FR-12 | TC-44 – TC-55, TC-73 – TC-74, TC-91 – TC-92, TC-98 – TC-99, TC-102, TC-105 – TC-108, TC-110 – TC-112 |
 | Non-functional requirements | NFR-01 – NFR-08 | TC-56 – TC-68, TC-97 |
 | Usability test with users | NFR-05 | Section 6 |
 
@@ -185,7 +185,9 @@ Unless a step says otherwise, start on the Map page, with the default search (Ul
 | TC-106 | Listen | Open **Chinese Water Deer**; click **Listen**; click **Stop** | The button says "Loading…", then the sound plays and the button says "Stop", with the recorder and licence ("recorded in South Korea" where possible); Stop (or closing the dialog) ends the sound | Pass | Gupta Aman Kumar | 2026-11-18 | Live site, 18 Nov version (2c9fed5), fully reloaded; run 4:00–4:20 PM, no errors. Added 18 Nov |
 | TC-107 | When to see it, where in Korea | Open **Chinese Water Deer**; look at "When to see it" and "Where in Korea"; click **Open on the map** | Twelve month bars (J to D) and "Seen most in April, May and June"; a map of South Korea with red areas; the Map page opens showing only this animal | Pass | Gupta Aman Kumar | 2026-11-18 | Live site, 18 Nov version (2c9fed5), fully reloaded; run 4:00–4:20 PM, no errors. Added 18 Nov |
 | TC-108 | Photo slideshow | Open **Chinese Water Deer**; wait 10 seconds; click a dot under the photo; click the photo and go through all photos in the viewer | Up to 6 photos change by themselves; the dot shows that photo; no photo of a dead animal or of droppings, in the slideshow or the viewer | Pass (re-test) | Paudel Amrit | 2026-11-19 | Live site. 18 Nov run (Gupta Aman Kumar): slideshow pass. 19 Nov (Paudel Amrit): **Fail** in the viewer: photo 4 of 13 a dead deer (GBIF does not mark it dead) and a photo of droppings → bug #25; fixed 1f4a94d; re-test Pass 19 Nov, 12 photos, all of the living deer. Added 18 Nov |
-| TC-110 | Only photos of sightings | Open **Harvest Mouse**; click the photo and go through all photos in the viewer | Only photos of the animal; no scanned museum catalogue page (museum specimens are skipped) | Pass | Paudel Amrit | 2026-11-19 | Live site. First seen 19 Nov during the re-test of #25: photo 5 of 13 was a catalogue book page (a PRESERVED_SPECIMEN record); fixed ec657c6 (refs #25); re-test Pass 19 Nov. Added 19 Nov |
+| TC-110 | Only photos of sightings | Open **Harvest Mouse**; click the photo and go through all photos in the viewer | Only photos of the animal; no scanned museum catalogue page (museum specimens are skipped when the animal has photos of sightings; only an animal without any, e.g. a copepod, shows its museum photos) | Pass | Paudel Amrit | 2026-11-19 | Live site. First seen 19 Nov during the re-test of #25: photo 5 of 13 was a catalogue book page (a PRESERVED_SPECIMEN record); fixed ec657c6 (refs #25); re-test Pass 19 Nov. Added 19 Nov |
+| TC-111 | See on the map: all of South Korea | On the Map page search **Ulsan**, 10 km; open the Encyclopedia, open **Chinese Water Deer** and click **See … on the map**; then search again | The Map page shows the animal's sightings in all of South Korea, not only around Ulsan; the last place and radius come back afterwards | Pass | Paudel Amrit | 2026-11-24 | Live site, 24 Nov version (525d9ba), fully reloaded. Added 24 Nov (bug #26) |
+| TC-112 | Seen most in: few months | In **Search all animals** type `Sorex minutissimus` (Asian Minute Shrew) and open it; look at "When to see it" | Only the months with sightings are dark and named: "Seen most in July and August" (no third month with 0 sightings) | Pass | Paudel Amrit | 2026-11-24 | Live site, 24 Nov version (525d9ba), fully reloaded. Added 24 Nov (bug #27) |
 
 ---
 
@@ -325,19 +327,20 @@ with the Round 1 fixes. Gupta Aman Kumar opened the website and read out the tas
 
 ---
 
-## 7. Summary (status: 19 Nov 2026)
+## 7. Summary (status: 24 Nov 2026)
 
 | | Number |
 |---|---|
-| Test cases in this plan | 124 (TC-01 to TC-110, plus API-01 to API-14) |
-| Test cases run | 124 |
-| Passed | 124 (TC-66, TC-75, TC-78, TC-100 and TC-108 after their re-tests) |
+| Test cases in this plan | 126 (TC-01 to TC-112, plus API-01 to API-14) |
+| Test cases run | 126 |
+| Passed | 126 (TC-66, TC-75, TC-78, TC-100 and TC-108 after their re-tests) |
 | Run on 18 Nov (Gupta Aman Kumar, live site) | 11: TC-18 (rewritten: no Search button since 17 Nov), TC-101 – TC-109 and API-14 (added 18 Nov); all pass |
 | Run on 18–19 Nov (Paudel Amrit, live site) | The same 11 again; TC-108 failed in the photo viewer (→ #25) and passed after the fix; TC-110 added and passed (19 Nov) |
+| Run on 24 Nov (Paudel Amrit, live site) | TC-111 and TC-112, added for bugs #26 and #27; both pass |
 | Failed on the first run (bug issues opened) | 5 (TC-66 → #13, TC-75 → #17, TC-78 → #20, TC-100 → #19, TC-108 → #25) |
 | Blocked | 0 |
-| Bug issues opened | 10 (#13, #17, #18, #19, #20, #21, #22, #23, #24, #25; #18 found during the re-test of TC-83, #21 – #23 found by Singh Shubham Kumar on the live site, #24 found while checking the fix for #20, #25 found by Paudel Amrit in TC-108) |
-| Bugs fixed and re-tested | 10 (all); #13, #17 – #20 by their test cases, #21 – #24 by TC-101 – TC-104 and API-14 (Pass, 18 Nov), #25 by TC-108 and TC-110 (Pass, 19 Nov) |
+| Bug issues opened | 12 (#13, #17 – #27; #18 found during the re-test of TC-83, #21 – #23 found by Singh Shubham Kumar on the live site, #24 found while checking the fix for #20, #25 found by Paudel Amrit in TC-108, #26 and #27 found by Gupta Aman Kumar while using the site on 24 Nov) |
+| Bugs fixed and re-tested | 12 (all); #13, #17 – #20 by their test cases, #21 – #24 by TC-101 – TC-104 and API-14 (Pass, 18 Nov), #25 by TC-108 and TC-110 (Pass, 19 Nov), #26 and #27 by TC-111 and TC-112 (Pass, 24 Nov) |
 | Open issues | 0 |
 | Automatic API checks (19 Nov) | API-01 – API-14 run by `tools/api-test.php` and daily on GitHub Actions; first runs 19 Nov: all pass |
 | Re-tested after the search update (16–17 Nov) | TC-15, TC-17 – TC-21, TC-25, TC-28, TC-37 – TC-43, TC-52, TC-64, TC-69 – TC-72, TC-77, TC-78, TC-83 |
