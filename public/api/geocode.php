@@ -24,7 +24,7 @@ if ($q === '') {
 
 // Places don't move: a place found in the last 30 days is answered from the cache.
 // (Nominatim's usage policy also asks apps to cache results instead of asking again.)
-$cacheKey = 'geo:' . mb_strtolower($q);
+$cacheKey = 'geo2:' . mb_strtolower($q);   // geo2: answers from Photon without roads (#28)
 if ($cached = cache_get($cacheKey, 30 * 86400)) {
     echo json_encode($cached);
     exit;
@@ -54,9 +54,12 @@ if (!cache_get('geo:nominatim-down', 600)) {
 
 // 2. Photon, limited to South Korea (bbox = west, south, east, north)
 if (!$place && !$reached) {
+    // Only places and nature, the same kinds as the place suggestions (places.php), so
+    // "Seoraksan" finds the national park and not the road "Seoraksan-ro"
     [$data, $ok] = get_json('https://photon.komoot.io/api/?' . http_build_query([
         'q' => $q, 'limit' => 5, 'lang' => 'en', 'bbox' => '124.5,33.0,131.0,38.7',
-    ]));
+    ]) . '&osm_tag=place&osm_tag=natural&osm_tag=boundary:national_park'
+       . '&osm_tag=leisure:nature_reserve&osm_tag=leisure:park');
     if ($ok) {
         $reached = true;
         foreach ($data['features'] ?? [] as $f) {
