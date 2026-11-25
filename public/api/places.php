@@ -18,11 +18,21 @@
  */
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../../includes/cache.php';
+require_once __DIR__ . '/../../includes/korean-places.php';
 
 $q = trim($_GET['q'] ?? '');
 if (mb_strlen($q) < 2 || mb_strlen($q) > 60) {
     echo json_encode(['places' => []]);
     exit;
+}
+
+// A main place by its Korean name (부산, 지리산) comes first, then what the service finds (#29, 25 Nov)
+$known = korean_place($q);
+function with_known(?array $known, array $places): array
+{
+    if (!$known) return $places;
+    $others = array_filter($places, fn($p) => hypot($p['lat'] - $known['lat'], $p['lng'] - $known['lng']) > 0.05);
+    return array_slice([$known, ...$others], 0, 6);
 }
 
 // Places near the map's centre come first (16 Nov): the page sends it as lat/lng. Rounded to about
@@ -31,7 +41,7 @@ $lat = isset($_GET['lat']) && is_numeric($_GET['lat']) ? round(max(33.0, min(38.
 $lng = isset($_GET['lng']) && is_numeric($_GET['lng']) ? round(max(124.5, min(131.0, (float)$_GET['lng'])), 1) : null;
 $near = ($lat !== null && $lng !== null) ? ['lat' => $lat, 'lon' => $lng, 'location_bias_scale' => 0.3] : [];
 
-$cacheKey = 'places:' . mb_strtolower($q) . ($near ? ":$lat,$lng" : '');
+$cacheKey = 'places2:' . mb_strtolower($q) . ($near ? ":$lat,$lng" : '');
 if ($cached = cache_get($cacheKey, 30 * 86400)) {
     echo json_encode($cached);
     exit;
@@ -39,7 +49,7 @@ if ($cached = cache_get($cacheKey, 30 * 86400)) {
 
 // Photon failed less than 10 minutes ago: answer from the built-in list at once (no 6 s wait)
 if (cache_get('places:photon-down', 600)) {
-    echo json_encode(['places' => built_in_places($q, $lat, $lng), 'source' => 'list']);
+    echo json_encode(['places' => with_known($known, built_in_places($q, $lat, $lng)), 'source' => 'list']);
     exit;
 }
 
@@ -69,7 +79,7 @@ if (!$data) {
     // Only the reason is written, not what the visitor typed.
     error_log("places.php: Photon failed, HTTP $code" . ($error ? ", $error" : '') . ' (answered from the built-in list)');
     cache_put('places:photon-down', ['at' => time()]);
-    echo json_encode(['places' => built_in_places($q, $lat, $lng), 'source' => 'list']);   // not cached: Photon is tried again later
+    echo json_encode(['places' => with_known($known, built_in_places($q, $lat, $lng)), 'source' => 'list']);   // not cached: Photon is tried again later
     exit;
 }
 
@@ -108,7 +118,7 @@ foreach ($data['features'] ?? [] as $f) {
     if (count($places) === 6) break;
 }
 
-$answer = ['places' => $places];
+$answer = ['places' => with_known($known, $places)];
 cache_put($cacheKey, $answer);
 echo json_encode($answer);
 

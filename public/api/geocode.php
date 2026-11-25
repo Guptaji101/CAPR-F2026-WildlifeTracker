@@ -12,6 +12,7 @@
  */
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../../includes/cache.php';
+require_once __DIR__ . '/../../includes/korean-places.php';
 
 const USER_AGENT = 'CAPR-F2026-WildlifeTracker/1.0 (student capstone project; https://github.com/Guptaji101/CAPR-F2026-WildlifeTracker)';
 
@@ -19,6 +20,13 @@ $q = isset($_GET['q']) ? trim($_GET['q']) : '';
 if ($q === '') {
     http_response_code(400);
     echo json_encode(['error' => 'Missing search query']);
+    exit;
+}
+
+// The main places by their Korean name need no search service (#29, 25 Nov)
+if ($known = korean_place($q)) {
+    $where = array_filter([$known['name'], $known['area']]);
+    echo json_encode(['lat' => (float)$known['lat'], 'lng' => (float)$known['lng'], 'displayName' => implode(', ', $where) . ', South Korea']);
     exit;
 }
 
