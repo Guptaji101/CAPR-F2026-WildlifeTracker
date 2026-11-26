@@ -11,7 +11,7 @@ results in the testing report (Week 12)
 
 | Area | Requirements | Test cases |
 |---|---|---|
-| Place search, Quick Locations, Locate Me, place suggestions | FR-01, FR-11 | TC-01 – TC-10, TC-93 – TC-95 |
+| Place search, Quick Locations, Locate Me, place suggestions | FR-01, FR-11 | TC-01 – TC-10, TC-93 – TC-95, TC-113 |
 | Map, base maps, legend | FR-02, FR-08 | TC-11 – TC-14, TC-88 |
 | Sightings: pins, table, filters, bar above the map | FR-03 – FR-06 | TC-15 – TC-26, TC-78 – TC-79, TC-103 – TC-104 |
 | Species Profile and GBIF link | FR-07, FR-09 | TC-27 – TC-31, TC-75 – TC-76, TC-80, TC-89 – TC-90, TC-96, TC-100 |
@@ -73,6 +73,7 @@ Unless a step says otherwise, start on the Map page, with the default search (Ul
 | TC-08 | Quick Location | Click the chip **Jeju Island** | Chip is highlighted; map moves to Jeju; sightings load | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost |
 | TC-09 | Locate Me (allowed) | Click **Locate Me**, allow location access | Box shows "Current Location (GPS)"; a blue dot marks your position; sightings around you load | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost |
 | TC-10 | Locate Me (refused) | Click **Locate Me**, block location access | Message "Could not retrieve current location: …"; map unchanged | Pass | Paudel Amrit | 2026-10-27 | Chrome, localhost; location blocked in Site settings |
+| TC-113 | Place search with Enter | Type `Gyeongju` in Search Location and press **Enter** without picking a suggestion; then `Seoraksan` + Enter; then `Vancouver` + Enter | The map moves to Gyeongju, then to Seoraksan National Park (not the road "Seoraksan-ro"); Vancouver: "Place not found in South Korea". Works even when Nominatim refuses the server (Photon and the built-in list answer instead) | Pass | Paudel Amrit | 2026-11-24 | Live site, 24 Nov version (40f3c03), fully reloaded. Added 24 Nov (bug #28, found by the scheduled API checks run #8: API-01 and API-02 failed with 502; run #9 after the fix: 14 of 14 pass) |
 
 ### 4.2 Map and legend (FR-02, FR-08)
 
@@ -214,7 +215,7 @@ Unless a step says otherwise, start on the Map page, with the default search (Ul
 
 Each endpoint opened on the live site (https://wildtrack-lq88.onrender.com/api/…); the time is the response time measured in the browser.
 
-Since 19 Nov the checks API-01 – API-14 also run by themselves: `php tools/api-test.php` (or with a localhost address as argument) prints Pass or Fail for each, and GitHub Actions ("API checks", `.github/workflows/api-test.yml`) runs it on the live site every day at 9:00 KST and by hand. First runs on 19 Nov (Paudel Amrit): all pass.
+Since 19 Nov the checks API-01 – API-14 also run by themselves: `php tools/api-test.php` (or with a localhost address as argument) prints Pass or Fail for each, and GitHub Actions ("API checks", `.github/workflows/api-test.yml`) runs it on the live site every day at 9:00 KST and by hand. First runs on 19 Nov (Paudel Amrit): all pass. On 24 Nov the scheduled run found bug #28 (API-01 and API-02: 502, Nominatim refused the Render server); after the fix the run passed again.
 
 | ID | Endpoint | Expected result | Result | Tester | Date | Notes |
 |---|---|---|---|---|---|---|
@@ -331,18 +332,18 @@ with the Round 1 fixes. Gupta Aman Kumar opened the website and read out the tas
 
 | | Number |
 |---|---|
-| Test cases in this plan | 126 (TC-01 to TC-112, plus API-01 to API-14) |
-| Test cases run | 126 |
-| Passed | 126 (TC-66, TC-75, TC-78, TC-100 and TC-108 after their re-tests) |
+| Test cases in this plan | 127 (TC-01 to TC-113, plus API-01 to API-14) |
+| Test cases run | 127 |
+| Passed | 127 (TC-66, TC-75, TC-78, TC-100 and TC-108 after their re-tests) |
 | Run on 18 Nov (Gupta Aman Kumar, live site) | 11: TC-18 (rewritten: no Search button since 17 Nov), TC-101 – TC-109 and API-14 (added 18 Nov); all pass |
 | Run on 18–19 Nov (Paudel Amrit, live site) | The same 11 again; TC-108 failed in the photo viewer (→ #25) and passed after the fix; TC-110 added and passed (19 Nov) |
-| Run on 24 Nov (Paudel Amrit, live site) | TC-111 and TC-112, added for bugs #26 and #27; both pass |
+| Run on 24 Nov (Paudel Amrit, live site) | TC-111, TC-112 and TC-113, added for bugs #26, #27 and #28; all pass |
 | Failed on the first run (bug issues opened) | 5 (TC-66 → #13, TC-75 → #17, TC-78 → #20, TC-100 → #19, TC-108 → #25) |
 | Blocked | 0 |
-| Bug issues opened | 12 (#13, #17 – #27; #18 found during the re-test of TC-83, #21 – #23 found by Singh Shubham Kumar on the live site, #24 found while checking the fix for #20, #25 found by Paudel Amrit in TC-108, #26 and #27 found by Gupta Aman Kumar while using the site on 24 Nov) |
-| Bugs fixed and re-tested | 12 (all); #13, #17 – #20 by their test cases, #21 – #24 by TC-101 – TC-104 and API-14 (Pass, 18 Nov), #25 by TC-108 and TC-110 (Pass, 19 Nov), #26 and #27 by TC-111 and TC-112 (Pass, 24 Nov) |
+| Bug issues opened | 13 (#13, #17 – #28; #18 found during the re-test of TC-83, #21 – #23 found by Singh Shubham Kumar on the live site, #24 found while checking the fix for #20, #25 found by Paudel Amrit in TC-108, #26 and #27 found by Gupta Aman Kumar while using the site on 24 Nov, #28 found by the automatic API checks on 24 Nov) |
+| Bugs fixed and re-tested | 13 (all); #13, #17 – #20 by their test cases, #21 – #24 by TC-101 – TC-104 and API-14 (Pass, 18 Nov), #25 by TC-108 and TC-110 (Pass, 19 Nov), #26 – #28 by TC-111 – TC-113 and API-01, API-02 (Pass, 24 Nov) |
 | Open issues | 0 |
-| Automatic API checks (19 Nov) | API-01 – API-14 run by `tools/api-test.php` and daily on GitHub Actions; first runs 19 Nov: all pass |
+| Automatic API checks (19 Nov) | API-01 – API-14 run by `tools/api-test.php` and daily on GitHub Actions; first runs 19 Nov: all pass; scheduled run 24 Nov: API-01 and API-02 failed (502) → bug #28; after the fix (run #9): 14 of 14 pass |
 | Re-tested after the search update (16–17 Nov) | TC-15, TC-17 – TC-21, TC-25, TC-28, TC-37 – TC-43, TC-52, TC-64, TC-69 – TC-72, TC-77, TC-78, TC-83 |
 
 These numbers, the usability results and the most important bugs go into the testing report
